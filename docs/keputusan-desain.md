@@ -51,6 +51,7 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - **SKU = kode kategori + nomor urut 5 digit** (mis. SMB-00012), dibuat otomatis, unik, **tidak berubah** walau barang dipindah kategori.
 - Selain SKU: **kode cepat** (opsional, unik, untuk ketik cepat) dan **barcode per satuan** (opsional, unik).
 - Barang hasil repack masuk kategori barangnya (Gula 1 kg bungkus → Sembako).
+- **Ditunda (menunggu data pemilik):** barang segar (bawang, cabai, tomat, dsb.) — kemungkinan kategori "Sayur & Bumbu Segar", dijual ditimbang, harga sering berubah, susut busuk/layu.
 
 ## Satuan
 
