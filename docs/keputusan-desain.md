@@ -267,6 +267,17 @@ Setiap barang memilih satu metode:
   - Faktur belum diinput → admin menginput, stok minus beres sendiri, modal sementara dikoreksi.
   - Semua faktur sudah diinput → barang ditandai **"stok minus belum terjelaskan"** dan diselidiki asal kelebihannya (salah hitung, salah isi kemasan, dll.) sampai dibetulkan lewat penyesuaian/opname.
 
+## Contoh SKU gula (pola untuk barang curah lain)
+
+| Barang | SKU | Satuan jual | Catatan |
+| --- | --- | --- | --- |
+| Gulaku 5 kg (pabrikan) | SMB-00001 | Bungkus (Karton bila ada) | Merek & kemasan pabrik |
+| Gula Pasir curah | SMB-00002 | **Hanya Karung 50 kg** | Satuan dasar kg; tidak pernah ditimbang eceran |
+| Gula Pasir 1 kg (bungkus) | SMB-00003 | Bungkus | Hasil repack dari gula curah; harga bertingkat dipasang di sini (mis. 5 bungkus ke atas lebih murah) |
+
+- Pembeli karungan → SKU curah. Pembeli 1, 2, 3 kg → SKU bungkus 1 kg sebanyak itu.
+- Contoh harga bertingkat per kg di bagian Harga jual tetap berlaku sebagai ilustrasi mekanisme untuk barang yang memang dijual per kg.
+
 ## Repack (bungkus ulang)
 
 - Barang besar dibeli lewat faktur seperti biasa (mis. Gula Pasir 50 kg); stoknya langsung masuk dan bisa dijual curah.
