@@ -21,8 +21,10 @@ Sistem kasir, stok, pembelian, hutang-piutang untuk toko kelontong (eceran + gro
 ## Struktur
 
 - `src/domain/` — aturan bisnis murni (tanpa React): harga, diskon, kasbon, FIFO. Setiap aturan baru wajib punya tes.
-- `src/navigasi.tsx` — daftar menu Operasional & Back Office. Modul yang selesai mengisi `halaman`.
-- `src/layouts/` — LayoutOperasional (kasir) dan LayoutBackOffice (pemilik).
+- `src/navigasi.tsx` — daftar menu per mode (Kasir, Gudang, Back Office) beserta sub-menu dan ikon. Modul yang selesai mengisi `halaman`.
+- `src/layouts/LayoutAplikasi.tsx` — kerangka semua mode: menu samping (bisa diciutkan) di tablet/komputer, menu bawah + "Lainnya" di HP.
+- `src/features/` — layar per modul (mis. `penjualan/`).
+- `src/data/contoh.ts` — data contoh untuk pratinjau (nanti diganti Supabase).
 - `src/components/` — komponen bersama.
 
 ## Konvensi

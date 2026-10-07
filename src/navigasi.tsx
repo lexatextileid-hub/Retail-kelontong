@@ -1,30 +1,37 @@
 /**
  * Daftar menu aplikasi, per mode: Kasir, Gudang, Back Office.
- * Modul yang selesai dibangun cukup mengisi `halaman`.
+ * Menu bisa punya sub-menu (`anak`). Modul yang selesai dibangun mengisi `halaman`.
  * Selama `halaman` kosong, yang tampil adalah ringkasan rencana modul tersebut.
  */
 import type { ReactNode } from 'react';
 import { Penjualan } from './features/penjualan/Penjualan';
 
-export interface Menu {
+export interface SubMenu {
   path: string;
   judul: string;
-  ringkasan: string;
-  rencana: string[];
   halaman?: ReactNode;
 }
 
+export interface Menu {
+  path: string;
+  judul: string;
+  ikon: string;
+  ringkasan: string;
+  rencana: string[];
+  halaman?: ReactNode;
+  anak?: SubMenu[];
+}
+
+export type NamaMode = 'kasir' | 'gudang' | 'admin';
+
 export const menuKasir: Menu[] = [
   {
-    path: 'penjualan',
-    judul: 'Penjualan',
-    ringkasan: 'Layar kasir untuk retail dan grosir yang datang langsung.',
-    rencana: [],
+    path: 'penjualan', judul: 'Penjualan', ikon: 'keranjang',
+    ringkasan: 'Layar kasir untuk retail dan grosir yang datang langsung.', rencana: [],
     halaman: <Penjualan />,
   },
   {
-    path: 'pesanan',
-    judul: 'Pesanan',
+    path: 'pesanan', judul: 'Pesanan', ikon: 'pesanan',
     ringkasan: 'Pesanan grosir yang barangnya perlu diorder ke distributor dulu.',
     rencana: [
       'Status: Dicatat → Menunggu barang → Barang siap → Disiapkan → Diserahkan → Lunas/Tempo',
@@ -32,32 +39,25 @@ export const menuKasir: Menu[] = [
       'Harga disesuaikan saat faktur baru masuk; di bawah target untung perlu persetujuan pemilik',
       'Serah terima sebagian boleh; surat jalan otomatis bila diantar',
     ],
+    anak: [{ path: 'daftar', judul: 'Daftar Pesanan' }, { path: 'baru', judul: 'Buat Pesanan' }],
   },
   {
-    path: 'kasbon',
-    judul: 'Kasbon',
+    path: 'kasbon', judul: 'Kasbon', ikon: 'kasbon',
     ringkasan: 'Cek kasbon pelanggan dan terima pembayaran.',
     rencana: ['Cari pelanggan, lihat sisa kasbon dan batasnya', 'Bayar sebagian/penuh, tunai/transfer, menutup nota tertua dulu'],
   },
   {
-    path: 'retur',
-    judul: 'Retur',
+    path: 'retur', judul: 'Retur', ikon: 'retur',
     ringkasan: 'Retur dari pembeli, wajib dengan nota, maksimal 3×24 jam.',
-    rencana: [
-      'Ketik nomor nota, atau cari lewat tanggal / nama pelanggan',
-      'Uang kembali, tukar barang, atau potong kasbon; barang bagus atau rusak',
-      'Perlu PIN pemilik',
-    ],
+    rencana: ['Ketik nomor nota, atau cari lewat tanggal / nama pelanggan', 'Uang kembali, tukar barang, atau potong kasbon; barang bagus atau rusak', 'Perlu PIN pemilik'],
   },
   {
-    path: 'riwayat',
-    judul: 'Riwayat',
+    path: 'riwayat', judul: 'Riwayat', ikon: 'riwayat',
     ringkasan: 'Semua nota hari ini.',
     rencana: ['Cari dan filter nota', 'Cetak ulang, kirim WhatsApp, retur (PIN pemilik)'],
   },
   {
-    path: 'kas-laci',
-    judul: 'Kas Laci',
+    path: 'kas-laci', judul: 'Kas Laci', ikon: 'kas',
     ringkasan: 'Buka/tutup kasir harian, pengeluaran, bayar distributor, laporan harian.',
     rencana: [
       'Buka kasir: modal awal (sisa kemarin)',
@@ -66,57 +66,59 @@ export const menuKasir: Menu[] = [
       'Tutup kasir: uang fisik, selisih (persetujuan pemilik), dibagi ke sisa laci / brankas / bank / prive',
       'Laporan harian: cetak thermal atau biasa',
     ],
+    anak: [
+      { path: 'buka-tutup', judul: 'Buka / Tutup Kasir' },
+      { path: 'pengeluaran', judul: 'Pengeluaran' },
+      { path: 'bayar-distributor', judul: 'Bayar Distributor' },
+      { path: 'laporan-harian', judul: 'Laporan Harian' },
+    ],
   },
 ];
 
 export const menuGudang: Menu[] = [
   {
-    path: 'stok-barang',
-    judul: 'Stok Barang',
-    ringkasan: 'Daftar dan detail barang, tambah barang baru.',
+    path: 'stok-barang', judul: 'Stok Barang', ikon: 'stok',
+    ringkasan: 'Daftar dan detail barang, tambah barang baru, umur stok.',
     rencana: [
       'Daftar: nama, satuan, stok, harga beli, harga jual kecil/sedang/besar + untung',
       'Detail: satuan, stok per kedatangan (FIFO), riwayat keluar-masuk, harga beli per distributor',
       'Tambah barang baru: pemilik atau PIN pemilik; SKU otomatis',
+      'Umur stok: kuning 3 bln, oranye 6 bln (retur), merah 12 bln (kerugian tahunan)',
+    ],
+    anak: [
+      { path: 'daftar', judul: 'Daftar Barang' },
+      { path: 'tambah', judul: 'Tambah Barang' },
+      { path: 'umur-stok', judul: 'Umur Stok' },
     ],
   },
   {
-    path: 'barang-masuk',
-    judul: 'Barang Masuk',
+    path: 'barang-masuk', judul: 'Barang Masuk', ikon: 'masuk',
     ringkasan: 'Input faktur distributor atau pembelian tanpa nota.',
-    rencana: [
-      'Satuan urut besar → kecil; isi kemasan wajib dicek fisik',
-      'Tandai baris untuk pesanan atau barang ikutan',
-      'Cash/tempo; total dicocokkan dengan kertas faktur',
-    ],
+    rencana: ['Satuan urut besar → kecil; isi kemasan wajib dicek fisik', 'Tandai baris untuk pesanan atau barang ikutan', 'Cash/tempo; total dicocokkan dengan kertas faktur'],
+    anak: [{ path: 'faktur', judul: 'Faktur Distributor' }, { path: 'tanpa-nota', judul: 'Tanpa Nota' }],
   },
   {
-    path: 'siapkan-pesanan',
-    judul: 'Siapkan Pesanan',
+    path: 'siapkan-pesanan', judul: 'Siapkan Pesanan', ikon: 'siapkan',
     ringkasan: 'Menyiapkan dan menyerahkan pesanan.',
     rencana: ['Daftar pesanan siap beserta letak barang', 'Cetak surat jalan / nota serah terima'],
   },
   {
-    path: 'repack',
-    judul: 'Repack',
+    path: 'repack', judul: 'Repack', ikon: 'repack',
     ringkasan: 'Bungkus ulang barang curah.',
     rencana: ['Bahan dipakai, hasil jadi, sisa', 'Susut otomatis; lewat 1 kg per 50 kg wajib alasan'],
   },
   {
-    path: 'hitung-stok',
-    judul: 'Hitung Stok',
+    path: 'hitung-stok', judul: 'Hitung Stok', ikon: 'hitung',
     ringkasan: 'Opname bergilir per kategori, toko + 11 ruko.',
     rencana: ['Kolom per tingkat satuan, total otomatis', 'Selisih disetujui pemilik'],
   },
   {
-    path: 'retur-distributor',
-    judul: 'Retur ke Distributor',
+    path: 'retur-distributor', judul: 'Retur ke Distributor', ikon: 'returDist',
     ringkasan: 'Kembalikan barang ke distributor.',
     rencana: ['Pilih faktur asal; potong hutang / uang kembali / ganti barang'],
   },
   {
-    path: 'barang-rusak',
-    judul: 'Barang Rusak',
+    path: 'barang-rusak', judul: 'Barang Rusak', ikon: 'rusak',
     ringkasan: 'Penampung barang rusak.',
     rencana: ['Dari retur pembeli, hitung stok, atau gudang', 'Diretur ke distributor atau dibuang (kerugian)'],
   },
@@ -124,54 +126,66 @@ export const menuGudang: Menu[] = [
 
 export const menuBackOffice: Menu[] = [
   {
-    path: 'dashboard',
-    judul: 'Dashboard',
+    path: 'dashboard', judul: 'Dashboard', ikon: 'dashboard',
     ringkasan: 'Ringkasan hari ini.',
-    rencana: [
-      'Omzet dan laba kotor hari ini',
-      'Stok tipis & daftar order, stok minus belum terjelaskan',
-      'Hutang jatuh tempo, kasbon terbesar, pelanggan baru belum diatur',
+    rencana: ['Omzet dan laba kotor hari ini', 'Stok tipis & daftar order, stok minus belum terjelaskan', 'Hutang jatuh tempo, kasbon terbesar, pelanggan baru belum diatur'],
+  },
+  {
+    path: 'produk', judul: 'Produk & Harga', ikon: 'produk',
+    ringkasan: 'Harga jual, target untung, diskon pelanggan.',
+    rencana: ['Ubah harga cepat', 'Target untung per kategori/barang', 'Diskon khusus per pelanggan'],
+    anak: [
+      { path: 'ubah-harga', judul: 'Ubah Harga Cepat' },
+      { path: 'target-untung', judul: 'Target Untung' },
+      { path: 'diskon-pelanggan', judul: 'Diskon Pelanggan' },
     ],
   },
   {
-    path: 'produk',
-    judul: 'Produk & Harga',
-    ringkasan: 'Harga jual, target untung, diskon pelanggan.',
-    rencana: ['Ubah harga cepat', 'Target untung per kategori/barang', 'Diskon khusus per pelanggan'],
-  },
-  {
-    path: 'kontak',
-    judul: 'Kontak',
+    path: 'kontak', judul: 'Kontak', ikon: 'kontak',
     ringkasan: 'Pelanggan dan distributor.',
     rencana: ['Pelanggan: batas kasbon, diskon', 'Distributor: termin tempo, menerima retur'],
+    anak: [{ path: 'pelanggan', judul: 'Pelanggan' }, { path: 'distributor', judul: 'Distributor' }],
   },
   {
-    path: 'pembelian',
-    judul: 'Pembelian',
+    path: 'pembelian', judul: 'Pembelian', ikon: 'pembelian',
     ringkasan: 'Periksa faktur, daftar order, pantauan per distributor.',
     rencana: ['Periksa faktur & pembelian tanpa nota', 'Daftar order', 'Barang laku/lambat/berhenti per distributor'],
+    anak: [
+      { path: 'periksa-faktur', judul: 'Periksa Faktur' },
+      { path: 'daftar-order', judul: 'Daftar Order' },
+      { path: 'per-distributor', judul: 'Per Distributor' },
+    ],
   },
   {
-    path: 'hutang-piutang',
-    judul: 'Hutang & Piutang',
+    path: 'hutang-piutang', judul: 'Hutang & Piutang', ikon: 'hutang',
     ringkasan: 'Hutang ke distributor dan piutang pelanggan.',
     rencana: ['Pembayaran bertahap dan campuran', 'Umur piutang'],
+    anak: [{ path: 'hutang', judul: 'Hutang Distributor' }, { path: 'piutang', judul: 'Piutang Pelanggan' }],
   },
   {
-    path: 'keuangan',
-    judul: 'Keuangan',
+    path: 'keuangan', judul: 'Keuangan', ikon: 'keuangan',
     ringkasan: 'Laci, brankas, bank, pengeluaran, prive.',
     rencana: ['Buku brankas', 'Pengeluaran dari brankas/bank (cermin pengeluaran kasir)', 'Prive per sumber', 'Posisi usaha'],
+    anak: [
+      { path: 'brankas', judul: 'Buku Brankas' },
+      { path: 'pengeluaran', judul: 'Pengeluaran' },
+      { path: 'prive', judul: 'Prive' },
+      { path: 'posisi-usaha', judul: 'Posisi Usaha' },
+    ],
   },
   {
-    path: 'laporan',
-    judul: 'Laporan',
+    path: 'laporan', judul: 'Laporan', ikon: 'laporan',
     ringkasan: 'Harian, bulanan (kalender), rentang bebas.',
     rencana: ['Laba (pasti vs perkiraan)', 'Susut, potongan, diskon pelanggan', 'Laporan harian per kasir'],
+    anak: [
+      { path: 'harian', judul: 'Harian' },
+      { path: 'bulanan', judul: 'Bulanan' },
+      { path: 'susut', judul: 'Susut' },
+      { path: 'umur-stok', judul: 'Umur Stok' },
+    ],
   },
   {
-    path: 'pengaturan',
-    judul: 'Pengaturan',
+    path: 'pengaturan', judul: 'Pengaturan', ikon: 'pengaturan',
     ringkasan: 'Toko, pengguna, aturan, data induk.',
     rencana: [
       'Toko: profil, catatan struk, penomoran, stasiun printer',
@@ -179,5 +193,17 @@ export const menuBackOffice: Menu[] = [
       'Aturan: potongan Rp 500 / Rp 10.000, retur 3×24 jam, target untung 5%, susut 2%',
       'Data induk: satuan, kategori, kategori pengeluaran, tempat uang, ruko',
     ],
+    anak: [
+      { path: 'toko', judul: 'Toko' },
+      { path: 'pengguna', judul: 'Pengguna & Akses' },
+      { path: 'aturan', judul: 'Aturan' },
+      { path: 'data-induk', judul: 'Data Induk' },
+    ],
   },
+];
+
+export const daftarMode: { kode: NamaMode; judul: string; menu: Menu[] }[] = [
+  { kode: 'kasir', judul: 'Kasir', menu: menuKasir },
+  { kode: 'gudang', judul: 'Gudang', menu: menuGudang },
+  { kode: 'admin', judul: 'Back Office', menu: menuBackOffice },
 ];

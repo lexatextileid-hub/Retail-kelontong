@@ -1,52 +1,80 @@
-/* ---------- Operasional (kasir) ---------- */
-.ops { height: 100%; display: flex; flex-direction: column; }
-.ops__atas {
-  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
-  padding: 10px 20px; background: var(--permukaan); border-bottom: 1px solid var(--garis);
-}
-.ops__menu { display: flex; gap: 4px; flex-wrap: wrap; flex: 1 1 auto; }
-.ops__menu a {
-  display: inline-flex; align-items: center; height: 40px; padding: 0 14px;
-  border-radius: var(--radius); color: var(--teks-2); font-weight: 500; text-decoration: none;
-}
-.ops__menu a:hover { background: var(--permukaan-2); color: var(--teks); }
-.ops__menu a.active { background: var(--biru-muda); color: var(--biru-tua); font-weight: 600; }
-.ops__aksi { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.ops__isi { flex: 1; min-height: 0; overflow: auto; }
+/* ---------- Kerangka aplikasi: menu samping (tablet/komputer), menu bawah (HP) ---------- */
+.app { height: 100%; display: flex; }
 
-/* ---------- Back Office ---------- */
-.bo { min-height: 100%; display: flex; flex-wrap: wrap; }
-.bo__samping {
-  flex: 1 1 220px; max-width: 100%;
+.samping {
+  width: 248px; flex: none; height: 100%; overflow-y: auto;
   background: var(--permukaan); border-right: 1px solid var(--garis);
-  padding: 16px 12px; display: flex; flex-direction: column; gap: 4px;
+  display: flex; flex-direction: column; gap: 12px; padding: 14px 10px;
 }
-.bo__samping a {
-  display: flex; align-items: center; height: 40px; padding: 0 12px;
-  border-radius: var(--radius); color: var(--teks-2); font-weight: 500; text-decoration: none;
-}
-.bo__samping a:hover { background: var(--permukaan-2); color: var(--teks); }
-.bo__samping a.active { background: var(--biru-muda); color: var(--biru-tua); font-weight: 600; }
-.bo__samping-bawah { margin-top: auto; padding-top: 16px; }
-.bo__isi { flex: 999 1 640px; min-width: 0; padding: 24px 32px; display: flex; flex-direction: column; gap: 18px; }
+.app--ciut .samping { width: 72px; align-items: center; }
 
-@media (max-width: 720px) {
-  .bo__samping { flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--garis); }
-  .bo__samping-bawah { margin-top: 0; padding-top: 0; }
-  .bo__isi { padding: 16px; }
-}
-
-/* ---------- Merek toko ---------- */
-.merek { display: flex; align-items: center; gap: 10px; padding: 4px 8px; }
+.samping__merek { display: flex; align-items: center; gap: 10px; padding: 2px 6px; }
 .merek__logo {
-  width: 34px; height: 34px; border-radius: var(--radius); flex: none;
+  width: 36px; height: 36px; border-radius: var(--radius); flex: none;
   background: var(--biru); color: #fff; display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 13px;
 }
 .merek__nama { font-weight: 700; font-size: 15px; }
 .merek__sub { font-size: 12px; color: var(--teks-3); }
 
+.samping__mode { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--permukaan-2); border-radius: var(--radius); padding: 3px; gap: 2px; }
+.samping__mode a {
+  display: flex; align-items: center; justify-content: center; height: 32px; border-radius: 6px;
+  font-size: 12px; font-weight: 600; color: var(--teks-2); text-decoration: none; text-align: center; line-height: 1.1;
+}
+.samping__mode a.aktif { background: var(--permukaan); color: var(--biru-tua); box-shadow: 0 1px 2px rgba(23, 32, 51, 0.12); }
+.samping__mode-ciut {
+  width: 40px; height: 32px; border-radius: var(--radius); background: var(--biru-muda); color: var(--biru-tua);
+  display: flex; align-items: center; justify-content: center; font-weight: 700;
+}
+
+.samping__menu { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+.samping__item {
+  display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px;
+  border-radius: var(--radius); color: var(--teks-2); font-weight: 500; text-decoration: none;
+}
+.samping__item:hover { background: var(--permukaan-2); color: var(--teks); }
+.samping__item.active { background: var(--biru-muda); color: var(--biru-tua); font-weight: 600; }
+.app--ciut .samping__item { justify-content: center; padding: 0; }
+
+.samping__anak { display: flex; flex-direction: column; margin: 2px 0 6px 22px; padding-left: 12px; border-left: 2px solid var(--garis); }
+.samping__anak a { display: flex; align-items: center; height: 36px; padding: 0 8px; border-radius: 6px; font-size: 13.5px; color: var(--teks-2); text-decoration: none; }
+.samping__anak a:hover { background: var(--permukaan-2); }
+.samping__anak a.active { color: var(--biru-tua); font-weight: 600; background: var(--biru-muda); }
+
+.samping__ciut {
+  margin-top: auto; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px;
+  border: none; background: none; color: var(--teks-3); font-size: 13px; cursor: pointer; border-radius: var(--radius);
+}
+.samping__ciut:hover { background: var(--permukaan-2); }
+
+.app__isi { flex: 1; min-width: 0; height: 100%; overflow: auto; }
+
+/* Menu bawah (HP) */
+.bawah { display: none; }
+.bawah__item {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border: none; background: none; color: var(--teks-3); font-size: 11px; font-weight: 600; text-decoration: none; cursor: pointer;
+}
+.bawah__item.active { color: var(--biru); }
+
+.laci-latar { position: fixed; inset: 0; background: rgba(23, 32, 51, 0.45); z-index: 40; }
+.laci {
+  position: absolute; top: 0; bottom: 0; left: 0; width: min(300px, 86vw); background: var(--permukaan);
+  display: flex; flex-direction: column; gap: 12px; padding: 16px 12px; overflow-y: auto;
+}
+
+@media (max-width: 860px) {
+  .samping { display: none; }
+  .app__isi { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  .bawah {
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    height: calc(64px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--permukaan); border-top: 1px solid var(--garis);
+  }
+}
+
 /* ---------- Halaman modul yang belum dibangun ---------- */
-.rencana { max-width: 760px; display: flex; flex-direction: column; gap: 16px; }
+.rencana { max-width: 760px; display: flex; flex-direction: column; gap: 16px; padding: 24px; }
 .rencana ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--teks-2); }
-.ops .rencana { padding: 24px 20px; }
