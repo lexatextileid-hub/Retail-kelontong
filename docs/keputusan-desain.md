@@ -121,7 +121,13 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
   - **disetor ke bank** (tidak tentu, kadang-kadang);
   - **diambil pemilik sebagai prive** (dicatat "ambil pemilik", bukan biaya toko; tidak mengurangi laba).
   Jumlah pembagian harus sama dengan uang fisik.
-- **Pengeluaran: satu catatan, dua pintu input.** Dari **Kasir** (sumber: laci kasir itu) dan dari **Back Office** (sumber: brankas atau bank). Back Office menampilkan semua pengeluaran dari kedua pintu (cermin); kasir hanya melihat pengeluaran lacinya sendiri.
+- **Pengeluaran: satu catatan, dua pintu input**, sumber dana dipilih di keduanya:
+  - **Back Office:** laci kasir mana pun, brankas, atau rekening bank mana pun.
+  - **Kasir:** laci sendiri (bawaan); brankas atau bank bisa dipilih dengan **PIN pemilik**.
+  Back Office menampilkan semua pengeluaran dari kedua pintu (cermin); kasir hanya melihat pengeluaran yang ia catat.
+- **Format pengeluaran:** tanggal (otomatis), kategori, jumlah, sumber dana, keterangan, foto nota (opsional), dicatat oleh (otomatis).
+- **Kategori awal** (bisa diubah di Pengaturan): bongkar muat & angkut; retribusi & keamanan pasar; kemasan; kebutuhan toko harian; listrik, air, internet; gaji & uang makan; sewa ruko; perbaikan & perawatan; lain-lain (wajib keterangan).
+- Bukan pengeluaran (punya jalur sendiri): bayar distributor, prive, setor bank/brankas, retur ke pembeli.
 - **Prive (ambil pemilik)** bisa dari tempat uang mana pun: laci (saat tutup kasir), brankas, atau bank. Selalu dicatat sebagai prive, tidak mengurangi laba. Laporan bulanan menampilkan total prive per sumber.
 - **Bayar distributor bisa dua cara:** kasir membayar dari laci memakai pendapatan hari itu; atau pemilik **menitipkan uang dari brankas** ke kasir (dicatat pindah dana brankas → laci "titipan bayar distributor"), lalu kasir membayar dan memilih fakturnya.
 - **Brankas hanya diakses pemilik**, dikelola di **Back Office**: pembayaran distributor, setor ke bank, dan pengeluaran lain dari brankas dicatat di sana dengan **buku brankas** sendiri (saldo + daftar keluar-masuk).
