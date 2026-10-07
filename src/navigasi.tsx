@@ -1,9 +1,10 @@
 /**
- * Daftar menu aplikasi.
- * Setiap modul yang selesai dibangun cukup mengganti `halaman` dengan komponennya.
+ * Daftar menu aplikasi, per mode: Kasir, Gudang, Back Office.
+ * Modul yang selesai dibangun cukup mengisi `halaman`.
  * Selama `halaman` kosong, yang tampil adalah ringkasan rencana modul tersebut.
  */
 import type { ReactNode } from 'react';
+import { Penjualan } from './features/penjualan/Penjualan';
 
 export interface Menu {
   path: string;
@@ -13,55 +14,111 @@ export interface Menu {
   halaman?: ReactNode;
 }
 
-export const menuOperasional: Menu[] = [
+export const menuKasir: Menu[] = [
   {
     path: 'penjualan',
     judul: 'Penjualan',
-    ringkasan: 'Layar kasir: cari barang, pilih satuan, pilih pelanggan, bayar.',
+    ringkasan: 'Layar kasir untuk retail dan grosir yang datang langsung.',
+    rencana: [],
+    halaman: <Penjualan />,
+  },
+  {
+    path: 'pesanan',
+    judul: 'Pesanan',
+    ringkasan: 'Pesanan grosir yang barangnya perlu diorder ke distributor dulu.',
     rencana: [
-      'Cari barang dengan mengetik nama atau kode pendek, plus filter kategori',
-      'Pilih satuan per baris (pcs, pak, dus, slop, kg)',
-      'Harga per satuan atau harga bertingkat dihitung otomatis',
-      'Diskon pelanggan terisi otomatis dan boleh diubah kasir (perubahan tercatat)',
-      'Bayar tunai, transfer, kasbon, atau campuran; pelanggan Umum tidak bisa kasbon',
-      'Simpan sementara (hold), retur/batal dengan PIN pemilik',
+      'Status: Dicatat → Menunggu barang → Barang siap → Disiapkan → Diserahkan → Lunas/Tempo',
+      'Pelanggan wajib terdaftar; DP opsional',
+      'Harga disesuaikan saat faktur baru masuk; di bawah target untung perlu persetujuan pemilik',
+      'Serah terima sebagian boleh; surat jalan otomatis bila diantar',
     ],
   },
   {
     path: 'kasbon',
     judul: 'Kasbon',
-    ringkasan: 'Cek saldo kasbon pelanggan dan terima pembayaran.',
-    rencana: [
-      'Cari pelanggan, lihat sisa kasbon dan batasnya',
-      'Terima pembayaran, otomatis dialokasikan ke nota tertua',
-    ],
+    ringkasan: 'Cek kasbon pelanggan dan terima pembayaran.',
+    rencana: ['Cari pelanggan, lihat sisa kasbon dan batasnya', 'Bayar sebagian/penuh, tunai/transfer, menutup nota tertua dulu'],
   },
   {
-    path: 'barang-masuk',
-    judul: 'Barang Masuk',
-    ringkasan: 'Input faktur distributor dengan cepat, seperti di apotek.',
+    path: 'retur',
+    judul: 'Retur',
+    ringkasan: 'Retur dari pembeli, wajib dengan nota, maksimal 3×24 jam.',
     rencana: [
-      'Kepala faktur: distributor, nomor faktur kertas, tanggal, cash/tempo, jatuh tempo',
-      'Baris: ketik nama/kode barang, satuan (mis. "Dus isi 50"), qty, harga, diskon',
-      'Isi kemasan bisa diubah per baris dan tercatat',
-      'Satuan dan harga terakhir dari distributor yang sama terisi otomatis',
-      'Total input dicocokkan dengan total yang tertulis di kertas faktur',
-    ],
-  },
-  {
-    path: 'hitung-stok',
-    judul: 'Hitung Stok',
-    ringkasan: 'Input hasil hitung fisik untuk opname bergilir per kategori.',
-    rencana: [
-      'Pilih kategori atau rak yang dihitung hari ini',
-      'Input jumlah fisik; selisih menunggu persetujuan pemilik',
+      'Ketik nomor nota, atau cari lewat tanggal / nama pelanggan',
+      'Uang kembali, tukar barang, atau potong kasbon; barang bagus atau rusak',
+      'Perlu PIN pemilik',
     ],
   },
   {
     path: 'riwayat',
     judul: 'Riwayat',
-    ringkasan: 'Transaksi hari ini dan cetak ulang struk.',
-    rencana: ['Daftar transaksi hari ini', 'Cetak ulang struk', 'Batal/retur dengan PIN pemilik'],
+    ringkasan: 'Semua nota hari ini.',
+    rencana: ['Cari dan filter nota', 'Cetak ulang, kirim WhatsApp, retur (PIN pemilik)'],
+  },
+  {
+    path: 'kas-laci',
+    judul: 'Kas Laci',
+    ringkasan: 'Buka/tutup kasir harian, pengeluaran, bayar distributor, laporan harian.',
+    rencana: [
+      'Buka kasir: modal awal (sisa kemarin)',
+      'Pengeluaran: kategori, jumlah, keterangan & penerima wajib, bukti kas keluar',
+      'Bayar distributor dari laci atau titipan brankas',
+      'Tutup kasir: uang fisik, selisih (persetujuan pemilik), dibagi ke sisa laci / brankas / bank / prive',
+      'Laporan harian: cetak thermal atau biasa',
+    ],
+  },
+];
+
+export const menuGudang: Menu[] = [
+  {
+    path: 'stok-barang',
+    judul: 'Stok Barang',
+    ringkasan: 'Daftar dan detail barang, tambah barang baru.',
+    rencana: [
+      'Daftar: nama, satuan, stok, harga beli, harga jual kecil/sedang/besar + untung',
+      'Detail: satuan, stok per kedatangan (FIFO), riwayat keluar-masuk, harga beli per distributor',
+      'Tambah barang baru: pemilik atau PIN pemilik; SKU otomatis',
+    ],
+  },
+  {
+    path: 'barang-masuk',
+    judul: 'Barang Masuk',
+    ringkasan: 'Input faktur distributor atau pembelian tanpa nota.',
+    rencana: [
+      'Satuan urut besar → kecil; isi kemasan wajib dicek fisik',
+      'Tandai baris untuk pesanan atau barang ikutan',
+      'Cash/tempo; total dicocokkan dengan kertas faktur',
+    ],
+  },
+  {
+    path: 'siapkan-pesanan',
+    judul: 'Siapkan Pesanan',
+    ringkasan: 'Menyiapkan dan menyerahkan pesanan.',
+    rencana: ['Daftar pesanan siap beserta letak barang', 'Cetak surat jalan / nota serah terima'],
+  },
+  {
+    path: 'repack',
+    judul: 'Repack',
+    ringkasan: 'Bungkus ulang barang curah.',
+    rencana: ['Bahan dipakai, hasil jadi, sisa', 'Susut otomatis; lewat 1 kg per 50 kg wajib alasan'],
+  },
+  {
+    path: 'hitung-stok',
+    judul: 'Hitung Stok',
+    ringkasan: 'Opname bergilir per kategori, toko + 11 ruko.',
+    rencana: ['Kolom per tingkat satuan, total otomatis', 'Selisih disetujui pemilik'],
+  },
+  {
+    path: 'retur-distributor',
+    judul: 'Retur ke Distributor',
+    ringkasan: 'Kembalikan barang ke distributor.',
+    rencana: ['Pilih faktur asal; potong hutang / uang kembali / ganti barang'],
+  },
+  {
+    path: 'barang-rusak',
+    judul: 'Barang Rusak',
+    ringkasan: 'Penampung barang rusak.',
+    rencana: ['Dari retur pembeli, hitung stok, atau gudang', 'Diretur ke distributor atau dibuang (kerugian)'],
   },
 ];
 
@@ -70,77 +127,57 @@ export const menuBackOffice: Menu[] = [
     path: 'dashboard',
     judul: 'Dashboard',
     ringkasan: 'Ringkasan hari ini.',
-    rencana: ['Omzet dan laba kotor hari ini', 'Stok tipis', 'Hutang jatuh tempo', 'Kasbon terbesar'],
+    rencana: [
+      'Omzet dan laba kotor hari ini',
+      'Stok tipis & daftar order, stok minus belum terjelaskan',
+      'Hutang jatuh tempo, kasbon terbesar, pelanggan baru belum diatur',
+    ],
   },
   {
     path: 'produk',
-    judul: 'Produk',
-    ringkasan: 'Data barang, satuan, dan harga.',
-    rencana: [
-      'Satuan dasar = satuan terkecil yang dijual; stok & modal dihitung dalam satuan ini',
-      'Tabel satuan per barang: isi, barcode opsional, dibeli/dijual, harga jual',
-      'Metode harga: per satuan atau bertingkat per jumlah',
-      'Diskon khusus per pelanggan per barang (Rp atau %)',
-      'Riwayat harga beli per distributor',
-      'Import dari Excel',
-    ],
+    judul: 'Produk & Harga',
+    ringkasan: 'Harga jual, target untung, diskon pelanggan.',
+    rencana: ['Ubah harga cepat', 'Target untung per kategori/barang', 'Diskon khusus per pelanggan'],
   },
   {
     path: 'kontak',
     judul: 'Kontak',
     ringkasan: 'Pelanggan dan distributor.',
-    rencana: ['Pelanggan: batas kasbon; "Umum" bawaan tidak bisa kasbon', 'Distributor: termin tempo default'],
+    rencana: ['Pelanggan: batas kasbon, diskon', 'Distributor: termin tempo, menerima retur'],
   },
   {
     path: 'pembelian',
     judul: 'Pembelian',
-    ringkasan: 'Periksa faktur dan retur ke distributor.',
-    rencana: [
-      'Periksa dan koreksi faktur dari Barang Masuk',
-      'Diskon faktur dibagi ke setiap baris; barang bonus masuk dengan harga 0',
-      'Retur pembelian memotong hutang',
-    ],
-  },
-  {
-    path: 'inventori',
-    judul: 'Inventori',
-    ringkasan: 'Kartu stok, opname, dan penyesuaian.',
-    rencana: [
-      'Kartu stok per barang (setiap perubahan tercatat)',
-      'Lapisan stok FIFO per baris faktur, termasuk "Saldo awal"',
-      'Setujui opname; penyesuaian rusak/kedaluwarsa/pakai sendiri',
-    ],
+    ringkasan: 'Periksa faktur, daftar order, pantauan per distributor.',
+    rencana: ['Periksa faktur & pembelian tanpa nota', 'Daftar order', 'Barang laku/lambat/berhenti per distributor'],
   },
   {
     path: 'hutang-piutang',
     judul: 'Hutang & Piutang',
-    ringkasan: 'Hutang ke distributor dan kasbon pelanggan.',
-    rencana: ['Daftar faktur tempo per jatuh tempo, bayar sebagian/penuh', 'Umur kasbon per pelanggan'],
+    ringkasan: 'Hutang ke distributor dan piutang pelanggan.',
+    rencana: ['Pembayaran bertahap dan campuran', 'Umur piutang'],
   },
   {
     path: 'keuangan',
     judul: 'Keuangan',
-    ringkasan: 'Akun kas, setoran, dan biaya operasional.',
-    rencana: ['Akun kas: laci, kas besar, rekening', 'Setoran antar akun', 'Biaya operasional'],
+    ringkasan: 'Laci, brankas, bank, pengeluaran, prive.',
+    rencana: ['Buku brankas', 'Pengeluaran dari brankas/bank (cermin pengeluaran kasir)', 'Prive per sumber', 'Posisi usaha'],
   },
   {
     path: 'laporan',
     judul: 'Laporan',
-    ringkasan: 'Penjualan, laba, stok, hutang/piutang.',
-    rencana: [
-      'Laba dengan tanda: bagian pasti (dari faktur) vs perkiraan (dari saldo awal)',
-      'Produk terlaris/lambat, laporan harian per kasir, diskon per pelanggan',
-    ],
+    ringkasan: 'Harian, bulanan (kalender), rentang bebas.',
+    rencana: ['Laba (pasti vs perkiraan)', 'Susut, potongan, diskon pelanggan', 'Laporan harian per kasir'],
   },
   {
     path: 'pengaturan',
     judul: 'Pengaturan',
-    ringkasan: 'Toko, data induk, pengguna, aturan transaksi.',
+    ringkasan: 'Toko, pengguna, aturan, data induk.',
     rencana: [
-      'Toko: profil, struk & printer, penomoran nota',
-      'Data induk: satuan (boleh desimal atau tidak), kategori, metode bayar, akun kas',
-      'Pengguna: akun kasir, hak akses, PIN pemilik',
-      'Aturan: batas kasbon default, boleh jual saat stok habis, pembulatan',
+      'Toko: profil, catatan struk, penomoran, stasiun printer',
+      'Pengguna, PIN, mode, izin',
+      'Aturan: potongan Rp 500 / Rp 10.000, retur 3×24 jam, target untung 5%, susut 2%',
+      'Data induk: satuan, kategori, kategori pengeluaran, tempat uang, ruko',
     ],
   },
 ];

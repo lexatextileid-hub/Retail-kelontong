@@ -12,7 +12,7 @@ import { buatSku, kategoriBawaan, kelompokBawaan } from './kategoriBawaan';
 import type { DiskonPelanggan, LapisanStok, Pelanggan, Produk } from './tipe';
 
 const gula: Produk = {
-  id: 'gula', nama: 'Gula Pasir', kategoriId: 'sembako', satuanDasarId: 'kg', stokMinimum: 25,
+  id: 'gula', sku: 'SMB-00001', nama: 'Gula Pasir', kategoriId: 'sembako', satuanDasarId: 'kg', stokMinimum: 25,
   metodeHarga: 'bertingkat', aktif: true,
   satuan: [
     { id: 'gula-kg', satuanId: 'kg', label: 'kg', isi: 1, dibeli: false, dijual: true },
@@ -26,7 +26,7 @@ const gula: Produk = {
 };
 
 const rokok: Produk = {
-  id: 'rokok-a', nama: 'Rokok A', kategoriId: 'rokok', satuanDasarId: 'bungkus', stokMinimum: 10,
+  id: 'rokok-a', sku: 'RKK-00001', nama: 'Rokok A', kategoriId: 'rokok', satuanDasarId: 'bungkus', stokMinimum: 10,
   metodeHarga: 'per_satuan', aktif: true, tingkatHarga: [],
   satuan: [
     { id: 'rk-bks', satuanId: 'bungkus', label: 'Bungkus', isi: 1, dibeli: false, dijual: true, hargaJual: 32000 },

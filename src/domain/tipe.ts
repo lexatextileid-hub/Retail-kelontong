@@ -36,7 +36,9 @@ export type MetodeHarga = 'per_satuan' | 'bertingkat';
 
 export interface Produk {
   id: string;
-  kode?: string; // kode pendek untuk ketik cepat, mis. "SRM"
+  sku: string; // otomatis: kode kategori + nomor urut, mis. "SMB-00012"; tidak pernah berubah
+  kode?: string; // kode cepat untuk ketik cepat, mis. "SRM"
+  letak?: string; // catatan letak, mis. "Rak toko, Gudang ruko 5"
   nama: string;
   kategoriId: string;
   satuanDasarId: string;

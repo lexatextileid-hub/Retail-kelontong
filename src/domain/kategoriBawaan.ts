@@ -29,6 +29,8 @@ export const kategoriBawaan: KategoriBawaan[] = [
   { kode: 'MIN', nama: 'Mi & Makanan Instan', kelompok: 'Makanan' },
   { kode: 'SNK', nama: 'Makanan Ringan', kelompok: 'Makanan' },
   { kode: 'SSU', nama: 'Susu', kelompok: 'Makanan' },
+  { kode: 'UMB', nama: 'Bawang & Umbi', kelompok: 'Makanan' },
+  { kode: 'RMP', nama: 'Rempah Kering', kelompok: 'Makanan' },
   { kode: 'MNM', nama: 'Minuman', kelompok: 'Minuman' },
   { kode: 'RKK', nama: 'Rokok', kelompok: 'Rokok' },
   { kode: 'PRD', nama: 'Perawatan Diri', kelompok: 'Perawatan Diri' },

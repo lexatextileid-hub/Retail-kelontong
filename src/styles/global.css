@@ -98,3 +98,50 @@ h2 { font-size: 17px; font-weight: 700; }
   text-transform: uppercase; color: var(--teks-3);
 }
 .teks-pudar { color: var(--teks-3); }
+
+/* ---------- Pola bersama ---------- */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.tumpuk { display: flex; flex-direction: column; gap: 14px; }
+.baris-isian { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.dua-kolom { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.baris-tombol { display: flex; gap: 8px; flex-wrap: wrap; }
+.tautan { border: none; background: none; padding: 0; color: var(--biru); font-weight: 600; font-size: 13px; cursor: pointer; }
+.tautan:hover { color: var(--biru-tua); text-decoration: underline; }
+.kotak { border: 1px solid var(--garis); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 10px; background: var(--permukaan-2); }
+.centang { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.centang input { width: 18px; height: 18px; accent-color: var(--biru); flex: none; }
+
+.ringkas-total { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 14px; }
+.ringkas-total--besar { font-size: 16px; }
+.ringkas-total--besar strong { font-size: 22px; }
+.ringkas-total--hijau strong { color: var(--biru-tua); font-size: 20px; }
+
+.catatan { margin: 0; padding: 8px 10px; border-radius: 6px; font-size: 12.5px; line-height: 1.4; }
+.catatan--info { background: var(--biru-muda); color: var(--biru-tua); }
+.catatan--peringatan { background: var(--peringatan-latar); color: var(--peringatan); }
+.catatan--bahaya { background: var(--bahaya-latar); color: var(--bahaya); }
+
+.input-rp {
+  display: flex; align-items: center; gap: 6px; height: 44px; padding: 0 12px;
+  border: 1px solid var(--garis-kuat); border-radius: var(--radius); background: var(--permukaan);
+  font-weight: 400;
+}
+.input-rp span { color: var(--teks-3); font-size: 13px; }
+.input-rp input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-size: 16px; text-align: right; }
+.input-rp:focus-within { outline: 2px solid var(--biru); outline-offset: 1px; }
+.input-rp--kecil { height: 32px; padding: 0 8px; width: 130px; }
+.input-rp--kecil input { font-size: 14px; }
+
+.saklar { display: inline-flex; border: 1px solid var(--garis-kuat); border-radius: var(--radius); overflow: hidden; height: 42px; }
+.saklar button { border: none; background: var(--permukaan); padding: 0 14px; font-weight: 600; cursor: pointer; }
+.saklar button + button { border-left: 1px solid var(--garis-kuat); }
+.saklar button[aria-pressed='true'] { background: var(--biru); color: #fff; }
+
+/* ---------- Dialog ---------- */
+.dialog-latar {
+  position: fixed; inset: 0; background: rgba(23, 32, 51, 0.45); z-index: 50;
+  display: flex; align-items: flex-start; justify-content: center; padding: 6vh 16px 16px; overflow-y: auto;
+}
+.dialog { background: var(--permukaan); border-radius: var(--radius-besar); width: 100%; box-shadow: 0 18px 48px rgba(23, 32, 51, 0.25); }
+.dialog__kepala { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px 0 20px; }
+.dialog__isi { padding: 12px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
