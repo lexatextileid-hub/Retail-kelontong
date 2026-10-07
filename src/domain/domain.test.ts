@@ -7,6 +7,7 @@ import { formatStok } from '../lib/format';
 import { ambilFifo, modalBarisFaktur } from './fifo';
 import { hitungHargaBaris } from './harga';
 import { cekKasbon } from './kasbon';
+import { kunciNama, satuanBawaan } from './satuanBawaan';
 import type { DiskonPelanggan, LapisanStok, Pelanggan, Produk } from './tipe';
 
 const gula: Produk = {
@@ -131,6 +132,19 @@ describe('FIFO (Sarimi)', () => {
   it('barang bonus menurunkan modal per satuan dasar', () => {
     // beli 10 dus isi 40 @ Rp 120.000, bonus 1 dus
     expect(modalBarisFaktur(1_200_000, 400, 40)).toBeCloseTo(2727.27, 2);
+  });
+});
+
+describe('master satuan bawaan', () => {
+  it('nama dan singkatan tidak ada yang ganda', () => {
+    const nama = satuanBawaan.map((s) => kunciNama(s.nama));
+    const singkatan = satuanBawaan.map((s) => kunciNama(s.singkatan));
+    expect(new Set(nama).size).toBe(nama.length);
+    expect(new Set(singkatan).size).toBe(singkatan.length);
+  });
+  it('"PCS", "pcs." dan " Pcs " dianggap sama', () => {
+    expect(new Set(['PCS', 'pcs.', ' Pcs ']).size).toBe(3);
+    expect(new Set(['PCS', 'pcs.', ' Pcs '].map(kunciNama)).size).toBe(1);
   });
 });
 

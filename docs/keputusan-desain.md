@@ -41,6 +41,7 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - Master Satuan ada di **Back Office → Pengaturan → Data Induk → Satuan**; hanya pemilik yang menambah/mengubah. "+ Satuan baru" di dropdown hanya untuk pemilik dan menulis ke master yang sama.
 - Pencegahan ganda saat menambah data induk (satuan, kategori, barang, pelanggan, distributor): nama dibandingkan tanpa beda huruf besar/kecil, spasi, dan tanda baca, dan nama yang mirip ditampilkan sebagai peringatan sebelum disimpan. Singkatan satuan unik. Pelanggan/distributor juga dicek dari nomor HP.
 - Bila terlanjur ganda, pemilik bisa **menggabungkan** dua data menjadi satu (semua riwayat ikut pindah).
+- **Master satuan bawaan** (`src/domain/satuanBawaan.ts`): nama baku memakai sebutan resmi Coretax DJP bila ada (Karton, Boks, Lusin, Lembar, Kilogram, Gram, Liter, Piece→Pcs), sisanya sebutan lapangan (Bungkus, Sachet, Renteng, Pak, Slop, Bal, Karung, Botol, Kaleng, Galon, Tabung, Krat, Tray, Butir, Ikat, Mililiter). Setiap satuan menyimpan padanan kode Coretax (UM.0033 = Lainnya). Singkatan: Bungkus = **bks**, Boks = **boks**. Satuan lain ditambah sendiri oleh pemilik.
 
 ## Satuan
 
