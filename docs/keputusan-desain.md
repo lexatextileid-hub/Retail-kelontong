@@ -212,7 +212,17 @@ Setiap barang memilih satu metode:
 - **Barang terjual sebelum fakturnya diinput**: pakai modal sementara (harga beli terakhir), dikoreksi otomatis saat faktur masuk.
 - Penelitian di beberapa toko Indomaret juga menemukan pemakaian FIFO; FIFO di sistem harus dibarengi FIFO fisik di rak.
 
-## Pesanan grosir
+## Pesanan kecil (WA, barang sudah ada di stok)
+
+- **Bukan menu Pesanan**, tapi keranjang kasir yang ditahan:
+  1. Pesanan WA masuk → kasir input di layar Penjualan.
+  2. **Cetak "Daftar Siapkan"** (barang, jumlah, letak, kolom nama penyiap) untuk staf.
+  3. **Tahan** dengan nama, mis. "Warung Bu Sri (WA)".
+  4. Staf menyiapkan dari kertas.
+  5. Barang diserahkan → kasir membuka keranjang tertahan → bayar atau tempo. **Transaksi baru terjadi di sini.**
+- Selama ditahan stok belum berkurang, tapi barangnya ditandai **"sedang dipesan"**; kasir lain diingatkan bila menjual barang yang sama melebihi stok yang tersisa.
+
+## Pesanan grosir (barang belum ada, perlu order ke distributor)
 
 - **Menu tersendiri, terpisah dari POS.** POS untuk pembeli yang datang dan langsung membawa barang; Pesanan untuk pembeli yang memesan dulu.
 - Status: Dicatat → Barang datang → Disiapkan → Diserahkan/Diantar → Lunas.
