@@ -276,6 +276,22 @@ Setiap barang memilih satu metode:
 - Hitung stok wajib mencakup toko + 11 ruko; form menyediakan baris per tempat lalu dijumlahkan.
 - Bisa ditingkatkan nanti ke stok terpisah Toko vs Gudang tanpa membongkar data.
 
+## Barang ikutan (bundling) & pantauan per distributor
+
+- Distributor kadang mewajibkan barang ikutan (mis. beli 20 slop A Mild wajib ambil 1 slop rokok lain yang sulit laku, sehingga dijual rugi atau pokok).
+- Barang ikutan ditandai di baris faktur (terhubung ke barang utama & distributor). Usulan pencatatan modal (rugi barang ikutan dibebankan ke barang utama) menunggu konfirmasi pemilik.
+- **Laporan per distributor untuk bahan nego:** barang dari tiap distributor dikelompokkan **laku / lambat / berhenti** (tidak ada penjualan dalam X hari), nilai stok yang mengendap, dan total rugi dari barang ikutan.
+
+## Angka bawaan
+
+- **Target untung bawaan: 5%** dari modal (bisa ditimpa per kategori/barang).
+- **Batas susut repack: 1 kg per 50 kg (2%)**; lebih dari itu muncul peringatan dan wajib alasan.
+
+## Printer
+
+- **Satu printer thermal untuk semua**: struk, daftar siapkan, surat jalan, bukti kas keluar.
+- Laporan harian bisa dipilih **cetak thermal** atau **cetak biasa/PDF** (unduh).
+
 ## Stok habis
 
 - Barang yang habis atau di bawah stok minimum otomatis masuk **daftar order** di Back Office (dengan distributor yang terakhir paling murah).
