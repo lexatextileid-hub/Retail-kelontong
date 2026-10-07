@@ -79,6 +79,13 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - Potongan dibagi **proporsional ke semua barang** di transaksi supaya margin per barang tetap akurat.
 - Laporan menampilkan pembulatan, diskon akhir, dan diskon pelanggan secara terpisah, per hari dan per kasir.
 
+## Penjualan: hal teknis
+
+- **Internet mati:** kasir tetap bisa berjualan; transaksi disimpan di perangkat dan otomatis terkirim saat online. Selama offline, kasbon dan diskon akhir di atas batas tidak bisa dipakai.
+- **Metode bayar: tunai, transfer, kasbon, atau campuran. Tanpa QRIS.**
+- **Retur dari pembeli:** uang kembali, tukar barang, atau potong kasbon. Barang kembali: masuk stok lagi atau rusak. Selalu perlu PIN pemilik.
+- **Kasir bersamaan:** boleh beberapa perangkat sekaligus, tapi **setiap perangkat harus akun yang berbeda** (satu akun hanya aktif di satu perangkat).
+
 ## Kasbon di layar Penjualan
 
 - Saat pelanggan dipilih, tampil kasbon berjalan (jumlah, banyak nota, nota tertua) dan batasnya. Kasir boleh melihat ini.
