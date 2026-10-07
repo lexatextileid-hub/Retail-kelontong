@@ -4,7 +4,8 @@ Dokumen ini mencatat aturan bisnis yang sudah disepakati. Kode di `src/domain/` 
 
 ## Gambaran usaha
 
-- Toko kelontong, eceran sekaligus grosir, toko fisik (POS/kasir).
+- Toko kelontong di pasar, toko fisik (POS/kasir), dengan **tiga model penjualan**: retail (eceran), grosir (pembeli datang langsung), dan **pesanan grosir**.
+- **12 ruko di pasar:** 1 ruko pusat untuk berjualan (semua pembeli dilayani di sini, satu kasir/kas), 11 ruko sebagai gudang penyimpanan.
 - Usaha sudah berjalan; sistem harus bisa mulai dari saldo awal.
 - Barang dibeli dari banyak distributor, cash atau tempo, dengan harga berbeda-beda.
 - Barang datang diinput dari **kertas faktur**, polanya mirip apotek. Scan barcode tidak wajib.
@@ -20,7 +21,10 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 
 ## Mode kerja & hak akses
 
-- Operasional dibagi per **mode**: **Kasir** (Penjualan, Kasbon, Riwayat, Kas Laci) dan **Gudang** (Barang Masuk, Repack, Hitung Stok). Ditambah **Back Office** untuk pemilik/admin.
+- Operasional dibagi per **mode**:
+  - **Kasir:** Penjualan (retail & grosir datang langsung), Pesanan, Kasbon, Riwayat, Kas Laci
+  - **Gudang:** Stok Barang, Barang Masuk, Siapkan Pesanan, Repack, Hitung Stok
+  - Ditambah **Back Office** untuk pemilik/admin.
 - Setiap orang masuk dengan **PIN sendiri**; semua pekerjaan tercatat atas namanya. Pindah mode cukup dengan PIN.
 - Diatur pemilik di Back Office → Pengaturan → Pengguna & Hak Akses: mode yang boleh dibuka per orang, izin rinci per mode, aturan per mode.
 - Izin yang tidak dimiliki bisa dijalankan di tempat dengan **PIN pemilik**; tercatat siapa yang menyetujui.
@@ -138,6 +142,31 @@ Setiap barang memilih satu metode:
 - Total modal jangka panjang sama dengan metode lain; FIFO dipilih karena modal tiap penjualan bisa ditelusuri ke faktur asalnya.
 - **Barang terjual sebelum fakturnya diinput**: pakai modal sementara (harga beli terakhir), dikoreksi otomatis saat faktur masuk.
 - Penelitian di beberapa toko Indomaret juga menemukan pemakaian FIFO; FIFO di sistem harus dibarengi FIFO fisik di rak.
+
+## Pesanan grosir
+
+- **Menu tersendiri, terpisah dari POS.** POS untuk pembeli yang datang dan langsung membawa barang; Pesanan untuk pembeli yang memesan dulu.
+- Status: Dicatat → Barang datang → Disiapkan → Diserahkan/Diantar → Lunas.
+- Kasir/pemilik mencatat dan menagih (Mode Kasir → Pesanan); gudang menyiapkan dan menyerahkan, cetak nota/surat jalan (Mode Gudang → Siapkan Pesanan). Satu data pesanan, status bergerak bersama.
+- **Barang numpang lewat:** faktur bisa berisi barang yang sudah dipesan pembeli (mis. 72 karton). Saat input faktur baris ditandai "untuk pesanan X": stok masuk lalu **langsung terkunci** untuk pesanan itu, tidak bisa dijual kasir.
+- Modal pesanan seperti ini diambil **langsung dari baris faktur tersebut** (bukan antrian FIFO stok umum), jadi untung pesanan tepat.
+- Faktur campuran: sisa di luar pesanan masuk stok umum seperti biasa.
+- Belum diputuskan: pembayaran pesanan lunas saat terima atau tempo; urutan (pesan dulu baru order ke distributor, atau sebaliknya); barang kadang diantar langsung distributor ke pembeli?
+
+## Lokasi stok (12 ruko)
+
+- **Dipilih: satu stok per barang + catatan letak.** Jumlah stok dihitung satu angka (toko + semua gudang), cukup untuk akurasi penjualan, modal, laba, hutang.
+- Data barang punya kolom **letak** (mis. "Rak toko, Gudang ruko 5") supaya pegawai tahu mengambil ke mana.
+- Faktur boleh mencatat **diturunkan di ruko berapa**, untuk memperbarui catatan letak.
+- Tidak ada pencatatan perpindahan antar ruko.
+- Hitung stok wajib mencakup toko + 11 ruko; form menyediakan baris per tempat lalu dijumlahkan.
+- Bisa ditingkatkan nanti ke stok terpisah Toko vs Gudang tanpa membongkar data.
+
+## Stok habis
+
+- Barang yang habis atau di bawah stok minimum otomatis masuk **daftar order** di Back Office (dengan distributor yang terakhir paling murah).
+- Kasir punya tombol "Lapor: barang tidak ada di rak" bila sistem mencatat stok tapi barang tidak ada.
+- Belum diputuskan: barang ada di rak tapi stok sistem 0 → boleh dijual dengan peringatan (stok minus) atau diblokir. Usulan: boleh dengan peringatan, masuk daftar "stok minus" di Back Office.
 
 ## Repack (bungkus ulang)
 
