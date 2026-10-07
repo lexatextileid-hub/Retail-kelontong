@@ -109,6 +109,13 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - Laporan **harian** (per kasir) dan **bulanan**. Periode bulanan mengikuti kalender: tanggal 1 sampai akhir bulan (28/29/30/31 menyesuaikan).
 - Rentang tanggal bebas tetap bisa dipilih untuk melihat laporan.
 
+## Tempat uang (akun kas)
+
+- Tiga jenis tempat uang: **Laci** (satu per kasir), **Brankas**, **Bank** (bisa beberapa rekening).
+- Perpindahan antar tempat dicatat sebagai **pindah dana**, bukan pemasukan/pengeluaran: laci → brankas, laci → bank, brankas → bank, brankas → laci (modal awal).
+- Setiap pembayaran (dari pelanggan atau ke distributor) dan pengeluaran menyebut tempat uangnya.
+- Saldo tiap tempat tampil di posisi usaha.
+
 ## Pembayaran (pelanggan & distributor)
 
 - Pembayaran dicatat **terpisah dari faktur/nota**: satu faktur bisa dibayar berkali-kali, dengan metode campuran (tunai + transfer); satu pembayaran bisa menutup beberapa faktur.
