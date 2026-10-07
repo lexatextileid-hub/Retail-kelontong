@@ -1,1 +1,0 @@
-{"root":["./src/App.tsx","./src/main.tsx","./src/navigasi.tsx","./src/components/Merek.tsx","./src/components/RencanaModul.tsx","./src/domain/domain.test.ts","./src/domain/fifo.ts","./src/domain/harga.ts","./src/domain/kasbon.ts","./src/domain/tipe.ts","./src/layouts/LayoutBackOffice.tsx","./src/layouts/LayoutOperasional.tsx","./src/lib/format.ts"],"version":"5.9.3"}
