@@ -63,6 +63,17 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - **Pembulatan** harga hasil hitung ke kelipatan yang diatur di Pengaturan (mis. ke atas ke Rp 100); % ditampilkan dari harga setelah dibulatkan.
 - Laporan memakai **untung dari penjualan (margin)**. Label selalu ditulis jelas ("dari modal" / "dari penjualan").
 - Harga beli naik → sistem bisa mengusulkan harga jual baru dengan % untung yang sama.
+- **Pembulatan harga bawaan: tanpa pembulatan** (usaha semi-FMCG, selisih Rp 100 berarti bagi pembeli). Harga hasil hitung hanya usulan; ada pilihan cepat di sekitarnya dengan % untung masing-masing. Pembulatan bisa diatur per barang bila perlu. Harga yang diketik manual tidak pernah diubah sistem.
+
+## Potongan di akhir transaksi (kasir)
+
+- Total belanja **tidak dibulatkan** otomatis.
+- Kasir mengetik **jumlah yang dibayar pelanggan**; sistem menghitung selisihnya dan menawarkan "Jadikan potongan" (atau "Jadikan kasbon" untuk pelanggan terdaftar).
+- **Pembulatan:** potongan sampai **Rp 500** → kasir langsung boleh.
+- **Diskon akhir (nego):** potongan sampai **Rp 10.000** → kasir boleh tanpa PIN; **di atas Rp 10.000 perlu PIN pemilik**. Kedua batas diatur di Pengaturan.
+- Berlaku juga untuk pelanggan Umum (potongan, bukan kasbon).
+- Potongan dibagi **proporsional ke semua barang** di transaksi supaya margin per barang tetap akurat.
+- Laporan menampilkan pembulatan, diskon akhir, dan diskon pelanggan secara terpisah, per hari dan per kasir.
 
 ## Harga jual
 
