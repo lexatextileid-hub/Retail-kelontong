@@ -18,6 +18,18 @@ Dokumen ini mencatat aturan bisnis yang sudah disepakati. Kode di `src/domain/` 
 
 Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung stok, pemilik memeriksa dan menyetujui di Back Office.
 
+## Mode kerja & hak akses
+
+- Operasional dibagi per **mode**: **Kasir** (Penjualan, Kasbon, Riwayat, Kas Laci) dan **Gudang** (Barang Masuk, Repack, Hitung Stok). Ditambah **Back Office** untuk pemilik/admin.
+- Setiap orang masuk dengan **PIN sendiri**; semua pekerjaan tercatat atas namanya. Pindah mode cukup dengan PIN.
+- Diatur pemilik di Back Office → Pengaturan → Pengguna & Hak Akses: mode yang boleh dibuka per orang, izin rinci per mode, aturan per mode.
+- Izin yang tidak dimiliki bisa dijalankan di tempat dengan **PIN pemilik**; tercatat siapa yang menyetujui.
+- **Tertutup untuk pegawai secara bawaan:** menambah produk baru, mengelola data pelanggan, mengelola data distributor.
+- **Pelanggan baru dari kasir:** boleh, hanya nama + nomor HP, **batas kasbon otomatis Rp 0**. Hanya pemilik yang bisa menaikkan batas kasbon (dan mengubah diskon/data lain) di Back Office.
+- Kasir boleh mencari & memilih pelanggan terdaftar.
+- Faktur yang memuat barang belum terdaftar bisa disimpan sebagai **draf**; diselesaikan setelah pemilik mendaftarkan barangnya.
+- Belum diputuskan: kasir melihat sisa kasbon atau tidak; gudang melihat riwayat harga beli atau tidak; kasir boleh menjual "Barang lain-lain" (nama + harga manual, tanpa stok) atau tidak.
+
 ## Satuan
 
 - **Satuan dasar = satuan terkecil yang dijual**, bukan terkecil secara fisik. Gula: kg. Rokok: bungkus (tidak dijual per batang). Mi: pcs.
