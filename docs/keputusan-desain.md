@@ -89,10 +89,10 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 
 ## Kas Laci, Riwayat & Laporan Harian (Mode Kasir)
 
-- **Laci per kasir**: setiap kasir punya shift dan laporan laci sendiri.
-- **Buka shift:** modal awal laci.
-- **Selama shift:** pengeluaran operasional (dengan keterangan), **bayar distributor** (pilih fakturnya; boleh dilakukan kasir), **setor tunai ke bank** (bisa beberapa kali; dicatat sebagai pindah dana laci → rekening, bukan pengeluaran), retur uang kembali.
-- **Tutup shift:** kasir mengetik **total uang fisik** (tidak per pecahan); sistem menampilkan selisih.
+- **Tidak ada shift.** Satu kasir = satu laci = satu laporan per hari.
+- **Buka kasir (awal hari):** modal awal laci.
+- **Selama hari itu:** pengeluaran operasional (dengan keterangan), **bayar distributor** (pilih fakturnya; boleh dilakukan kasir), **setor tunai ke bank** (bisa beberapa kali; dicatat sebagai pindah dana laci → rekening, bukan pengeluaran), retur uang kembali.
+- **Tutup kasir (akhir hari):** kasir mengetik **total uang fisik** (tidak per pecahan); sistem menampilkan selisih.
 - **Selisih wajib disetujui pemilik**, karena itu kerugian. Saat menyetujui pemilik memilih: ditanggung toko (biaya) atau **dibebankan ke kasir** (tercatat sebagai tagihan ke kasir).
 - **Laporan harian:** modal awal; uang masuk tunai (penjualan, pembayaran kasbon, pembayaran pesanan); uang keluar tunai (bayar distributor per faktur, pengeluaran operasional, setor tunai, retur); seharusnya di laci; uang fisik; selisih. Catatan non-tunai: penjualan transfer, kasbon baru, potongan pembulatan/diskon akhir.
 - **Riwayat transaksi:** semua nota (penjualan, pembayaran kasbon, pesanan, retur), bisa dicari/difilter; buka nota untuk cetak ulang, kirim WhatsApp, atau retur (PIN pemilik).

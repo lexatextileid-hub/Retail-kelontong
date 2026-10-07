@@ -61,7 +61,7 @@ export const menuOperasional: Menu[] = [
     path: 'riwayat',
     judul: 'Riwayat',
     ringkasan: 'Transaksi hari ini dan cetak ulang struk.',
-    rencana: ['Daftar transaksi shift ini', 'Cetak ulang struk', 'Batal/retur dengan PIN pemilik'],
+    rencana: ['Daftar transaksi hari ini', 'Cetak ulang struk', 'Batal/retur dengan PIN pemilik'],
   },
 ];
 
@@ -129,7 +129,7 @@ export const menuBackOffice: Menu[] = [
     ringkasan: 'Penjualan, laba, stok, hutang/piutang.',
     rencana: [
       'Laba dengan tanda: bagian pasti (dari faktur) vs perkiraan (dari saldo awal)',
-      'Produk terlaris/lambat, rekap shift kasir, diskon per pelanggan',
+      'Produk terlaris/lambat, laporan harian per kasir, diskon per pelanggan',
     ],
   },
   {
