@@ -125,7 +125,9 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
   - **Back Office:** laci kasir mana pun, brankas, atau rekening bank mana pun.
   - **Kasir:** laci sendiri (bawaan); brankas atau bank bisa dipilih dengan **PIN pemilik**.
   Back Office menampilkan semua pengeluaran dari kedua pintu (cermin); kasir hanya melihat pengeluaran yang ia catat.
-- **Format pengeluaran:** tanggal (otomatis), kategori, jumlah, sumber dana, keterangan, foto nota (opsional), dicatat oleh (otomatis).
+- **Format pengeluaran:** tanggal (otomatis), kategori, jumlah, sumber dana, **keterangan (wajib)**, **nama penerima (wajib)**, foto nota (opsional, karena tidak semua ada nota), dicatat oleh (otomatis).
+- Setiap pengeluaran bisa **dicetak sebagai bukti kas keluar** (lewat stasiun printer atau unduh PDF) dengan kolom tanda tangan penerima, untuk ditandatangani manual.
+- **Ongkos angkut barang dari distributor = pengeluaran biasa** (kategori bongkar muat & angkut), tidak ditambahkan ke modal barang.
 - **Kategori awal** (bisa diubah di Pengaturan): bongkar muat & angkut; retribusi & keamanan pasar; kemasan; kebutuhan toko harian; listrik, air, internet; gaji & uang makan; sewa ruko; perbaikan & perawatan; lain-lain (wajib keterangan).
 - Bukan pengeluaran (punya jalur sendiri): bayar distributor, prive, setor bank/brankas, retur ke pembeli.
 - **Prive (ambil pemilik)** bisa dari tempat uang mana pun: laci (saat tutup kasir), brankas, atau bank. Selalu dicatat sebagai prive, tidak mengurangi laba. Laporan bulanan menampilkan total prive per sumber.
