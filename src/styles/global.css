@@ -1,0 +1,100 @@
+/* Warna dan ukuran dasar. Ubah di sini, semua halaman ikut. */
+:root {
+  --biru: #1e5bd8;
+  --biru-tua: #1743a6;
+  --biru-muda: #e8effc;
+  --biru-garis: #c9d7f5;
+
+  --latar: #f4f6fa;
+  --permukaan: #ffffff;
+  --permukaan-2: #f5f7fb;
+
+  --teks: #172033;
+  --teks-2: #485163;
+  --teks-3: #5b6475;
+  --teks-pudar: #7a8396;
+
+  --garis: #e2e6ee;
+  --garis-kuat: #d6dce6;
+  --garis-halus: #edf0f5;
+
+  --peringatan: #8a5a00;
+  --peringatan-latar: #fff6e3;
+  --bahaya: #b42318;
+  --bahaya-latar: #fdecea;
+
+  --radius: 8px;
+  --radius-besar: 12px;
+  --font: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--teks);
+  background: var(--latar);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--biru); }
+a:hover { color: var(--biru-tua); }
+
+h1, h2, h3 { margin: 0; }
+h1 { font-size: 24px; font-weight: 700; }
+h2 { font-size: 17px; font-weight: 700; }
+
+:focus-visible { outline: 2px solid var(--biru); outline-offset: 2px; }
+
+/* ---------- Tombol ---------- */
+.tombol {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 40px; padding: 0 16px;
+  border-radius: var(--radius); border: 1px solid var(--garis-kuat);
+  background: var(--permukaan); font-weight: 600; cursor: pointer;
+  text-decoration: none; color: var(--teks); white-space: nowrap;
+}
+.tombol:hover { background: var(--permukaan-2); color: var(--teks); }
+.tombol:disabled { opacity: 0.5; cursor: not-allowed; }
+.tombol--utama { background: var(--biru); border-color: var(--biru); color: #fff; }
+.tombol--utama:hover { background: var(--biru-tua); color: #fff; }
+.tombol--hantu { border-color: transparent; background: transparent; color: var(--teks-2); font-weight: 500; }
+.tombol--hantu:hover { background: var(--permukaan-2); }
+.tombol--putus { border-style: dashed; color: var(--biru-tua); }
+.tombol--besar { height: 52px; font-size: 16px; }
+.tombol--kecil { height: 32px; padding: 0 10px; font-size: 13px; }
+
+/* ---------- Isian ---------- */
+.isian { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
+.isian__kontrol {
+  height: 42px; padding: 0 12px;
+  border: 1px solid var(--garis-kuat); border-radius: var(--radius);
+  background: var(--permukaan); font-size: 14px; font-weight: 400;
+}
+.isian__bantuan { font-size: 12px; font-weight: 400; color: var(--teks-3); }
+
+/* ---------- Kartu & label ---------- */
+.kartu {
+  background: var(--permukaan); border: 1px solid var(--garis);
+  border-radius: var(--radius-besar); padding: 20px;
+}
+.lencana {
+  display: inline-flex; align-items: center; padding: 2px 8px;
+  border-radius: 4px; font-size: 11.5px; font-weight: 600;
+  background: var(--biru-muda); color: var(--biru-tua);
+}
+.lencana--peringatan { background: var(--peringatan-latar); color: var(--peringatan); }
+.lencana--bahaya { background: var(--bahaya-latar); color: var(--bahaya); }
+.lencana--netral { background: var(--permukaan-2); color: var(--teks-2); }
+
+.label-kecil {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--teks-3);
+}
+.teks-pudar { color: var(--teks-3); }

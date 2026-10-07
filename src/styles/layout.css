@@ -1,0 +1,52 @@
+/* ---------- Operasional (kasir) ---------- */
+.ops { height: 100%; display: flex; flex-direction: column; }
+.ops__atas {
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  padding: 10px 20px; background: var(--permukaan); border-bottom: 1px solid var(--garis);
+}
+.ops__menu { display: flex; gap: 4px; flex-wrap: wrap; flex: 1 1 auto; }
+.ops__menu a {
+  display: inline-flex; align-items: center; height: 40px; padding: 0 14px;
+  border-radius: var(--radius); color: var(--teks-2); font-weight: 500; text-decoration: none;
+}
+.ops__menu a:hover { background: var(--permukaan-2); color: var(--teks); }
+.ops__menu a.active { background: var(--biru-muda); color: var(--biru-tua); font-weight: 600; }
+.ops__aksi { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ops__isi { flex: 1; min-height: 0; overflow: auto; }
+
+/* ---------- Back Office ---------- */
+.bo { min-height: 100%; display: flex; flex-wrap: wrap; }
+.bo__samping {
+  flex: 1 1 220px; max-width: 100%;
+  background: var(--permukaan); border-right: 1px solid var(--garis);
+  padding: 16px 12px; display: flex; flex-direction: column; gap: 4px;
+}
+.bo__samping a {
+  display: flex; align-items: center; height: 40px; padding: 0 12px;
+  border-radius: var(--radius); color: var(--teks-2); font-weight: 500; text-decoration: none;
+}
+.bo__samping a:hover { background: var(--permukaan-2); color: var(--teks); }
+.bo__samping a.active { background: var(--biru-muda); color: var(--biru-tua); font-weight: 600; }
+.bo__samping-bawah { margin-top: auto; padding-top: 16px; }
+.bo__isi { flex: 999 1 640px; min-width: 0; padding: 24px 32px; display: flex; flex-direction: column; gap: 18px; }
+
+@media (max-width: 720px) {
+  .bo__samping { flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--garis); }
+  .bo__samping-bawah { margin-top: 0; padding-top: 0; }
+  .bo__isi { padding: 16px; }
+}
+
+/* ---------- Merek toko ---------- */
+.merek { display: flex; align-items: center; gap: 10px; padding: 4px 8px; }
+.merek__logo {
+  width: 34px; height: 34px; border-radius: var(--radius); flex: none;
+  background: var(--biru); color: #fff; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 13px;
+}
+.merek__nama { font-weight: 700; font-size: 15px; }
+.merek__sub { font-size: 12px; color: var(--teks-3); }
+
+/* ---------- Halaman modul yang belum dibangun ---------- */
+.rencana { max-width: 760px; display: flex; flex-direction: column; gap: 16px; }
+.rencana ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--teks-2); }
+.ops .rencana { padding: 24px 20px; }
