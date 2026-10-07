@@ -99,7 +99,8 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 
 ## Retur
 
-- **Retur dari pembeli → Mode Kasir → Retur.** Dianggap pembeli **tidak membawa struk**; nota dicari lewat dua jalur: **Riwayat (pilih tanggal)** atau **nama pelanggan**. Pilih barang & jumlah → uang kembali / tukar barang / potong kasbon. Barang kembali ditandai bagus (masuk stok) atau rusak. Harga & modal mengikuti nota asli. Perlu PIN pemilik.
+- **Kebijakan retur pembeli: wajib dengan nota, maksimal 3×24 jam** sejak transaksi. Tanpa nota atau lewat 72 jam → ditolak. Kalimat "Retur barang harus dengan nota, maksimal 3×24 jam" dicetak di bawah setiap struk.
+- **Retur dari pembeli → Mode Kasir → Retur.** Nota dicocokkan lewat nomor nota di struk, atau dicari lewat **Riwayat (pilih tanggal)** atau **nama pelanggan**. Pilih barang & jumlah → uang kembali / tukar barang / potong kasbon. Barang kembali ditandai bagus (masuk stok) atau rusak. Harga & modal mengikuti nota asli. Perlu PIN pemilik.
 - **Retur ke distributor → Mode Gudang → Retur ke Distributor.** Pilih distributor & faktur asal → potong hutang / uang kembali / diganti barang. Fitur aktif untuk semua; di data distributor ada tanda **"menerima retur: ya/tidak"** sebagai panduan.
 - **Barang Rusak (Mode Gudang):** penampung barang rusak dari retur pembeli, hitung stok, atau gudang; diputuskan dikembalikan ke distributor atau dibuang (dicatat sebagai kerugian).
 
