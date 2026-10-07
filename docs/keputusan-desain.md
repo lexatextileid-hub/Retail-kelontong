@@ -43,6 +43,15 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - Bila terlanjur ganda, pemilik bisa **menggabungkan** dua data menjadi satu (semua riwayat ikut pindah).
 - **Master satuan bawaan** (`src/domain/satuanBawaan.ts`): nama baku memakai sebutan resmi Coretax DJP bila ada (Karton, Boks, Lusin, Lembar, Kilogram, Gram, Liter, Piece→Pcs), sisanya sebutan lapangan (Bungkus, Sachet, Renteng, Pak, Slop, Bal, Karung, Botol, Kaleng, Galon, Tabung, Krat, Tray, Butir, Ikat, Mililiter). Setiap satuan menyimpan padanan kode Coretax (UM.0033 = Lainnya). Singkatan: Bungkus = **bks**, Boks = **boks**. Satuan lain ditambah sendiri oleh pemilik.
 
+## Kategori & SKU
+
+- **Dua tingkat: kelompok → kategori** (mengikuti pola GS1 GPC dan minimarket). Kasir memfilter per kategori; laporan bisa diringkas per kelompok. Kode di `src/domain/kategoriBawaan.ts`.
+- Kategori bawaan (kode): **Makanan** — Sembako (SMB), Bumbu Dapur (BMB), Mi & Makanan Instan (MIN), Makanan Ringan (SNK), Susu (SSU); **Minuman** — Minuman (MNM); **Rokok** — Rokok (RKK); **Perawatan Diri** — Perawatan Diri (PRD); **Kebersihan & Rumah Tangga** — Kebersihan Rumah (KBR), Perlengkapan Rumah Tangga (RTG), Gas & Air Galon (GAS); **Bayi** — Perlengkapan Bayi (BYI); **Kesehatan** — Obat & Kesehatan (OBT); **Lainnya** — Alat Tulis (ATK), Pakan Hewan (PKN), Lain-lain (LLN).
+- Pemilik bisa menambah kategori; kode 3 huruf, unik.
+- **SKU = kode kategori + nomor urut 5 digit** (mis. SMB-00012), dibuat otomatis, unik, **tidak berubah** walau barang dipindah kategori.
+- Selain SKU: **kode cepat** (opsional, unik, untuk ketik cepat) dan **barcode per satuan** (opsional, unik).
+- Barang hasil repack masuk kategori barangnya (Gula 1 kg bungkus → Sembako).
+
 ## Satuan
 
 - **Satuan dasar = satuan terkecil yang dijual**, bukan terkecil secara fisik. Gula: kg. Rokok: bungkus (tidak dijual per batang). Mi: pcs.

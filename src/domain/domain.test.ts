@@ -8,6 +8,7 @@ import { ambilFifo, modalBarisFaktur } from './fifo';
 import { hitungHargaBaris } from './harga';
 import { cekKasbon } from './kasbon';
 import { kunciNama, satuanBawaan } from './satuanBawaan';
+import { buatSku, kategoriBawaan, kelompokBawaan } from './kategoriBawaan';
 import type { DiskonPelanggan, LapisanStok, Pelanggan, Produk } from './tipe';
 
 const gula: Produk = {
@@ -145,6 +146,20 @@ describe('master satuan bawaan', () => {
   it('"PCS", "pcs." dan " Pcs " dianggap sama', () => {
     expect(new Set(['PCS', 'pcs.', ' Pcs ']).size).toBe(3);
     expect(new Set(['PCS', 'pcs.', ' Pcs '].map(kunciNama)).size).toBe(1);
+  });
+});
+
+describe('kategori & SKU', () => {
+  it('kode kategori 3 huruf dan unik, kelompoknya terdaftar', () => {
+    const kode = kategoriBawaan.map((k) => k.kode);
+    expect(new Set(kode).size).toBe(kode.length);
+    expect(kode.every((k) => /^[A-Z]{3}$/.test(k))).toBe(true);
+    expect(kategoriBawaan.every((k) => (kelompokBawaan as readonly string[]).includes(k.kelompok))).toBe(true);
+  });
+  it('SKU lanjut dari nomor terbesar dalam kategori yang sama', () => {
+    expect(buatSku('SMB', [])).toBe('SMB-00001');
+    expect(buatSku('SMB', ['SMB-00001', 'SMB-00002', 'RKK-00009'])).toBe('SMB-00003');
+    expect(buatSku('rkk', ['SMB-00001', 'RKK-00009'])).toBe('RKK-00010');
   });
 });
 
