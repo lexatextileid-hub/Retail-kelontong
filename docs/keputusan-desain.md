@@ -83,6 +83,19 @@ Setiap barang memilih satu metode:
 - **Barang terjual sebelum fakturnya diinput**: pakai modal sementara (harga beli terakhir), dikoreksi otomatis saat faktur masuk.
 - Penelitian di beberapa toko Indomaret juga menemukan pemakaian FIFO; FIFO di sistem harus dibarengi FIFO fisik di rak.
 
+## Repack (bungkus ulang)
+
+- Barang besar dibeli lewat faktur seperti biasa (mis. Gula Pasir 50 kg); stoknya langsung masuk dan bisa dijual curah.
+- Barang hasil repack adalah **barang tersendiri** (mis. "Gula Pasir 1 kg (bungkus)", "½ kg (bungkus)"). Tidak pernah dibeli dari distributor; stoknya hanya bertambah lewat **transaksi Repack**.
+- Di data barang hasil repack diisi sekali: bahan + takaran per bungkus (1 bungkus = 1 kg Gula Pasir), dan **batas susut wajar** (mis. 2%).
+- Repack dicatat terpisah dari faktur, kapan pun dikerjakan, sekaligus atau sebagian. Input: bahan dipakai, hasil jadi, sisa dikembalikan.
+- **Susut dihitung sistem** = bahan − (hasil × takaran) − sisa. Bisa negatif (kelebihan). Tumpah/tercecer tidak perlu ditimbang; otomatis masuk susut.
+- Susut melewati batas → wajib pilih alasan (tumpah, kemasan rusak, karung kurang, lainnya + catatan) dan ditandai untuk diperiksa pemilik.
+- Modal per bungkus = (modal bahan terpakai menurut FIFO + biaya plastik bila dihitung) ÷ jumlah bungkus jadi.
+- **Data susut disimpan per repack**: tanggal, pegawai, barang, bahan, hasil, sisa, susut (kg, %, Rp), alasan, distributor asal bahan. Laporan susut per barang, per pegawai, per distributor.
+- Opsional: kolom "berat aktual" saat barang datang, supaya karung kurang dari distributor terpisah dari susut saat membungkus.
+- Belum diputuskan: siapa yang mengerjakan repack (menu di kasir atau Back Office); biaya plastik dihitung atau tidak.
+
 ## Mulai dari usaha yang sudah berjalan
 
 - Tidak memasukkan sejarah; cukup **saldo awal** per tanggal mulai.
