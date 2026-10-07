@@ -151,7 +151,9 @@ Setiap barang memilih satu metode:
 - **Barang numpang lewat:** faktur bisa berisi barang yang sudah dipesan pembeli (mis. 72 karton). Saat input faktur baris ditandai "untuk pesanan X": stok masuk lalu **langsung terkunci** untuk pesanan itu, tidak bisa dijual kasir.
 - Modal pesanan seperti ini diambil **langsung dari baris faktur tersebut** (bukan antrian FIFO stok umum), jadi untung pesanan tepat.
 - Faktur campuran: sisa di luar pesanan masuk stok umum seperti biasa.
-- Belum diputuskan: pembayaran pesanan lunas saat terima atau tempo; urutan (pesan dulu baru order ke distributor, atau sebaliknya); barang kadang diantar langsung distributor ke pembeli?
+- **Pembayaran pesanan: lunas saat terima atau tempo** (keduanya). Tempo tercatat sebagai piutang pelanggan dengan jatuh tempo.
+- **Urutan: pembeli pesan dulu → baru order ke distributor.** Pesanan yang belum ada stoknya muncul di daftar "perlu diorder".
+- **Barang tidak pernah diantar langsung dari distributor ke pembeli** (risiko). Selalu masuk ke ruko dulu, dicek, lalu diserahkan.
 
 ## Lokasi stok (12 ruko)
 
@@ -166,7 +168,10 @@ Setiap barang memilih satu metode:
 
 - Barang yang habis atau di bawah stok minimum otomatis masuk **daftar order** di Back Office (dengan distributor yang terakhir paling murah).
 - Kasir punya tombol "Lapor: barang tidak ada di rak" bila sistem mencatat stok tapi barang tidak ada.
-- Belum diputuskan: barang ada di rak tapi stok sistem 0 → boleh dijual dengan peringatan (stok minus) atau diblokir. Usulan: boleh dengan peringatan, masuk daftar "stok minus" di Back Office.
+- **Barang ada di rak tapi stok sistem 0:** penjualan **tetap jalan** (pembeli tidak ditolak), stok jadi minus, kasir melihat peringatan.
+- Sistem otomatis membuat **tugas tindak lanjut untuk admin**: "cek apakah semua faktur barang ini sudah diinput" (barang datang setiap hari).
+  - Faktur belum diinput → admin menginput, stok minus beres sendiri, modal sementara dikoreksi.
+  - Semua faktur sudah diinput → barang ditandai **"stok minus belum terjelaskan"** dan diselidiki asal kelebihannya (salah hitung, salah isi kemasan, dll.) sampai dibetulkan lewat penyesuaian/opname.
 
 ## Repack (bungkus ulang)
 
