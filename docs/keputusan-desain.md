@@ -12,7 +12,7 @@ Dokumen ini mencatat aturan bisnis yang sudah disepakati. Kode di `src/domain/` 
 
 ## Struktur aplikasi
 
-**Operasional (kasir):** Penjualan, Kasbon, Barang Masuk, Hitung Stok, Riwayat, Kas masuk/keluar, Buka/Tutup kasir. Kasir tidak melihat modal dan laba.
+**Operasional (khusus kasir):** Penjualan, Kasbon, Barang Masuk, Hitung Stok, Riwayat, Kas masuk/keluar, Buka/Tutup kasir. Kasir tidak melihat modal dan laba.
 
 **Back Office (pemilik/admin):** Dashboard, Produk, Kontak, Pembelian, Inventori, Hutang & Piutang, Keuangan, Laporan, Pengaturan.
 
@@ -27,6 +27,11 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - Satu satuan bisa: dibeli saja, dijual saja, atau keduanya.
 - **Satu barang bisa punya beberapa kemasan dengan isi berbeda**, mis. Sarimi "Dus isi 50" dan "Dus isi 25" sebagai dua baris satuan. Label di dropdown selalu menyebut isinya.
 - Di dropdown satuan ada "+ Satuan baru" supaya tidak perlu pindah ke Pengaturan.
+- Barang bisa punya 2 tingkat (besar + kecil, mis. Sarimi: karton isi 25 pcs) atau 3 tingkat (besar + sedang + kecil, mis. Taro: karton isi 5 renteng, renteng isi 10 pcs → karton = 50 pcs).
+- **Isi ditulis relatif ke satuan di bawahnya** ("karton isi 5 renteng"); sistem menghitung isi dalam satuan dasar.
+- **Urutan satuan:** saat menjual (kasir) dari kecil ke besar; saat membeli (faktur) dari besar ke kecil.
+- Di kasir, pilihan satuan tampil langsung bersama harganya; satuan berbeda untuk barang yang sama = baris terpisah.
+- Form faktur dan hitung stok memakai kolom per tingkat satuan (mis. Karton | Renteng | Pcs); hanya tingkat yang dimiliki barang itu yang tampil, total dihitung otomatis.
 
 ## Harga jual
 
@@ -59,6 +64,9 @@ Setiap barang memilih satu metode:
 
 - Kepala faktur: distributor, nomor faktur kertas, tanggal, cash/tempo, jatuh tempo (dari termin distributor).
 - Baris: barang (cari nama/kode pendek), satuan, isi (terisi otomatis, bisa diubah, tercatat & ditandai), qty, harga, diskon.
+- **Isi kemasan wajib dicek fisik oleh penerima barang**, karena banyak faktur tidak mencantumkannya. Baris baru bisa disimpan setelah "Sudah dicek fisik" dicentang.
+- Isi berbeda dari data barang → pilih: **kemasan baru** (dibuat satuan baru, mis. "Karton isi 4 renteng") atau **hanya kali ini** (dicatat di baris faktur, ditandai untuk diperiksa pemilik).
+- Barang baru bisa dibuatkan rantai satuannya langsung dari layar Barang Masuk.
 - Satuan dan harga terakhir dari distributor yang sama terisi otomatis.
 - Total input dicocokkan dengan total yang tertulis di kertas faktur.
 - Diskon faktur dibagi proporsional ke setiap baris. Barang bonus masuk dengan harga 0 (menurunkan modal).
