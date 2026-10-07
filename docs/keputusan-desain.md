@@ -34,6 +34,14 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - Faktur yang memuat barang belum terdaftar bisa disimpan sebagai **draf**; diselesaikan setelah pemilik mendaftarkan barangnya.
 - Belum diputuskan: kasir melihat sisa kasbon atau tidak; gudang melihat riwayat harga beli atau tidak; kasir boleh menjual "Barang lain-lain" (nama + harga manual, tanpa stok) atau tidak.
 
+## Tidak ada data ganda
+
+- **1 barang = 1 SKU.** Satuan (pcs, renteng, karton, kemasan isi berbeda) adalah baris satuan dari SKU yang sama, bukan SKU baru. Barang hasil repack adalah barang fisik berbeda sehingga punya SKU sendiri.
+- **Satuan hanya dipilih dari dropdown Master Satuan**, tidak pernah diketik bebas di form barang/faktur/kasir. Nama satuan baku (mis. "Pcs", bukan "picis"/"PCS"/"pcs.").
+- Master Satuan ada di **Back Office → Pengaturan → Data Induk → Satuan**; hanya pemilik yang menambah/mengubah. "+ Satuan baru" di dropdown hanya untuk pemilik dan menulis ke master yang sama.
+- Pencegahan ganda saat menambah data induk (satuan, kategori, barang, pelanggan, distributor): nama dibandingkan tanpa beda huruf besar/kecil, spasi, dan tanda baca, dan nama yang mirip ditampilkan sebagai peringatan sebelum disimpan. Singkatan satuan unik. Pelanggan/distributor juga dicek dari nomor HP.
+- Bila terlanjur ganda, pemilik bisa **menggabungkan** dua data menjadi satu (semua riwayat ikut pindah).
+
 ## Satuan
 
 - **Satuan dasar = satuan terkecil yang dijual**, bukan terkecil secara fisik. Gula: kg. Rokok: bungkus (tidak dijual per batang). Mi: pcs.
