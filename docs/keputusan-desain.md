@@ -22,8 +22,8 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 ## Mode kerja & hak akses
 
 - Operasional dibagi per **mode**:
-  - **Kasir:** Penjualan (retail & grosir datang langsung), Pesanan, Kasbon, Riwayat, Kas Laci
-  - **Gudang:** Stok Barang, Barang Masuk, Siapkan Pesanan, Repack, Hitung Stok
+  - **Kasir:** Penjualan (retail & grosir datang langsung), Pesanan, Kasbon, Retur, Riwayat, Kas Laci
+  - **Gudang:** Stok Barang, Barang Masuk, Siapkan Pesanan, Repack, Hitung Stok, Retur ke Distributor, Barang Rusak
   - Ditambah **Back Office** untuk pemilik/admin.
 - Setiap orang masuk dengan **PIN sendiri**; semua pekerjaan tercatat atas namanya. Pindah mode cukup dengan PIN.
 - Diatur pemilik di Back Office → Pengaturan → Pengguna & Hak Akses: mode yang boleh dibuka per orang, izin rinci per mode, aturan per mode.
@@ -96,6 +96,17 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - **Selisih wajib disetujui pemilik**, karena itu kerugian. Saat menyetujui pemilik memilih: ditanggung toko (biaya) atau **dibebankan ke kasir** (tercatat sebagai tagihan ke kasir).
 - **Laporan harian:** modal awal; uang masuk tunai (penjualan, pembayaran kasbon, pembayaran pesanan); uang keluar tunai (bayar distributor per faktur, pengeluaran operasional, setor tunai, retur); seharusnya di laci; uang fisik; selisih. Catatan non-tunai: penjualan transfer, kasbon baru, potongan pembulatan/diskon akhir.
 - **Riwayat transaksi:** semua nota (penjualan, pembayaran kasbon, pesanan, retur), bisa dicari/difilter; buka nota untuk cetak ulang, kirim WhatsApp, atau retur (PIN pemilik).
+
+## Retur
+
+- **Retur dari pembeli → Mode Kasir → Retur.** Dianggap pembeli **tidak membawa struk**; nota dicari lewat dua jalur: **Riwayat (pilih tanggal)** atau **nama pelanggan**. Pilih barang & jumlah → uang kembali / tukar barang / potong kasbon. Barang kembali ditandai bagus (masuk stok) atau rusak. Harga & modal mengikuti nota asli. Perlu PIN pemilik.
+- **Retur ke distributor → Mode Gudang → Retur ke Distributor.** Pilih distributor & faktur asal → potong hutang / uang kembali / diganti barang. Fitur aktif untuk semua; di data distributor ada tanda **"menerima retur: ya/tidak"** sebagai panduan.
+- **Barang Rusak (Mode Gudang):** penampung barang rusak dari retur pembeli, hitung stok, atau gudang; diputuskan dikembalikan ke distributor atau dibuang (dicatat sebagai kerugian).
+
+## Periode laporan
+
+- Laporan **harian** (per kasir) dan **bulanan**. Periode bulanan mengikuti kalender: tanggal 1 sampai akhir bulan (28/29/30/31 menyesuaikan).
+- Rentang tanggal bebas tetap bisa dipilih untuk melihat laporan.
 
 ## Pembayaran (pelanggan & distributor)
 
