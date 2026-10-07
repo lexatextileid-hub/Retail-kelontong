@@ -75,6 +75,20 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - Potongan dibagi **proporsional ke semua barang** di transaksi supaya margin per barang tetap akurat.
 - Laporan menampilkan pembulatan, diskon akhir, dan diskon pelanggan secara terpisah, per hari dan per kasir.
 
+## Kasbon di layar Penjualan
+
+- Saat pelanggan dipilih, tampil kasbon berjalan (jumlah, banyak nota, nota tertua) dan batasnya. Kasir boleh melihat ini.
+- Pelanggan bisa **bayar kasbon sekalian belanja**, boleh sebagian: tombol "Bayar kasbon" menambah baris pembayaran ke tagihan yang sama; sekali terima uang.
+- Dicatat terpisah: belanja = penjualan, kasbon = pembayaran piutang (omzet tidak tercampur). Pembayaran menutup nota tertua dulu.
+- Struk mencetak sisa kasbon setelah transaksi.
+- Dalam satu transaksi: bayar kasbon **atau** tambah kasbon baru, tidak keduanya.
+
+## Struk
+
+- Perangkat kasir campuran (iPhone, Android). Web app tidak bisa langsung mencetak ke printer Bluetooth dari iPhone/iPad.
+- **Dipilih: antrian cetak + satu stasiun printer.** Printer thermal Bluetooth dipasangkan ke satu perangkat tetap di meja kasir (mis. HP Android lama/laptop) yang selalu menyala dan membuka halaman "Stasiun Printer". Semua perangkat kasir mengirim struk ke antrian di database; stasiun mencetaknya.
+- Struk juga bisa **diunduh** (gambar/PDF) dan **dikirim lewat WhatsApp** sebagai cadangan.
+
 ## Harga jual
 
 Setiap barang memilih satu metode:
