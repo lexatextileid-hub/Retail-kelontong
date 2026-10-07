@@ -115,7 +115,13 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - Perpindahan antar tempat dicatat sebagai **pindah dana**, bukan pemasukan/pengeluaran: laci → brankas, laci → bank, brankas → bank, brankas → laci (modal awal).
 - Setiap pembayaran (dari pelanggan atau ke distributor) dan pengeluaran menyebut tempat uangnya.
 - Saldo tiap tempat tampil di posisi usaha.
-- **Akhir hari:** kasir menutup kasir lalu menyerahkan uang laci ke pemilik; pemilik mengonfirmasi jumlah yang diterima (PIN) dan uang masuk **Brankas**. Modal awal laci keesokan hari diambil pemilik dari brankas.
+- **Akhir hari (tutup kasir):** uang fisik laci dibagi ke:
+  - **disisakan di laci** sebagai modal besok (saldo laci terbawa ke hari berikutnya; modal awal besok = sisa ini, bisa ditambah dari brankas);
+  - **diserahkan ke brankas lewat pemilik** (pemilik konfirmasi jumlah dengan PIN);
+  - **disetor ke bank** (tidak tentu, kadang-kadang);
+  - **diambil pemilik sebagai prive** (dicatat "ambil pemilik", bukan biaya toko; tidak mengurangi laba).
+  Jumlah pembagian harus sama dengan uang fisik.
+- **Bayar distributor bisa dua cara:** kasir membayar dari laci memakai pendapatan hari itu; atau pemilik **menitipkan uang dari brankas** ke kasir (dicatat pindah dana brankas → laci "titipan bayar distributor"), lalu kasir membayar dan memilih fakturnya.
 - **Brankas hanya diakses pemilik**, dikelola di **Back Office**: pembayaran distributor, setor ke bank, dan pengeluaran lain dari brankas dicatat di sana dengan **buku brankas** sendiri (saldo + daftar keluar-masuk).
 - Laporan harian kasir **hanya mencakup laci**; kasir tidak perlu tahu atau menghitung isi brankas.
 
