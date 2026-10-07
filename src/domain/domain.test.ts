@@ -76,8 +76,14 @@ describe('diskon pelanggan', () => {
   it('Amir tanpa entri diskon: harga normal', () => {
     expect(hitungHargaBaris(gula, 'gula-kg', 7, amir, diskon).diskon).toBe(0);
   });
-  it('pelanggan Umum tidak pernah dapat diskon pelanggan', () => {
-    expect(hitungHargaBaris(gula, 'gula-kg', 7, umum, diskon, 5000).diskon).toBe(0);
+  it('pelanggan Umum tidak dapat diskon pelanggan (saran 0)', () => {
+    const h = hitungHargaBaris(gula, 'gula-kg', 7, umum, [{ pelangganId: 'umum', produkId: 'gula', jenis: 'potongan_rp', nilai: 200 }]);
+    expect(h.diskonSaran).toBe(0);
+    expect(h.diskon).toBe(0);
+  });
+  it('diskon yang diketik kasir berlaku juga untuk Umum, maksimal sebesar harga', () => {
+    expect(hitungHargaBaris(gula, 'gula-kg', 7, umum, diskon, 2000).netto).toBe(40000);
+    expect(hitungHargaBaris(gula, 'gula-kg', 1, umum, diskon, 99999).netto).toBe(0);
   });
 });
 

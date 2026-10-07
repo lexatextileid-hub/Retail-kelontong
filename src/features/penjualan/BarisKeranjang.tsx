@@ -91,9 +91,14 @@ export function BarisKeranjang({
         </div>
       )}
 
-      {punyaDiskon && (
+      {!punyaDiskon && baris.diskonManual === undefined && (
+        <button type="button" className="tautan" style={{ alignSelf: 'flex-start' }} onClick={() => onDiskon(0)}>
+          + Diskon
+        </button>
+      )}
+      {(punyaDiskon || baris.diskonManual !== undefined) && (
         <div className="kr-diskon">
-          <label htmlFor={`diskon-${baris.id}`}>Diskon {namaPelanggan}</label>
+          <label htmlFor={`diskon-${baris.id}`}>{punyaDiskon ? `Diskon ${namaPelanggan}` : 'Diskon'}</label>
           <div className="input-rp input-rp--kecil">
             <span aria-hidden="true">−Rp</span>
             <input
@@ -103,10 +108,13 @@ export function BarisKeranjang({
               onChange={(e) => onDiskon(Number(e.target.value.replace(/\D/g, '')) || 0)}
             />
           </div>
-          {hasil.diskonDiubah && (
+          {punyaDiskon && hasil.diskonDiubah && (
             <button type="button" className="tautan" onClick={() => onDiskon(undefined)}>
               diubah · saran {rupiah(hasil.diskonSaran)}
             </button>
+          )}
+          {!punyaDiskon && (
+            <button type="button" className="tautan" onClick={() => onDiskon(undefined)}>Hapus diskon</button>
           )}
         </div>
       )}

@@ -101,3 +101,7 @@
   .pj__keranjang { border-left: none; border-top: 1px solid var(--garis); }
   .dua-kolom { grid-template-columns: minmax(0, 1fr); }
 }
+
+.stepper--besar { height: 44px; }
+.stepper--besar button { width: 44px; font-size: 18px; }
+.stepper--besar input { width: 72px; font-size: 18px; }

@@ -28,13 +28,13 @@ export function DialogStruk({ nota, onSelesai }: { nota: Nota; onSelesai: () => 
               <span>{rupiah(b.bruto)}</span>
             </div>
             {b.diskon > 0 && (
-              <div className="struk__baris"><span>  Diskon pelanggan</span><span>−{rupiah(b.diskon)}</span></div>
+              <div className="struk__baris"><span>  Diskon</span><span>−{rupiah(b.diskon)}</span></div>
             )}
           </div>
         ))}
         <div className="struk__garis" />
         <div className="struk__baris"><span>Subtotal</span><span>{rupiah(nota.subtotal)}</span></div>
-        {nota.diskonPelanggan > 0 && <div className="struk__baris"><span>Diskon pelanggan</span><span>−{rupiah(nota.diskonPelanggan)}</span></div>}
+        {nota.diskonPelanggan > 0 && <div className="struk__baris"><span>Diskon</span><span>−{rupiah(nota.diskonPelanggan)}</span></div>}
         {nota.potongan > 0 && <div className="struk__baris"><span>{nota.jenisPotongan}</span><span>−{rupiah(nota.potongan)}</span></div>}
         <div className="struk__baris struk__tebal"><span>TOTAL BELANJA</span><span>{rupiah(nota.total)}</span></div>
         {nota.bayarKasbon > 0 && <div className="struk__baris"><span>Bayar kasbon</span><span>{rupiah(nota.bayarKasbon)}</span></div>}

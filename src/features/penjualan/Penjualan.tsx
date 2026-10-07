@@ -64,6 +64,7 @@ export function Penjualan() {
   const subtotal = hasilBaris.reduce((t, x) => t + x.hasil.bruto, 0);
   const diskonPelanggan = hasilBaris.reduce((t, x) => t + x.hasil.diskon, 0);
   const total = subtotal - diskonPelanggan;
+  const diskonKasir = hasilBaris.reduce((t, x) => t + Math.max(0, x.hasil.diskon - x.hasil.diskonSaran), 0);
 
   const ubahBaris = (id: string, patch: Partial<Keranjang['baris'][number]>) =>
     setAktif((k) => ({ ...k, baris: k.baris.map((b) => (b.id === id ? { ...b, ...patch } : b)) }));
@@ -269,7 +270,7 @@ export function Penjualan() {
         <div className="pj__total">
           <div className="ringkas-total"><span>Subtotal · {aktif.baris.length} baris</span><span>{rupiah(subtotal)}</span></div>
           {diskonPelanggan > 0 && (
-            <div className="ringkas-total"><span>Diskon pelanggan</span><span>−{rupiah(diskonPelanggan)}</span></div>
+            <div className="ringkas-total"><span>Diskon</span><span>−{rupiah(diskonPelanggan)}</span></div>
           )}
           <div className="ringkas-total ringkas-total--besar"><span>Total</span><strong>{rupiah(total)}</strong></div>
           <div className="pj__aksi">
@@ -284,7 +285,7 @@ export function Penjualan() {
       {pilihSatuan && (
         <DialogSatuan produk={pilihSatuan} onPilih={(s, qty) => tambah(pilihSatuan.id, s, qty)} onTutup={() => setPilihSatuan(null)} />
       )}
-      {dialog === 'bayar' && <DialogBayar belanja={total} pelanggan={plg} onBatal={() => setDialog(null)} onSelesai={selesai} />}
+      {dialog === 'bayar' && <DialogBayar belanja={total} diskonKasir={diskonKasir} pelanggan={plg} onBatal={() => setDialog(null)} onSelesai={selesai} />}
       {dialog === 'tahan' && (
         <DialogTahan namaAwal={plg.jenis === 'umum' ? '' : plg.nama} onTahan={tahan} onTutup={() => setDialog(null)} />
       )}

@@ -18,6 +18,7 @@ export function DialogSatuan({
   const timbang = daftar.length === 1 && bolehDesimal(daftar[0].satuanId);
   const [berat, setBerat] = useState('');
   const [pakaiGram, setPakaiGram] = useState(true);
+  const [qty, setQty] = useState('1');
 
   if (timbang) {
     const s = daftar[0];
@@ -64,12 +65,28 @@ export function DialogSatuan({
     );
   }
 
+  const jumlah = Math.max(1, Math.floor(Number(qty) || 1));
   return (
     <Dialog judul={produk.nama} onTutup={onTutup} lebar={560}>
-      <p className="teks-pudar" style={{ margin: 0 }}>Pilih satuan</p>
+      <div className="baris-isian" style={{ alignItems: 'center' }}>
+        <label htmlFor="jumlah-satuan" className="label-kecil">Jumlah</label>
+        <div className="stepper stepper--besar">
+          <button type="button" onClick={() => setQty(String(Math.max(1, jumlah - 1)))} aria-label="Kurangi">−</button>
+          <input
+            id="jumlah-satuan"
+            inputMode="numeric"
+            autoFocus
+            value={qty}
+            onFocus={(e) => e.target.select()}
+            onChange={(e) => setQty(e.target.value.replace(/\D/g, ''))}
+          />
+          <button type="button" onClick={() => setQty(String(jumlah + 1))} aria-label="Tambah">+</button>
+        </div>
+        <span className="teks-pudar" style={{ fontSize: 13 }}>lalu pilih satuan</span>
+      </div>
       <div className="pilih-satuan">
         {daftar.map((s) => (
-          <button key={s.id} type="button" className="pilih-satuan__item" onClick={() => onPilih(s.id, 1)} autoFocus={s === daftar[0]}>
+          <button key={s.id} type="button" className="pilih-satuan__item" onClick={() => onPilih(s.id, jumlah)}>
             <span className="pilih-satuan__label">{s.label}</span>
             {produk.metodeHarga === 'bertingkat' ? (
               <span className="pilih-satuan__harga">
@@ -88,6 +105,9 @@ export function DialogSatuan({
             )}
             {s.isi > 1 && (
               <span className="pilih-satuan__isi">= {s.isi.toLocaleString('id-ID')} {singkatan(produk.satuanDasarId)}</span>
+            )}
+            {jumlah > 1 && produk.metodeHarga !== 'bertingkat' && (
+              <span className="pilih-satuan__isi">{jumlah} × = {rupiah(jumlah * (s.hargaJual ?? 0))}</span>
             )}
           </button>
         ))}

@@ -77,7 +77,8 @@ export function hitungHargaBaris(
   }
 
   const diskonSaran = hitungDiskonSaran(pelanggan, produk.id, daftarDiskon, jumlahDasar, bruto);
-  const diskon = pelanggan.jenis === 'umum' ? 0 : Math.max(0, Math.min(bruto, diskonManual ?? diskonSaran));
+  // Diskon pelanggan (saran) tidak berlaku untuk Umum; diskon yang diketik kasir berlaku untuk siapa pun.
+  const diskon = Math.max(0, Math.min(bruto, diskonManual ?? diskonSaran));
 
   return {
     jumlahDasar,

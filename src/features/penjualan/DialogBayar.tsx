@@ -21,11 +21,14 @@ export interface HasilBayar {
 
 export function DialogBayar({
   belanja,
+  diskonKasir,
   pelanggan,
   onBatal,
   onSelesai,
 }: {
   belanja: number;
+  /** Diskon per barang yang diketik kasir di luar diskon pelanggan; ikut dihitung ke batas tanpa PIN. */
+  diskonKasir: number;
   pelanggan: PelangganContoh;
   onBatal: () => void;
   onSelesai: (h: HasilBayar) => void;
@@ -48,14 +51,19 @@ export function DialogBayar({
 
   // Kekurangan: potongan atau kasbon
   const jenisPotongan: HasilBayar['jenisPotongan'] = kurang <= BATAS_PEMBULATAN ? 'Pembulatan' : 'Diskon akhir';
-  const potonganPerluPin = kurang > BATAS_DISKON_AKHIR_TANPA_PIN;
+  // Batas tanpa PIN berlaku untuk gabungan diskon kasir per barang + potongan akhir (pembulatan tidak dihitung).
+  const potonganDihitung = jenisPotongan === 'Pembulatan' ? 0 : kurang;
+  const potonganPerluPin = diskonKasir + potonganDihitung > BATAS_DISKON_AKHIR_TANPA_PIN;
+  const diskonKasirPerluPin = diskonKasir > BATAS_DISKON_AKHIR_TANPA_PIN;
   const bolehKasbon = terdaftar && !bayarKasbonAktif;
   const cek = bolehKasbon ? cekKasbon(pelanggan, pelanggan.saldoKasbon, kurang) : null;
   const kasbonPerluPin = cek !== null && !cek.boleh;
   const modeKurang = bolehKasbon ? pilihan : 'potongan';
   const potonganTidakBisa = bayarKasbonAktif && kurang > 0;
 
-  const perluPin = kurang > 0 && !potonganTidakBisa && (modeKurang === 'potongan' ? potonganPerluPin : kasbonPerluPin);
+  const perluPin =
+    diskonKasirPerluPin ||
+    (kurang > 0 && !potonganTidakBisa && (modeKurang === 'potongan' ? potonganPerluPin : kasbonPerluPin));
   const pinBenar = pin === PIN_PEMILIK_CONTOH;
   const siap = !transferLebih && !potonganTidakBisa && (!perluPin || pinBenar);
 
@@ -85,6 +93,11 @@ export function DialogBayar({
           <span>Belanja</span>
           <strong>{rupiah(belanja)}</strong>
         </div>
+        {diskonKasir > 0 && (
+          <p className="catatan catatan--info">
+            Termasuk diskon kasir {rupiah(diskonKasir)}{diskonKasirPerluPin ? ' · melebihi Rp 10.000, perlu PIN pemilik' : ''}.
+          </p>
+        )}
 
         {terdaftar && pelanggan.saldoKasbon > 0 && (
           <div className="kotak">
@@ -169,15 +182,16 @@ export function DialogBayar({
                   )}
                 </div>
                 {!terdaftar && <p className="teks-pudar" style={{ margin: 0, fontSize: 12.5 }}>Pelanggan Umum tidak bisa kasbon.</p>}
-                {perluPin && (
-                  <label className="isian" htmlFor="pin-pemilik">
-                    PIN pemilik <span className="isian__bantuan">(pratinjau: 1234)</span>
-                    <input id="pin-pemilik" className="isian__kontrol" type="password" inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value)} />
-                  </label>
-                )}
               </>
             )}
           </div>
+        )}
+
+        {perluPin && (
+          <label className="isian" htmlFor="pin-pemilik">
+            PIN pemilik <span className="isian__bantuan">(pratinjau: 1234)</span>
+            <input id="pin-pemilik" className="isian__kontrol" type="password" inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value)} />
+          </label>
         )}
 
         <button type="submit" className="tombol tombol--utama tombol--besar" disabled={!siap}>
