@@ -230,6 +230,12 @@ Setiap barang memilih satu metode:
 - **Barang numpang lewat:** faktur bisa berisi barang yang sudah dipesan pembeli (mis. 72 karton). Saat input faktur baris ditandai "untuk pesanan X": stok masuk lalu **langsung terkunci** untuk pesanan itu, tidak bisa dijual kasir.
 - Modal pesanan seperti ini diambil **langsung dari baris faktur tersebut** (bukan antrian FIFO stok umum), jadi untung pesanan tepat.
 - Faktur campuran: sisa di luar pesanan masuk stok umum seperti biasa.
+- **Harga pesanan:** dicatat saat pesanan dibuat (perkiraan), lalu **disesuaikan saat faktur dengan harga beli baru masuk**. Sistem menghitung ulang untung; bila **di bawah target untung** barang itu, pesanan berhenti di status "perlu persetujuan" sampai **pemilik menyetujui** (tetap dengan harga lama, atau ubah harga ke pembeli).
+- **Target untung** (% dari modal) diatur per barang (atau kategori) sebagai batas bawah yang wajar.
+- **Uang muka (DP):** opsional; mengurangi tagihan saat serah terima. Bila pesanan batal, DP dikembalikan atau disimpan sebagai saldo pelanggan.
+- **Pengantaran:** diambil pembeli atau diantar toko. Ongkos antar **tidak ditagihkan**, dicatat sebagai pengeluaran biasa. Bila diantar, nota otomatis disertai **surat jalan** (kolom tanda tangan penerima).
+- **Serah terima sebagian ke pembeli: boleh.**
+- **Barang yang diterima dari distributor harus sesuai faktur.** Bila distributor mengirim kurang/beda, toko meminta **faktur pengganti**; faktur yang diinput selalu mengikuti barang yang benar-benar diterima. Selisih ditandai di Barang Masuk sampai faktur pengganti diterima.
 - **Pembayaran pesanan: lunas saat terima atau tempo** (keduanya). Tempo tercatat sebagai piutang pelanggan dengan jatuh tempo.
 - **Urutan: pembeli pesan dulu → baru order ke distributor.** Pesanan yang belum ada stoknya muncul di daftar "perlu diorder".
 - **Barang tidak pernah diantar langsung dari distributor ke pembeli** (risiko). Selalu masuk ke ruko dulu, dicek, lalu diserahkan.
