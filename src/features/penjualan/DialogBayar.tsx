@@ -19,6 +19,18 @@ export interface HasilBayar {
   bayarKasbon: number;
 }
 
+type Metode = 'tunai' | 'transfer' | 'kasbon' | 'campuran';
+
+/** Tombol uang cepat: pecahan wajar di atas tagihan, mis. 17.500 → 20.000, 50.000, 100.000. */
+export function uangCepat(tagihan: number): number[] {
+  const kandidat = [10000, 20000, 50000, 100000, 150000, 200000, 500000, 1000000];
+  const bulat = [5000, 10000, 50000, 100000].map((k) => Math.ceil(tagihan / k) * k);
+  return [...new Set([...bulat, ...kandidat])]
+    .filter((n) => n > tagihan)
+    .sort((a, b) => a - b)
+    .slice(0, 4);
+}
+
 export function DialogBayar({
   belanja,
   diskonKasir,
@@ -34,50 +46,59 @@ export function DialogBayar({
   onSelesai: (h: HasilBayar) => void;
 }) {
   const terdaftar = pelanggan.jenis === 'terdaftar';
+  const [metode, setMetode] = useState<Metode>('tunai');
   const [bayarKasbonAktif, setBayarKasbonAktif] = useState(false);
   const [bayarKasbon, setBayarKasbon] = useState(0);
-  const [tunai, setTunai] = useState(0);
-  const [transfer, setTransfer] = useState(0);
-  const [pilihan, setPilihan] = useState<'potongan' | 'kasbon'>('potongan');
+  const [tunaiInput, setTunai] = useState(0);
+  const [transferInput, setTransfer] = useState<number | null>(null);
+  const [pilihanKurang, setPilihanKurang] = useState<'potongan' | 'kasbon'>('potongan');
   const [pin, setPin] = useState('');
 
   const kasbonDibayar = bayarKasbonAktif ? Math.min(bayarKasbon, pelanggan.saldoKasbon) : 0;
   const tagihan = belanja + kasbonDibayar;
+  const kasbonBisa = terdaftar && !bayarKasbonAktif;
+  const m: Metode = metode === 'kasbon' && !kasbonBisa ? 'tunai' : metode;
+
+  const tunai = m === 'tunai' || m === 'campuran' ? tunaiInput : 0;
+  const transfer = m === 'transfer' ? (transferInput ?? tagihan) : m === 'campuran' ? (transferInput ?? 0) : 0;
   const diterima = tunai + transfer;
   const kurang = Math.max(0, tagihan - diterima);
   const lebih = Math.max(0, diterima - tagihan);
   const kembalian = Math.min(lebih, tunai);
   const transferLebih = lebih > tunai;
 
-  // Kekurangan: potongan atau kasbon
+  const modeKurang: 'potongan' | 'kasbon' = m === 'kasbon' ? 'kasbon' : kasbonBisa ? pilihanKurang : 'potongan';
   const jenisPotongan: HasilBayar['jenisPotongan'] = kurang <= BATAS_PEMBULATAN ? 'Pembulatan' : 'Diskon akhir';
-  // Batas tanpa PIN berlaku untuk gabungan diskon kasir per barang + potongan akhir (pembulatan tidak dihitung).
   const potonganDihitung = jenisPotongan === 'Pembulatan' ? 0 : kurang;
   const potonganPerluPin = diskonKasir + potonganDihitung > BATAS_DISKON_AKHIR_TANPA_PIN;
   const diskonKasirPerluPin = diskonKasir > BATAS_DISKON_AKHIR_TANPA_PIN;
-  const bolehKasbon = terdaftar && !bayarKasbonAktif;
-  const cek = bolehKasbon ? cekKasbon(pelanggan, pelanggan.saldoKasbon, kurang) : null;
+  const cek = modeKurang === 'kasbon' ? cekKasbon(pelanggan, pelanggan.saldoKasbon, kurang) : null;
   const kasbonPerluPin = cek !== null && !cek.boleh;
-  const modeKurang = bolehKasbon ? pilihan : 'potongan';
   const potonganTidakBisa = bayarKasbonAktif && kurang > 0;
 
   const perluPin =
     diskonKasirPerluPin ||
     (kurang > 0 && !potonganTidakBisa && (modeKurang === 'potongan' ? potonganPerluPin : kasbonPerluPin));
-  const pinBenar = pin === PIN_PEMILIK_CONTOH;
-  const siap = !transferLebih && !potonganTidakBisa && (!perluPin || pinBenar);
+  const siap = !transferLebih && !potonganTidakBisa && (!perluPin || pin === PIN_PEMILIK_CONTOH);
 
   const selesai = () => {
     if (!siap) return;
+    const adaKurang = kurang > 0;
     onSelesai({
       tunai,
       transfer,
       kembalian,
-      potongan: kurang > 0 && modeKurang === 'potongan' ? kurang : 0,
-      jenisPotongan: kurang > 0 && modeKurang === 'potongan' ? jenisPotongan : undefined,
-      kasbonBaru: kurang > 0 && modeKurang === 'kasbon' ? kurang : 0,
+      potongan: adaKurang && modeKurang === 'potongan' ? kurang : 0,
+      jenisPotongan: adaKurang && modeKurang === 'potongan' ? jenisPotongan : undefined,
+      kasbonBaru: adaKurang && modeKurang === 'kasbon' ? kurang : 0,
       bayarKasbon: kasbonDibayar,
     });
+  };
+
+  const pilihMetode = (x: Metode) => {
+    setMetode(x);
+    setTransfer(null);
+    if (x !== 'campuran') setTunai(0);
   };
 
   return (
@@ -108,13 +129,8 @@ export function DialogBayar({
             {bayarKasbonAktif && (
               <div className="baris-isian">
                 <InputRupiah id="bayar-kasbon" label="Jumlah bayar kasbon" nilai={bayarKasbon} onUbah={setBayarKasbon} />
-                <button type="button" className="tombol tombol--kecil" onClick={() => setBayarKasbon(pelanggan.saldoKasbon)}>
-                  Lunasi
-                </button>
+                <button type="button" className="tombol tombol--kecil" onClick={() => setBayarKasbon(pelanggan.saldoKasbon)}>Lunasi</button>
               </div>
-            )}
-            {bayarKasbonAktif && bayarKasbon > pelanggan.saldoKasbon && (
-              <p className="catatan catatan--info">Dibatasi sebesar sisa kasbon: {rupiah(pelanggan.saldoKasbon)}</p>
             )}
           </div>
         )}
@@ -124,65 +140,86 @@ export function DialogBayar({
           <strong>{rupiah(tagihan)}</strong>
         </div>
 
-        <div className="dua-kolom">
-          <label className="isian" htmlFor="bayar-tunai">
-            Tunai diterima
-            <InputRupiah id="bayar-tunai" nilai={tunai} onUbah={setTunai} autoFocus />
-          </label>
-          <label className="isian" htmlFor="bayar-transfer">
-            Transfer
-            <InputRupiah id="bayar-transfer" nilai={transfer} onUbah={setTransfer} />
-          </label>
-        </div>
-        <div className="uang-cepat">
-          <button type="button" className="tombol tombol--kecil" onClick={() => { setTunai(Math.max(0, tagihan - transfer)); }}>Uang pas</button>
-          {[50000, 100000, 200000, 500000].filter((n) => n >= tagihan - transfer).slice(0, 3).map((n) => (
-            <button key={n} type="button" className="tombol tombol--kecil" onClick={() => setTunai(n)}>{rupiah(n)}</button>
+        <div className="metode" role="radiogroup" aria-label="Metode bayar">
+          {(['tunai', 'transfer', 'kasbon', 'campuran'] as Metode[]).map((x) => (
+            <button
+              key={x}
+              type="button"
+              role="radio"
+              aria-checked={m === x}
+              disabled={x === 'kasbon' && !kasbonBisa}
+              onClick={() => pilihMetode(x)}
+            >
+              {x === 'tunai' ? 'Tunai' : x === 'transfer' ? 'Transfer' : x === 'kasbon' ? 'Kasbon' : 'Campuran'}
+            </button>
           ))}
-          <button type="button" className="tombol tombol--kecil" onClick={() => { setTransfer(tagihan); setTunai(0); }}>Semua transfer</button>
         </div>
+        {!terdaftar && <p className="teks-pudar" style={{ margin: 0, fontSize: 12.5 }}>Kasbon hanya untuk pelanggan terdaftar.</p>}
+        {terdaftar && bayarKasbonAktif && <p className="teks-pudar" style={{ margin: 0, fontSize: 12.5 }}>Saat membayar kasbon, tidak bisa menambah kasbon baru.</p>}
 
-        {lebih > 0 && !transferLebih && (
-          <div className="ringkas-total ringkas-total--hijau">
+        {(m === 'tunai' || m === 'campuran') && (
+          <label className="isian" htmlFor="bayar-tunai">
+            {m === 'campuran' ? 'Bagian tunai' : 'Uang diterima'}
+            <InputRupiah id="bayar-tunai" nilai={tunaiInput} onUbah={setTunai} autoFocus />
+          </label>
+        )}
+        {m === 'tunai' && (
+          <div className="uang-cepat">
+            <button type="button" className="tombol" onClick={() => setTunai(tagihan)}>Uang pas</button>
+            {uangCepat(tagihan).map((n) => (
+              <button key={n} type="button" className="tombol" onClick={() => setTunai(n)}>{rupiah(n)}</button>
+            ))}
+          </div>
+        )}
+        {(m === 'transfer' || m === 'campuran') && (
+          <label className="isian" htmlFor="bayar-transfer">
+            {m === 'campuran' ? 'Bagian transfer' : 'Nominal transfer diterima'}
+            <InputRupiah id="bayar-transfer" nilai={transfer} onUbah={(n) => setTransfer(n)} />
+          </label>
+        )}
+        {m === 'campuran' && tunaiInput > 0 && (
+          <button type="button" className="tombol tombol--kecil" style={{ alignSelf: 'flex-start' }} onClick={() => setTransfer(Math.max(0, tagihan - tunaiInput))}>
+            Sisanya transfer ({rupiah(Math.max(0, tagihan - tunaiInput))})
+          </button>
+        )}
+
+        {m === 'kasbon' && (
+          <div className="kotak">
+            <div className="ringkas-total"><span>Jadi kasbon</span><strong>{rupiah(kurang)}</strong></div>
+            <div className="ringkas-total">
+              <span>Kasbon setelah ini</span>
+              <span>{rupiah(pelanggan.saldoKasbon + kurang)} dari batas {rupiah(pelanggan.batasKasbon)}</span>
+            </div>
+            {kasbonPerluPin && <p className="catatan catatan--peringatan">Melebihi batas kasbon. Perlu PIN pemilik.</p>}
+          </div>
+        )}
+
+        {m !== 'kasbon' && lebih > 0 && !transferLebih && (
+          <div className="kembalian">
             <span>Kembalian</span>
             <strong>{rupiah(kembalian)}</strong>
           </div>
         )}
         {transferLebih && <p className="catatan catatan--bahaya">Transfer melebihi tagihan. Kembalian hanya bisa dari uang tunai.</p>}
 
-        {kurang > 0 && (
+        {m !== 'kasbon' && kurang > 0 && diterima > 0 && (
           <div className="kotak">
-            <div className="ringkas-total">
-              <span>Kurang</span>
-              <strong>{rupiah(kurang)}</strong>
-            </div>
+            <div className="ringkas-total"><span>Kurang</span><strong>{rupiah(kurang)}</strong></div>
             {potonganTidakBisa ? (
-              <p className="catatan catatan--peringatan">
-                Saat membayar kasbon, belanja harus lunas. Kurangi jumlah bayar kasbon atau tambah uang diterima.
-              </p>
+              <p className="catatan catatan--peringatan">Saat membayar kasbon, belanja harus lunas. Kurangi jumlah bayar kasbon atau tambah uang diterima.</p>
             ) : (
-              <>
-                <div className="pilih-opsi" role="radiogroup" aria-label="Kekurangan dijadikan">
+              <div className="pilih-opsi" role="radiogroup" aria-label="Kekurangan dijadikan">
+                <label className="centang">
+                  <input type="radio" name="kurang" checked={modeKurang === 'potongan'} onChange={() => setPilihanKurang('potongan')} />
+                  Jadikan potongan · <span className="teks-pudar">{jenisPotongan}{potonganPerluPin ? ', perlu PIN pemilik' : ''}</span>
+                </label>
+                {kasbonBisa && (
                   <label className="centang">
-                    <input type="radio" name="kurang" checked={modeKurang === 'potongan'} onChange={() => setPilihan('potongan')} />
-                    Jadikan potongan · <span className="teks-pudar">{jenisPotongan}{potonganPerluPin ? ', perlu PIN pemilik' : ''}</span>
+                    <input type="radio" name="kurang" checked={modeKurang === 'kasbon'} onChange={() => setPilihanKurang('kasbon')} />
+                    Jadikan kasbon · <span className="teks-pudar">{kasbonPerluPin ? 'melebihi batas, perlu PIN pemilik' : 'dalam batas'}</span>
                   </label>
-                  {terdaftar && (
-                    <label className="centang">
-                      <input type="radio" name="kurang" checked={modeKurang === 'kasbon'} onChange={() => setPilihan('kasbon')} disabled={!bolehKasbon} />
-                      Jadikan kasbon ·{' '}
-                      <span className="teks-pudar">
-                        {!bolehKasbon
-                          ? 'tidak bisa bersamaan dengan bayar kasbon'
-                          : cek && !cek.boleh && cek.alasan === 'melebihi_batas'
-                            ? `melebihi sisa batas ${rupiah(Math.max(0, cek.sisaBatas))}, perlu PIN pemilik`
-                            : 'dalam batas'}
-                      </span>
-                    </label>
-                  )}
-                </div>
-                {!terdaftar && <p className="teks-pudar" style={{ margin: 0, fontSize: 12.5 }}>Pelanggan Umum tidak bisa kasbon.</p>}
-              </>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -194,8 +231,8 @@ export function DialogBayar({
           </label>
         )}
 
-        <button type="submit" className="tombol tombol--utama tombol--besar" disabled={!siap}>
-          Selesaikan transaksi
+        <button type="submit" className="tombol tombol--utama tombol--besar" disabled={!siap || (m !== 'kasbon' && diterima === 0 && tagihan > 0)}>
+          {m === 'kasbon' ? `Catat kasbon ${rupiah(kurang)}` : kembalian > 0 ? `Selesai · kembalian ${rupiah(kembalian)}` : 'Selesaikan transaksi'}
         </button>
       </form>
     </Dialog>

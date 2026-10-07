@@ -147,3 +147,26 @@
   .dialog-latar { padding: 16px 12px; align-items: flex-end; }
   .dialog { max-height: calc(100% - 24px); overflow-y: auto; }
 }
+
+/* Metode bayar */
+.metode { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.metode button {
+  height: 48px; border-radius: var(--radius); border: 1px solid var(--garis-kuat); background: var(--permukaan);
+  font-weight: 700; font-size: 14px; cursor: pointer;
+}
+.metode button[aria-checked='true'] { background: var(--biru); border-color: var(--biru); color: #fff; }
+.metode button:disabled { opacity: 0.4; cursor: not-allowed; }
+.uang-cepat .tombol { height: 44px; }
+.kembalian {
+  display: flex; justify-content: space-between; align-items: center; padding: 12px 14px;
+  border-radius: var(--radius); background: var(--biru-muda); color: var(--biru-tua);
+}
+.kembalian strong { font-size: 26px; }
+
+@media (max-width: 860px) {
+  .dialog { margin-top: auto; }
+  .dialog-latar { padding-top: 64px; }
+}
+@media (max-width: 420px) {
+  .metode { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
