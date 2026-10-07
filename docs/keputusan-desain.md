@@ -51,7 +51,15 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - **SKU = kode kategori + nomor urut 5 digit** (mis. SMB-00012), dibuat otomatis, unik, **tidak berubah** walau barang dipindah kategori.
 - Selain SKU: **kode cepat** (opsional, unik, untuk ketik cepat) dan **barcode per satuan** (opsional, unik).
 - Barang hasil repack masuk kategori barangnya (Gula 1 kg bungkus → Sembako).
-- **Ditunda (menunggu data pemilik):** barang segar (bawang, cabai, tomat, dsb.) — kemungkinan kategori "Sayur & Bumbu Segar", dijual ditimbang, harga sering berubah, susut busuk/layu.
+- **Kategori tambahan (kelompok Makanan):** **Bawang & Umbi (UMB)** — bawang merah, bawang bombai, bawang putih, kentang, jahe; **Rempah Kering (RMP)** — bumbu tradisional kering (kemiri, ketumbar, lada, kunyit kering, asam jawa, cengkeh, kayu manis, pala, daun salam kering, dsb.). Bumbu Dapur (BMB) tetap untuk bumbu kemasan pabrik.
+- Barang segar lain (cabai, tomat, dsb.) belum dibahas.
+
+## Barang timbang (Bawang & Umbi, Rempah Kering)
+
+- **Dijual ditimbang sesuai kebutuhan.** Satuan dasar kg dengan desimal; harga jual per kg; kasir mengetik berat (dalam kg atau gram), total dihitung otomatis tanpa pembulatan.
+- **Pembelian kadang tanpa nota** (pasar/pengepul): Barang Masuk punya jenis **"pembelian tanpa nota"** — pilih/ketik sumber, berat aktual, harga total, sumber uang (biasanya dibayar langsung); sistem membuat nomor nota internal; foto opsional; ditandai untuk diperiksa pemilik.
+- **Harga sangat sering berubah:** layar **ubah harga cepat** — daftar barang per kategori dengan modal terakhir, harga jual, dan usulan dari % untung; ubah banyak barang sekaligus; riwayat harga tersimpan.
+- Susut (kering, busuk, bertunas) dicatat lewat penyesuaian stok dengan alasan, sebagai kerugian terpisah.
 
 ## Satuan
 
