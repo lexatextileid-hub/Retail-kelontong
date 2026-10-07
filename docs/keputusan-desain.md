@@ -45,6 +45,25 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - Di kasir, pilihan satuan tampil langsung bersama harganya; satuan berbeda untuk barang yang sama = baris terpisah.
 - Form faktur dan hitung stok memakai kolom per tingkat satuan (mis. Karton | Renteng | Pcs); hanya tingkat yang dimiliki barang itu yang tampil, total dihitung otomatis.
 
+## Stok Barang (Mode Gudang)
+
+- **Tempat utama mengelola barang**: Mode Gudang → Stok Barang → Tambah Barang Baru. Datanya satu; Back Office membaca dan merangkum dari sini.
+- Tambah barang baru hanya pemilik atau dengan PIN pemilik.
+- **Daftar:** nama, satuan, stok (format "4 krt 3 rtg 7 pcs"), harga beli terakhir, harga jual **kecil · sedang · besar** (barang bertingkat memakai kolom yang sama untuk tingkatannya; level ke-4+ ditandai "+1"). Di bawah tiap harga jual tampil laba Rp dan % (dari modal). Pencarian, filter kategori, filter stok tipis.
+- **Detail barang:** info & satuan; stok per kedatangan (lapisan FIFO: tanggal, distributor, sisa, modal); riwayat keluar-masuk (tanggal, kegiatan, dokumen, jumlah ±, saldo, oleh siapa); harga beli per distributor.
+- Harga beli, modal, dan laba hanya tampil untuk yang punya izin "lihat harga beli".
+- Di kasir, jika barang tidak ditemukan: tombol "Tambah barang baru" (pemilik/PIN pemilik) membuka form yang sama, nama terisi dari kata yang dicari; setelah disimpan barang langsung masuk keranjang.
+- **Tidak ada "Barang lain-lain"**: barang belum terdaftar tidak bisa dijual sebelum didaftarkan.
+- Di masa awal pemilik memegang kasir sambil merapikan data barang.
+
+## Persen untung
+
+- **Patokan utama: untung dari modal (markup).** Modal Rp 10.000 + 10% = Rp 11.000.
+- Di form harga bisa diisi harga jual atau % untung; yang lain terhitung otomatis. Persen diatur per level satuan (grosir biasanya lebih kecil).
+- **Pembulatan** harga hasil hitung ke kelipatan yang diatur di Pengaturan (mis. ke atas ke Rp 100); % ditampilkan dari harga setelah dibulatkan.
+- Laporan memakai **untung dari penjualan (margin)**. Label selalu ditulis jelas ("dari modal" / "dari penjualan").
+- Harga beli naik → sistem bisa mengusulkan harga jual baru dengan % untung yang sama.
+
 ## Harga jual
 
 Setiap barang memilih satu metode:
