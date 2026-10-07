@@ -279,7 +279,16 @@ Setiap barang memilih satu metode:
 ## Barang ikutan (bundling) & pantauan per distributor
 
 - Distributor kadang mewajibkan barang ikutan (mis. beli 20 slop A Mild wajib ambil 1 slop rokok lain yang sulit laku, sehingga dijual rugi atau pokok).
-- Barang ikutan ditandai di baris faktur (terhubung ke barang utama & distributor). Usulan pencatatan modal (rugi barang ikutan dibebankan ke barang utama) menunggu konfirmasi pemilik.
+- Barang ikutan ditandai di baris faktur (terhubung ke barang utama & distributor) tapi **masuk stok seperti biasa**; modalnya tidak dialihkan ke barang utama.
+
+## Umur stok
+
+- Dihitung per kedatangan (lapisan FIFO). Warna di Stok Barang dan Dashboard:
+  - **< 3 bulan:** normal.
+  - **3–6 bulan: kuning** — segera keluarkan (taruh depan, tawarkan, harga khusus).
+  - **6–12 bulan: oranye** — mendesak; **saatnya retur ke distributor**.
+  - **≥ 12 bulan: merah** — nilai modalnya dicatat sebagai **kerugian tahunan**. Barang **dibuang** (lewat Barang Rusak), atau bila masih layak **dijual dan hasilnya masuk pendapatan lain-lain** (bukan penjualan biasa, modal 0), karena bisa jadi sudah dianggap kedaluwarsa.
+- Laporan per distributor ikut menampilkan barang berumur ini sebagai bahan nego.
 - **Laporan per distributor untuk bahan nego:** barang dari tiap distributor dikelompokkan **laku / lambat / berhenti** (tidak ada penjualan dalam X hari), nilai stok yang mengendap, dan total rugi dari barang ikutan.
 
 ## Angka bawaan
