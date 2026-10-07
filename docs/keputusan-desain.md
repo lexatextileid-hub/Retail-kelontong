@@ -121,6 +121,7 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
   - **disetor ke bank** (tidak tentu, kadang-kadang);
   - **diambil pemilik sebagai prive** (dicatat "ambil pemilik", bukan biaya toko; tidak mengurangi laba).
   Jumlah pembagian harus sama dengan uang fisik.
+- **Prive (ambil pemilik)** bisa dari tempat uang mana pun: laci (saat tutup kasir), brankas, atau bank. Selalu dicatat sebagai prive, tidak mengurangi laba. Laporan bulanan menampilkan total prive per sumber.
 - **Bayar distributor bisa dua cara:** kasir membayar dari laci memakai pendapatan hari itu; atau pemilik **menitipkan uang dari brankas** ke kasir (dicatat pindah dana brankas → laci "titipan bayar distributor"), lalu kasir membayar dan memilih fakturnya.
 - **Brankas hanya diakses pemilik**, dikelola di **Back Office**: pembayaran distributor, setor ke bank, dan pengeluaran lain dari brankas dicatat di sana dengan **buku brankas** sendiri (saldo + daftar keluar-masuk).
 - Laporan harian kasir **hanya mencakup laci**; kasir tidak perlu tahu atau menghitung isi brankas.
