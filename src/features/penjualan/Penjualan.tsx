@@ -34,6 +34,7 @@ export function Penjualan() {
   const [nota, setNota] = useState<Nota | null>(null);
   const [siapkan, setSiapkan] = useState<Tertahan | null>(null);
   const [nomor, setNomor] = useState(231);
+  const [keranjangHp, setKeranjangHp] = useState(false);
 
   const plg = pelanggan.find((p) => p.id === aktif.pelangganId) ?? pelanggan[0];
 
@@ -92,6 +93,7 @@ export function Penjualan() {
     setTertahan((xs) => [...xs, t]);
     setAktif(kosong());
     setDialog(null);
+    setKeranjangHp(false);
     if (cetak) setSiapkan(t);
   };
 
@@ -153,7 +155,7 @@ export function Penjualan() {
     plg.jenis === 'terdaftar' && diskonContoh.some((d) => d.pelangganId === plg.id && d.produkId === produkId);
 
   return (
-    <div className="pj">
+    <div className={keranjangHp ? 'pj pj--keranjang-buka' : 'pj'}>
       <section className="pj__barang" aria-label="Daftar barang">
         <div className="pj__cari">
           <label className="pj__cari-kotak">
@@ -161,7 +163,7 @@ export function Penjualan() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" />
             </svg>
-            <input id="cari-barang" value={cari} onChange={(e) => setCari(e.target.value)} placeholder="Ketik nama, SKU, atau kode cepat (mis. SRM)" autoComplete="off" />
+            <input id="cari-barang" value={cari} onChange={(e) => setCari(e.target.value)} placeholder="Cari nama, SKU, kode" autoComplete="off" />
           </label>
         </div>
 
@@ -206,6 +208,10 @@ export function Penjualan() {
       </section>
 
       <aside className="pj__keranjang" aria-label="Keranjang">
+        <div className="pj__keranjang-kepala">
+          <button type="button" className="tombol tombol--hantu tombol--kecil" onClick={() => setKeranjangHp(false)}>← Tambah barang</button>
+          <strong>Keranjang</strong>
+        </div>
         {tertahan.length > 0 && (
           <div className="pj__tertahan">
             <span className="label-kecil">Ditahan ({tertahan.length})</span>
@@ -282,6 +288,19 @@ export function Penjualan() {
         </div>
       </aside>
 
+      <div className="pj__ringkas-hp">
+        {tertahan.length > 0 && (
+          <button type="button" className="pj__ringkas-tahan" onClick={() => setKeranjangHp(true)}>
+            Ditahan {tertahan.length}
+          </button>
+        )}
+        <button type="button" className="pj__ringkas-tombol" onClick={() => setKeranjangHp(true)}>
+          <span>{aktif.baris.length} barang · {plg.nama}</span>
+          <strong>{rupiah(total)}</strong>
+          <span className="pj__ringkas-lihat">Lihat keranjang →</span>
+        </button>
+      </div>
+
       {pilihSatuan && (
         <DialogSatuan produk={pilihSatuan} onPilih={(s, qty) => tambah(pilihSatuan.id, s, qty)} onTutup={() => setPilihSatuan(null)} />
       )}
@@ -291,7 +310,7 @@ export function Penjualan() {
       )}
       {dialog === 'pelanggan' && <DialogPelangganBaru daftar={pelanggan} onSimpan={simpanPelanggan} onTutup={() => setDialog(null)} />}
       {siapkan && <DialogDaftarSiapkan tertahan={siapkan} onTutup={() => setSiapkan(null)} />}
-      {nota && <DialogStruk nota={nota} onSelesai={() => { setNota(null); setAktif(kosong()); }} />}
+      {nota && <DialogStruk nota={nota} onSelesai={() => { setNota(null); setAktif(kosong()); setKeranjangHp(false); }} />}
     </div>
   );
 }
