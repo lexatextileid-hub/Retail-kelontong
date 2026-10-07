@@ -23,7 +23,7 @@ export const menuOperasional: Menu[] = [
       'Pilih satuan per baris (pcs, pak, dus, slop, kg)',
       'Harga per satuan atau harga bertingkat dihitung otomatis',
       'Diskon pelanggan terisi otomatis dan boleh diubah kasir (perubahan tercatat)',
-      'Bayar tunai, QRIS, transfer, kasbon, atau campuran; pelanggan Umum tidak bisa kasbon',
+      'Bayar tunai, transfer, kasbon, atau campuran; pelanggan Umum tidak bisa kasbon',
       'Simpan sementara (hold), retur/batal dengan PIN pemilik',
     ],
   },
@@ -121,7 +121,7 @@ export const menuBackOffice: Menu[] = [
     path: 'keuangan',
     judul: 'Keuangan',
     ringkasan: 'Akun kas, setoran, dan biaya operasional.',
-    rencana: ['Akun kas: laci, kas besar, rekening/QRIS', 'Setoran antar akun', 'Biaya operasional'],
+    rencana: ['Akun kas: laci, kas besar, rekening', 'Setoran antar akun', 'Biaya operasional'],
   },
   {
     path: 'laporan',
