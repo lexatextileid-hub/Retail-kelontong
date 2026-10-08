@@ -26,6 +26,8 @@ export interface SatuanProduk {
   hargaJual?: number; // dipakai jika metode harga = per_satuan
   /** Harga beli perkiraan per satuan ini (satuan beli), dipakai sampai ada faktur untuk satuan ini. */
   hargaBeli?: number;
+  /** Waktu (ISO) harga beli diubah manual. Lebih baru dari faktur terakhir → harga ini yang dipakai sampai faktur berikutnya. */
+  hargaBeliTanggal?: string;
 }
 
 /** Harga per satuan dasar yang berlaku mulai jumlah tertentu (dalam satuan dasar). */

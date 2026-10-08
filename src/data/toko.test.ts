@@ -293,3 +293,20 @@ describe('harga beli per satuan beli', () => {
     expect(t.beliPerkiraan(p)).toBe(31000); // dari slop (satuan beli terkecil), bukan karton yang lebih murah
   });
 });
+
+describe('harga beli diubah manual', () => {
+  it('lebih baru dari faktur → dipakai; faktur berikutnya kembali jadi acuan', async () => {
+    const t = await import('./toko');
+    const { ambilProduk } = await import('../features/penjualan/model');
+    const p = ambilProduk('kecap');
+    t.simpanProduk({ ...p, satuan: p.satuan.map((s) => (s.id === 'kecap-ktn' ? { ...s, hargaBeli: 300000, hargaBeliTanggal: new Date().toISOString() } : s)) });
+    expect(t.infoBarang('kecap').beliPerSatuan['kecap-ktn']).toMatchObject({ harga: 300000, manual: true });
+    expect(t.infoBarang('kecap').beliAcuan).toBe(25000);
+    await new Promise((r) => setTimeout(r, 5));
+    t.setPeran('kasir');
+    t.buatFakturTunai({ distributorId: 'dist-c', namaPemasok: 'Distributor C', baris: [{ produkId: 'kecap', satuanProdukId: 'kecap-ktn', qty: 1, harga: 264000 }] });
+    t.setPeran('pemilik');
+    expect(t.infoBarang('kecap').beliPerSatuan['kecap-ktn']).toMatchObject({ harga: 264000 });
+    expect(t.infoBarang('kecap').beliAcuan).toBe(22000);
+  });
+});

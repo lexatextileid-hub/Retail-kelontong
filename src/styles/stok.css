@@ -46,3 +46,4 @@
 .sb-isi { display: flex; gap: 6px; align-items: center; }
 .sb-isi .kk-qty { margin-left: 0; width: 64px; }
 .sb-isi select { width: 110px; height: 38px; }
+.sb-ubah-beli { font-size: 12px; color: #a24a00; max-width: 150px; margin-left: auto; text-align: right; }

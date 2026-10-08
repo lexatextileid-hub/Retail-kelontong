@@ -149,7 +149,9 @@ export function FormBarang() {
   // Harga beli acuan per satuan dasar untuk satuan yang tidak dibeli (mis. eceran):
   // faktur terakhir, atau perkiraan dari satuan beli terkecil yang diisi harganya.
   const perkiraan = satuan.filter((x) => x.dibeli && x.hargaBeli && !isiSalah(x)).sort((a, b) => a.isi - b.isi)[0];
-  const acuanDasar = dariFaktur?.modal ?? (perkiraan ? perkiraan.hargaBeli! / perkiraan.isi : undefined);
+  // Harga beli yang baru diubah di form (paling hati-hati: satuan terkecil) menjadi acuan baru.
+  const diubah = satuan.filter((x) => x.dibeli && x.hargaBeli && !isiSalah(x) && x.hargaBeli !== awal.baris.find((b) => b.id && b.id === x.id)?.hargaBeli).sort((a, b) => a.isi - b.isi)[0];
+  const acuanDasar = diubah ? diubah.hargaBeli! / diubah.isi : info?.beliAcuan ?? (perkiraan ? perkiraan.hargaBeli! / perkiraan.isi : undefined);
   const modalBaris = (s: BarisSatuan) => (s.dibeli && s.hargaBeli ? s.hargaBeli : acuanDasar ? acuanDasar * s.isi : undefined);
   const masalah: string[] = [];
   if (!nama.trim()) masalah.push('Nama barang wajib.');
@@ -182,6 +184,8 @@ export function FormBarang() {
         hargaJual: metode === 'per_satuan' && s.dijual ? s.hargaJual : undefined,
         // Harga beli per satuan beli (perkiraan); faktur nanti menimpa dengan harga sebenarnya.
         hargaBeli: s.dibeli ? s.hargaBeli || undefined : undefined,
+        // Harga beli yang diubah manual diberi tanggal supaya mengalahkan faktur lama (sampai faktur berikutnya).
+        hargaBeliTanggal: s.dibeli && s.hargaBeli && s.hargaBeli !== awal.baris.find((b) => b.id && b.id === s.id)?.hargaBeli ? new Date().toISOString() : s.hargaBeliTanggal,
       })),
       tingkatHarga: metode === 'bertingkat' ? [...tingkat].sort((a, b) => a.mulaiJumlah - b.mulaiJumlah).map(({ kunci: _k, ...t }) => t) : [],
       aktif, musiman: musiman || undefined,
@@ -301,9 +305,17 @@ export function FormBarang() {
                   <td data-label="Beli"><input type="checkbox" className="kb-centang" aria-label={`Dibeli ${s.label}`} checked={s.dibeli} onChange={(e) => ubahSatuan(s.kunci, { dibeli: e.target.checked })} /></td>
                   <td data-label="Jual"><input type="checkbox" className="kb-centang" aria-label={`Dijual ${s.label}`} checked={s.dijual} onChange={(e) => ubahSatuan(s.kunci, { dijual: e.target.checked })} /></td>
                   <td data-label="Harga beli" className="kanan">
-                    {s.dibeli ? (info?.beliPerSatuan[s.id]
-                      ? <><strong>{rupiah(s.hargaBeli ?? 0)}</strong><div className="teks-pudar" style={{ fontSize: 12 }}>{info.beliPerSatuan[s.id].nomor}</div></>
-                      : <InputRupiah id={`hb-${s.kunci}`} nilai={s.hargaBeli ?? 0} label={`Harga beli ${s.label}`} onUbah={(n) => ubahSatuan(s.kunci, { hargaBeli: n })} />)
+                    {s.dibeli ? (
+                      <>
+                        <InputRupiah id={`hb-${s.kunci}`} nilai={s.hargaBeli ?? 0} label={`Harga beli ${s.label}`} onUbah={(n) => ubahSatuan(s.kunci, { hargaBeli: n })} />
+                        {(() => {
+                          const f = info?.beliPerSatuan[s.id];
+                          const awalnya = awal.baris.find((b) => b.id && b.id === s.id)?.hargaBeli;
+                          if (s.id && awalnya !== undefined && s.hargaBeli !== awalnya) return <div className="sb-ubah-beli">diubah dari {rupiah(awalnya)} · dipakai sampai faktur berikutnya</div>;
+                          return f ? <div className="teks-pudar" style={{ fontSize: 12 }}>{f.nomor === 'perkiraan' ? 'perkiraan (belum ada faktur)' : f.manual ? `diubah manual ${f.tanggal}` : `dari faktur ${f.nomor}`}</div> : null;
+                        })()}
+                      </>
+                    )
                       : modalBaris(s) ? <span className="teks-pudar">≈ {rupiah(modalBaris(s)!)}</span> : '-'}
                   </td>
                   {metode === 'per_satuan' && (s.dijual
@@ -316,8 +328,8 @@ export function FormBarang() {
           </table>
         )}
         <p className="teks-pudar" style={{ fontSize: 12.5, margin: '8px 0 0' }}>
-          Setiap satuan yang dibeli (✓ Beli) punya harga beli sendiri — mis. per slop dan per karton bisa berbeda. Yang sudah pernah difaktur memakai harga faktur terakhir;
-          yang belum diisi perkiraan. Satuan yang tidak dibeli (eceran) dihitung dari {dariFaktur ? `faktur terakhir ${dariFaktur.nomor}` : 'satuan beli terkecil'}.
+          Setiap satuan yang dibeli (✓ Beli) punya harga beli sendiri — mis. per slop dan per karton bisa berbeda. Terisi dari faktur terakhir dan boleh diubah
+          (mis. distributor mengabari harga naik); harga yang diubah dipakai sampai faktur berikutnya masuk. Belum pernah difaktur → isi perkiraan. Satuan yang tidak dibeli (eceran) dihitung dari {dariFaktur ? `faktur terakhir ${dariFaktur.nomor}` : 'satuan beli terkecil'}.
         </p>
         {terbalik.length > 0 && (
           <p className="catatan catatan--peringatan" style={{ margin: '8px 0 0' }}>

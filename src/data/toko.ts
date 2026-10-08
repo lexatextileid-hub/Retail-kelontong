@@ -505,7 +505,7 @@ export interface InfoBarang {
   /** Dasar hitung untung di harga jual: harga beli terakhir (per satuan dasar); belum ada faktur → harga beli perkiraan. */
   beliAcuan?: number;
   /** Harga beli terakhir per satuan beli (dari faktur), mis. per slop dan per karton bisa berbeda. */
-  beliPerSatuan: Record<string, { harga: number; tanggal: string; nomor: string }>;
+  beliPerSatuan: Record<string, { harga: number; tanggal: string; waktu?: string; nomor: string; manual?: boolean }>;
 }
 
 /** Angka gerak dan nilai satu barang (stok, FIFO, umur, status gerak, terjual, cukup untuk berapa hari). */
@@ -536,12 +536,30 @@ export function infoBarang(produkId: string, s: State = state): InfoBarang {
     terjual30, rataHarian, cukupHari: rataHarian > 0 ? Math.floor(Math.max(0, stok) / rataHarian) : undefined,
     terakhirTerjual: keluarJual[keluarJual.length - 1]?.tanggal, masukPertama: mut[0]?.tanggal,
     beliTerakhir: beli ? { tanggal: beli.tanggal, nomor: beli.nomor, modal: beli.modal ?? 0, distributorId: beli.distributorId } : undefined,
-    beliAcuan: beli?.modal ?? beliPerkiraan(p) ?? modal,
-    beliPerSatuan: Object.fromEntries(masuk.filter((m) => m.satuanProdukId && m.hargaSatuan)
-      .map((m) => [m.satuanProdukId!, { harga: m.hargaSatuan!, tanggal: m.tanggal, nomor: m.nomor }])),
+    ...hargaBeliTerbaru(p, masuk, beli, modal),
   };
   peta.set(produkId, info);
   return info;
+}
+
+/**
+ * Harga beli terakhir per satuan beli dan acuan per satuan dasar.
+ * Sumber: faktur, atau harga yang diubah manual di data barang bila tanggalnya sama/lebih baru dari faktur terakhir
+ * (mis. distributor mengabari harga naik sebelum barang datang). Faktur berikutnya kembali menjadi acuan.
+ */
+function hargaBeliTerbaru(p: Produk, masuk: MutasiStok[], beli: MutasiStok | undefined, modal: number | undefined) {
+  const per: InfoBarang['beliPerSatuan'] = Object.fromEntries(masuk.filter((m) => m.satuanProdukId && m.hargaSatuan)
+    .map((m) => [m.satuanProdukId!, { harga: m.hargaSatuan!, tanggal: m.tanggal, waktu: m.waktuIso, nomor: m.nomor }]));
+  let acuan = beli ? { nilai: beli.modal ?? 0, waktu: beli.waktuIso } : undefined;
+  for (const s of p.satuan) {
+    if (!s.hargaBeli) continue;
+    // Harga perkiraan (belum pernah difaktur, tanpa tanggal) tetap dipakai untuk satuan itu.
+    if (!s.hargaBeliTanggal) { if (!per[s.id]) per[s.id] = { harga: s.hargaBeli, tanggal: '', nomor: 'perkiraan', manual: true }; continue; }
+    const w = s.hargaBeliTanggal;
+    if (!per[s.id] || w > per[s.id].waktu!) per[s.id] = { harga: s.hargaBeli, tanggal: isoHari(new Date(w)), waktu: w, nomor: 'diubah manual', manual: true };
+    if (!acuan || w > acuan.waktu) acuan = { nilai: s.hargaBeli / s.isi, waktu: w };
+  }
+  return { beliPerSatuan: per, beliAcuan: acuan?.nilai ?? beliPerkiraan(p) ?? modal };
 }
 
 /** Harga beli perkiraan per satuan dasar: dari satuan beli terkecil yang diisi harganya (paling hati-hati untuk untung). */
