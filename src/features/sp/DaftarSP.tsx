@@ -4,7 +4,7 @@ import { namaSumberSP, tutupSP, useToko, type StatusSP } from '../../data/toko';
 import { rupiah } from '../../lib/format';
 import { ambilProduk, angka } from '../penjualan/model';
 import { ambilDistributor, ChipStatus, totalPerkiraanSP } from '../pesanan/bersama';
-import { DialogDokumenSP, DialogTerimaSP } from './DialogSP';
+import { DialogDokumenSP } from './DialogSP';
 import '../../styles/pesanan.css';
 
 const terbuka: StatusSP[] = ['draf', 'dikirim', 'sebagian'];
@@ -83,7 +83,7 @@ export function DaftarSP({ hanyaTerbuka = false, dariOffice = false }: { hanyaTe
                     {x.status === 'draf' && !dariOffice ? 'Kirim' : 'Lihat'}
                   </button>
                   {!dariOffice && terbuka.includes(x.status) && sisa.length > 0 && (
-                    <button type="button" className="tombol tombol--kecil tombol--utama" onClick={() => setDialog({ jenis: 'terima', id: x.id })}>Terima barang</button>
+                    <Link to={`/gudang/barang-masuk/baru?sp=${x.id}`} className="tombol tombol--kecil tombol--utama">Terima barang</Link>
                   )}
                   {x.status === 'sebagian' && (
                     <button type="button" className="tombol tombol--kecil tombol--hantu" onClick={() => { tutupSP(x.id); setInfo(`${x.nomor} ditutup, sisa barang dibatalkan.`); }}>Tutup SP</button>
@@ -96,13 +96,6 @@ export function DaftarSP({ hanyaTerbuka = false, dariOffice = false }: { hanyaTe
       )}
 
       {dialog?.jenis === 'dok' && <DialogDokumenSP spId={dialog.id} onTutup={() => setDialog(null)} />}
-      {dialog?.jenis === 'terima' && (
-        <DialogTerimaSP
-          sp={sp.find((x) => x.id === dialog.id)!}
-          onTutup={() => setDialog(null)}
-          onSelesai={(nomor) => { setDialog(null); setInfo(`Faktur ${nomor} tersimpan. Stok masuk; bagian untuk pesanan pelanggan sudah terkunci.`); }}
-        />
-      )}
     </div>
   );
 }

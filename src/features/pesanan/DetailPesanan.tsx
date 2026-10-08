@@ -13,7 +13,7 @@ import { TARGET_UNTUNG_PERSEN } from '../../domain/harga';
 import { rupiah } from '../../lib/format';
 import { DialogAturBarang } from '../penjualan/DialogSatuan';
 import { ambilProduk } from '../penjualan/model';
-import { DialogBuatSP, DialogDokumenSP, DialogTerimaSP, type Kebutuhan } from '../sp/DialogSP';
+import { DialogBuatSP, DialogDokumenSP, type Kebutuhan } from '../sp/DialogSP';
 import { ChipStatus, labelDasar, labelJumlah, namaPelanggan, tanggalPanjang } from './bersama';
 import { DialogBatalPesanan, DialogBayarPesanan, DialogSerahkan, DialogSuratJalan } from './DialogPesanan';
 import '../../styles/pesanan.css';
@@ -126,7 +126,7 @@ export function DetailPesanan() {
                 <p>{spMenunggu.map((x) => x.nomor).join(', ') || 'Surat Pesanan'} {bolehAdmin ? '· catat faktur saat barang datang.' : ''}</p>
               </div>
               {bolehAdmin && spMenunggu[0] && (
-                <button type="button" className="tombol tombol--utama" onClick={() => setDialog({ jenis: 'terima', spId: spMenunggu[0].id })}>Terima barang</button>
+                <Link to={`/gudang/barang-masuk/baru?sp=${spMenunggu[0].id}`} className="tombol tombol--utama">Terima barang</Link>
               )}
             </div>
           )}
@@ -299,9 +299,6 @@ export function DetailPesanan() {
           spId={dialog.spIds[0]}
           onTutup={() => setDialog(dialog.spIds.length > 1 ? { jenis: 'dokumen', spIds: dialog.spIds.slice(1) } : null)}
         />
-      )}
-      {dialog?.jenis === 'terima' && (
-        <DialogTerimaSP sp={sp.find((x) => x.id === dialog.spId)!} onTutup={() => setDialog(null)} onSelesai={() => setDialog(null)} />
       )}
       {dialog?.jenis === 'serah' && (
         <DialogSerahkan p={p} onTutup={() => setDialog(null)} onSelesai={(nomor) => setDialog({ jenis: 'sj', nomor })} />

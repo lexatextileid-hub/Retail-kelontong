@@ -18,6 +18,8 @@ import { BayarDistributor, LaporanHarian, Pengeluaran } from './features/kaslaci
 import { LaciHariIni } from './features/kaslaci/LaciHariIni';
 import { BukuKas } from './features/keuangan/BukuKas';
 import { DaftarBarang } from './features/stok/DaftarBarang';
+import { DaftarBarangMasuk, HalamanFakturTunai } from './features/masuk/DaftarBarangMasuk';
+import { FormBarangMasuk } from './features/masuk/FormBarangMasuk';
 import { DetailBarang } from './features/stok/DetailBarang';
 import { FormBarang } from './features/stok/FormBarang';
 import { UmurStok } from './features/stok/UmurStok';
@@ -161,8 +163,13 @@ export const menuGudang: Menu[] = [
   {
     path: 'barang-masuk', judul: 'Barang Masuk', ikon: 'masuk',
     ringkasan: 'Input faktur distributor atau pembelian tanpa nota.',
-    rencana: ['Satuan urut besar → kecil; isi kemasan wajib dicek fisik', 'Tandai baris untuk pesanan atau barang ikutan', 'Cash/tempo; total dicocokkan dengan kertas faktur'],
-    anak: [{ path: 'dari-sp', judul: 'Dari Pesanan Toko', halaman: <DaftarSP hanyaTerbuka /> }, { path: 'tanpa-nota', judul: 'Tanpa Nota' }],
+    rencana: ['Satu baris per barang dengan lapis satuan beli (karton · slop · bungkus), harga @ per satuan', 'Diskon per baris & per faktur, bonus, barang ikutan; isi kemasan wajib dicek fisik', 'Cash (dibayar dari laci/brankas/rekening) / tempo (hutang); total dicocokkan dengan kertas faktur', 'Harga beli naik → usulan harga jual baru'],
+    anak: [
+      { path: 'daftar', judul: 'Daftar Barang Masuk', halaman: <DaftarBarangMasuk /> },
+      { path: 'baru', judul: 'Catat Barang Masuk', halaman: <FormBarangMasuk key="baru" /> },
+      { path: 'dari-sp', judul: 'Dari Pesanan Toko', halaman: <DaftarSP hanyaTerbuka /> },
+      { path: 'tanpa-nota', judul: 'Faktur Tunai (tanpa nota)', halaman: <HalamanFakturTunai /> },
+    ],
   },
   {
     path: 'siapkan-pesanan', judul: 'Siapkan Pesanan', ikon: 'siapkan',

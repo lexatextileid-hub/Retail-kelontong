@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { formatStok } from '../lib/format';
 import { ringkasTempat, saldoBerjalan, type MutasiKas } from './kas';
+import { diskonDariPersen, hitungFakturMasuk, perubahanHarga } from './faktur';
 import { hitungLapisan, modalRata, statusGerak, stokBertingkat, umurStok, type MutasiStok } from './stok';
 import { ambilFifo, modalBarisFaktur } from './fifo';
 import { bulatkanHarga, cekTurunHarga, hargaDariPersen, hargaDariUntungRp, hitungHargaBaris, untungDariModal } from './harga';
@@ -340,5 +341,37 @@ describe('pembanding harga antar satuan (harus turun per satuan dasar)', () => {
   });
   it('satuan tanpa harga dilewati', () => {
     expect(cekTurunHarga([bks, { isi: 10, harga: 0 }]).size).toBe(1);
+  });
+});
+
+describe('faktur barang masuk (3 lapis satuan, diskon baris & faktur, bonus)', () => {
+  const dunhill = { kunci: 'dh', diskonRp: 0, lapis: [
+    { kunci: 'ktn', qty: 1, harga: 3050000, isi: 100 }, { kunci: 'slp', qty: 2, harga: 310000, isi: 10 }, { kunci: 'bks', qty: 4, harga: 31500, isi: 1 },
+  ] };
+  it('lapis dijumlah ke satuan dasar; modal per dasar = netto ÷ jumlah dasar', () => {
+    const r = hitungFakturMasuk([dunhill], 0);
+    expect(r.total).toBe(3796000);
+    expect(r.barang[0].jumlahDasar).toBe(124);
+    expect(Math.round(r.barang[0].modalPerDasar)).toBe(30613);
+  });
+  it('diskon baris lalu diskon faktur dibagi sebanding; total tetap pas', () => {
+    const mi = { kunci: 'mi', diskonRp: 0, lapis: [{ kunci: 'k', qty: 10, harga: 150000, isi: 50 }] };
+    const r = hitungFakturMasuk([{ ...dunhill, diskonRp: 96000 }, mi], 100000);
+    expect(r).toMatchObject({ subtotal: 5296000, diskonBaris: 96000, diskonFaktur: 100000, total: 5100000 });
+    expect(r.barang.reduce((t, b) => t + b.netto, 0)).toBeCloseTo(5100000, 6);
+    expect(r.barang[0].bagianDiskonFaktur + r.barang[1].bagianDiskonFaktur).toBe(100000);
+    // harga netto per lapis turun sebanding
+    expect(r.barang[1].lapis[0].hargaNetto).toBeLessThan(150000);
+  });
+  it('barang bonus masuk stok dengan modal 0 dan tidak ikut diskon faktur', () => {
+    const bonus = { kunci: 'b', diskonRp: 0, bonus: true, lapis: [{ kunci: 'x', qty: 1, harga: 310000, isi: 10 }] };
+    const r = hitungFakturMasuk([dunhill, bonus], 50000);
+    expect(r.barang[1]).toMatchObject({ netto: 0, jumlahDasar: 10, modalPerDasar: 0, bagianDiskonFaktur: 0 });
+    expect(r.total).toBe(3796000 - 50000);
+  });
+  it('diskon % dan perubahan harga', () => {
+    expect(diskonDariPersen(3796000, 2.5)).toBe(94900);
+    expect(perubahanHarga(3150000, 3050000)).toMatchObject({ selisih: 100000, naik: true, persen: 3.3 });
+    expect(perubahanHarga(100, undefined)).toBeUndefined();
   });
 });

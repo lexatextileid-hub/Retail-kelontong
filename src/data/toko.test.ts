@@ -340,3 +340,59 @@ describe('saldo pelanggan', () => {
     t.setPeran('pemilik');
   });
 });
+
+describe('barang masuk (faktur distributor, lapis satuan)', () => {
+  it('tanpa SP, tempo: 1 karton + 2 slop + 4 bungkus, diskon baris & faktur → stok, harga beli per satuan, hutang', async () => {
+    const t = await import('./toko');
+    const stok0 = t.stokFisik('dunhill-blue');
+    const r = t.terimaBarangMasuk({
+      distributorId: 'dist-a', nomorDistributor: 'UJI-BM-1', cara: 'tempo', diskonFaktur: 26000, totalKertas: 3700000,
+      barang: [{ produkId: 'dunhill-blue', diskonRp: 70000, lapis: [
+        { satuanProdukId: 'dh-ktn', qty: 1, harga: 3050000 }, { satuanProdukId: 'dh-slp', qty: 2, harga: 310000 }, { satuanProdukId: 'dh-bks', qty: 4, harga: 31500 },
+      ] }],
+    });
+    expect(r.total).toBe(3796000 - 70000 - 26000);
+    expect(t.stokFisik('dunhill-blue')).toBe(stok0 + 124);
+    const i = t.infoBarang('dunhill-blue');
+    expect(i.beliPerSatuan['dh-ktn'].harga).toBeLessThan(3050000); // harga netto setelah diskon
+    expect(i.beliPerSatuan['dh-ktn'].nomor).toBe(r.nomor);
+    const f = t.daftarFaktur().find((x) => x.nomor === r.nomor)!;
+    expect(f).toMatchObject({ total: r.total, sisa: r.total, status: 'belum' });
+    expect(t.daftarBarangMasuk().find((x) => x.nomor === r.nomor)).toMatchObject({ jenis: 'tanpa-sp', cara: 'tempo' });
+  });
+
+  it('tanpa SP, cash dari brankas + barang bonus → lunas, brankas berkurang, bonus masuk stok modal 0', async () => {
+    const t = await import('./toko');
+    const brankas0 = t.saldoTempat('brankas');
+    const stok0 = t.stokFisik('kecap');
+    const r = t.terimaBarangMasuk({
+      distributorId: 'dist-c', nomorDistributor: 'UJI-BM-2', cara: 'cash', diskonFaktur: 0, totalKertas: 264000, bayar: { sumber: 'brankas' },
+      barang: [
+        { produkId: 'kecap', diskonRp: 0, lapis: [{ satuanProdukId: 'kecap-ktn', qty: 1, harga: 264000 }] },
+        { produkId: 'kecap', diskonRp: 0, bonus: true, lapis: [{ satuanProdukId: 'kecap-btl', qty: 2, harga: 22000 }] },
+      ],
+    });
+    expect(t.stokFisik('kecap')).toBe(stok0 + 14);
+    expect(t.saldoTempat('brankas')).toBe(brankas0 - 264000);
+    expect(t.daftarFaktur().find((x) => x.nomor === r.nomor)).toMatchObject({ status: 'lunas', sisa: 0 });
+    expect(t.mutasiBarang('kecap').some((m) => m.nomor === r.nomor && m.jumlah === 2 && m.modal === 0)).toBe(true);
+  });
+
+  it('dari Surat Pesanan: lapis campuran dihitung ke satuan SP; rincian faktur sesuai kertas', async () => {
+    const t = await import('./toko');
+    const spId = t.buatSP({ distributorId: 'dist-a', sumber: 'stok', baris: [{ produkId: 'dunhill-blue', satuanProdukId: 'dh-slp', labelSatuan: 'Slop', qty: 12, hargaPerkiraan: 310000, untukPesanan: [] }] });
+    t.tandaiSPDikirim(spId);
+    const sp = t.__state().sp.find((x) => x.id === spId)!;
+    const stok0 = t.stokFisik('dunhill-blue');
+    const r = t.terimaBarangMasuk({
+      spId, distributorId: 'dist-a', nomorDistributor: 'UJI-BM-3', cara: 'tempo', diskonFaktur: 0, totalKertas: 3670000, tutupSisa: true,
+      barang: [{ produkId: 'dunhill-blue', spBarisId: sp.baris[0].id, diskonRp: 0, lapis: [{ satuanProdukId: 'dh-ktn', qty: 1, harga: 3050000 }, { satuanProdukId: 'dh-slp', qty: 2, harga: 310000 }] }],
+    });
+    expect(r.total).toBe(3670000);
+    expect(t.stokFisik('dunhill-blue')).toBe(stok0 + 120);
+    const faktur = t.__state().sp.find((x) => x.id === spId)!.faktur[0];
+    expect(faktur.baris?.map((b) => b.satuanProdukId)).toEqual(['dh-ktn', 'dh-slp']);
+    expect(t.infoBarang('dunhill-blue').beliPerSatuan['dh-ktn']).toMatchObject({ harga: 3050000, nomor: r.nomor });
+    expect(t.daftarFaktur().find((x) => x.id === `fk:${r.nomor}`)).toMatchObject({ total: 3670000, status: 'belum' });
+  });
+});

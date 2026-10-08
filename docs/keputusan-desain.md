@@ -317,17 +317,26 @@ Setiap barang memilih satu metode:
 
 ## Pembelian & barang masuk
 
-- Kepala faktur: distributor, nomor faktur kertas, tanggal, cash/tempo, jatuh tempo (dari termin distributor).
-- Baris: barang (cari nama/kode pendek), satuan, isi (terisi otomatis, bisa diubah, tercatat & ditandai), qty, harga, diskon.
-- **Isi kemasan wajib dicek fisik oleh penerima barang**, karena banyak faktur tidak mencantumkannya. Baris baru bisa disimpan setelah "Sudah dicek fisik" dicentang.
-- Isi berbeda dari data barang → pilih: **kemasan baru** (dibuat satuan baru, mis. "Karton isi 4 renteng") atau **hanya kali ini** (dicatat di baris faktur, ditandai untuk diperiksa pemilik).
-- Barang baru bisa dibuatkan rantai satuannya langsung dari layar Barang Masuk.
-- Satuan dan harga terakhir dari distributor yang sama terisi otomatis.
-- Total input dicocokkan dengan total yang tertulis di kertas faktur.
-- Diskon faktur dibagi proporsional ke setiap baris. Barang bonus masuk dengan harga 0 (menurunkan modal).
-- Retur pembelian memotong hutang dan mengurangi lapisan stok yang tepat.
-- **Riwayat harga beli per distributor per barang** disimpan otomatis dari faktur; perbandingan dalam modal per satuan dasar.
-- Belum diputuskan: perlukah padanan nama barang per distributor; reaksi saat harga beli naik (pengingat vs usulan harga jual otomatis).
+Gudang → **Barang Masuk** (admin & pemilik). Tiga jalur, satu daftar:
+- **Dari Pesanan Toko** (barang yang dipesan lewat Surat Pesanan) — form terisi dari SP; bagian untuk pesanan pelanggan otomatis terkunci.
+- **Tanpa Surat Pesanan** — sering terjadi (sales datang langsung membawa barang & faktur).
+- **Faktur tunai (tanpa nota)** — beli di toko sebelah / pasar.
+
+**Daftar Barang Masuk** (format seragam): ringkasan nilai barang masuk periode ini · tempo belum lunas · perlu dicek pemilik · Surat Pesanan menunggu barang; filter periode, distributor, jenis, cash/tempo; kolom tanggal, no. PB + no. faktur kertas, distributor, jenis, cash/tempo, total, status bayar (+ tanda perlu dicek); klik → detail faktur asli.
+
+**Form barang masuk** (pola faktur pembelian akuntansi):
+- Kepala: distributor, no. faktur kertas, tanggal, **cash/tempo** (jatuh tempo dari termin distributor), *dibayar dari* laci/brankas/rekening bila cash (PIN pemilik untuk brankas/rekening), diturunkan di ruko (opsional).
+- **Satu baris per barang dengan lapis satuan beli sesuai kertas faktur** (mis. karton · slop · bungkus — satuan yang dicentang "Beli" di data barang, urut besar → kecil): jumlah dan **harga @ per satuan**; jumlah dalam satuan dasar dan modal per satuan dasar dihitung otomatis. Harga terisi dari harga beli terakhir per satuan, dengan tanda naik/turun dan pembanding "harus turun per satuan dasar".
+- **Diskon per baris** (% atau Rp) **dan diskon faktur** (% atau Rp, dibagi sebanding ke semua baris berbayar). Harga beli & modal memakai harga netto setelah diskon.
+- **Bonus** = harga 0 (masuk stok, modal 0, menurunkan modal rata-rata, tidak memperbarui harga beli). **Barang ikutan** ditandai.
+- **Isi kemasan & jumlah wajib dicentang "dicek fisik"** di setiap barang.
+- **Total input dicocokkan dengan total yang diketik dari kertas faktur.** Beda → tidak bisa disimpan kecuali disetujui pemilik (admin: PIN pemilik); dicatat "perlu dicek pemilik".
+- **Harga beli naik** → ditandai "perlu dicek" dan **sistem mengusulkan harga jual baru dengan untung % yang sama** (dibulatkan ke atas Rp 100); bisa diterapkan langsung (admin: PIN pemilik).
+- **Barang belum terdaftar** di faktur → **admin boleh mendaftarkan langsung dari form dengan PIN pemilik** (form barang yang sama), lalu lanjut mengisi faktur.
+- Setelah simpan: stok + kartu stok (per kedatangan/FIFO), harga beli terakhir per satuan, hutang distributor (tempo) atau bukti bayar (cash), pesanan pelanggan yang menunggu barang jadi siap.
+- Retur pembelian memotong hutang dan mengurangi lapisan stok yang tepat (menu Retur ke Distributor).
+- **Riwayat harga beli per distributor per barang** dari faktur (Detail Barang → Harga beli).
+- Belum diputuskan: padanan nama barang per distributor.
 
 ## Modal (HPP): FIFO
 

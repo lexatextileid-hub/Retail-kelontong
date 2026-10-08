@@ -94,14 +94,18 @@ function HargaUntung({ id, modalTotal, harga, onHarga, catatan }: { id: string; 
  * Tambah / ubah barang (Gudang → Stok Barang). Pemilik langsung; admin dengan PIN pemilik.
  * Harga jual: isi harga, untung %, atau untung Rp (dari harga beli terakhir); dua lainnya terhitung otomatis.
  */
-export function FormBarang() {
-  const { id } = useParams();
+export function FormBarang({ namaAwal, onSimpan, onBatal }: {
+  /** Dipakai dari form lain (mis. Barang Masuk): nama terisi, setelah simpan kembali ke pemanggil. */
+  namaAwal?: string; onSimpan?: (produkId: string) => void; onBatal?: () => void;
+} = {}) {
+  const { id: idRute } = useParams();
+  const id = onSimpan ? undefined : idRute;
   const toko = useToko();
   const navigasi = useNavigate();
   const lama = id ? ambilProduk(id) : undefined;
   const info = lama ? infoBarang(lama.id, toko) : undefined;
   const dariFaktur = info?.beliTerakhir;
-  const [nama, setNama] = useState(lama?.nama ?? '');
+  const [nama, setNama] = useState(lama?.nama ?? namaAwal ?? '');
   const [kategori, setKategori] = useState(lama?.kategoriId ?? '');
   const [kode, setKode] = useState(lama?.kode ?? '');
   const [dasar, setDasar] = useState(lama?.satuanDasarId ?? '');
@@ -203,14 +207,14 @@ export function FormBarang() {
       aktif, musiman: musiman || undefined,
     };
     simpanProduk(p);
-    navigasi(`../detail/${p.id}`);
+    if (onSimpan) onSimpan(p.id); else navigasi(`../detail/${p.id}`);
   };
 
   return (
     <div className="ps-halaman">
       <div className="ps-atas">
         <h2 style={{ margin: 0 }}>{lama ? `Ubah ${lama.nama}` : 'Tambah barang'}</h2>
-        <Link to={lama ? `../detail/${lama.id}` : '../daftar'} className="tautan">← Batal</Link>
+        {onBatal ? <button type="button" className="tautan" onClick={onBatal}>← Batal</button> : <Link to={lama ? `../detail/${lama.id}` : '../daftar'} className="tautan">← Batal</Link>}
       </div>
 
       <div className="kartu bd-kepala">
@@ -396,7 +400,7 @@ export function FormBarang() {
         <div className="bd-kaki__angka">
           {coba && masalah.length > 0 && <ul className="catatan catatan--peringatan" style={{ margin: 0, paddingLeft: 28 }}>{masalah.map((m) => <li key={m}>{m}</li>)}</ul>}
           <div className="baris-tombol" style={{ justifyContent: 'flex-end' }}>
-            <Link to={lama ? `../detail/${lama.id}` : '../daftar'} className="tombol">Batal</Link>
+            {onBatal ? <button type="button" className="tombol" onClick={onBatal}>Batal</button> : <Link to={lama ? `../detail/${lama.id}` : '../daftar'} className="tombol">Batal</Link>}
             <button type="button" className="tombol tombol--utama" disabled={!pinOk} onClick={simpan}>{lama ? 'Simpan perubahan' : 'Simpan barang'}</button>
           </div>
         </div>

@@ -12,6 +12,7 @@ import { hitungHargaBaris, TARGET_UNTUNG_PERSEN, untungDariModal } from '../doma
 import { ambilProduk, ambilSatuan, bolehDesimal, produkById, singkatan, type Nota } from '../features/penjualan/model';
 import type { KelompokKas, MutasiKas, TempatUang } from '../domain/kas';
 import { ringkasTempat, saldoPada } from '../domain/kas';
+import { hitungFakturMasuk } from '../domain/faktur';
 import { kategoriBawaan } from '../domain/kategoriBawaan';
 import { ATURAN_RETUR_BAWAAN, nilaiAkhirBaris, nilaiRetur as hitungNilaiRetur, type AturanRetur } from '../domain/retur';
 
@@ -104,6 +105,7 @@ export interface FakturSP {
   cara: 'cash' | 'tempo';
   total: number;
   oleh: string;
+  waktuIso?: string;
   baris?: { nama: string; satuan: string; qty: number; harga: number; produkId?: string; satuanProdukId?: string; jumlahDasar?: number }[];
 }
 
@@ -329,6 +331,27 @@ export interface FakturTunai {
   bayarNomor: string; // bukti pembayaran BD-…
 }
 
+/** Faktur distributor tanpa Surat Pesanan (mis. sales datang membawa barang). Baris = lapis satuan sesuai kertas faktur. */
+export interface FakturMasuk {
+  id: string;
+  nomor: string; // PB-…
+  nomorDistributor: string;
+  distributorId: string;
+  tanggal: string;
+  waktuIso: string;
+  cara: 'cash' | 'tempo';
+  ruko?: string;
+  totalKertas: number;
+  subtotal: number;
+  diskonBaris: number;
+  diskonFaktur: number;
+  total: number;
+  oleh: string;
+  /** Hal yang perlu dicek pemilik, mis. total tidak cocok disetujui PIN, harga naik. */
+  catatanCek: string[];
+  baris: { produkId: string; satuanProdukId: string; qty: number; harga: number; hargaNetto: number; jumlahDasar: number; bonus?: boolean; ikutan?: boolean }[];
+}
+
 /** Hitung fisik brankas / cocokkan saldo rekening dengan mutasi bank (pemilik, mingguan). */
 export interface Pencocokan {
   id: string;
@@ -374,6 +397,7 @@ interface State {
   arus: ArusKas[];
   pencocokan: Pencocokan[];
   saldoPelanggan: MutasiSaldo[];
+  fakturMasuk: FakturMasuk[];
   fakturTunai: FakturTunai[];
   hutangLama: HutangLama[];
   penjualan: NotaPenjualan[];
@@ -398,6 +422,7 @@ let state: State = {
   arus: [],
   pencocokan: [],
   saldoPelanggan: [],
+  fakturMasuk: [],
   fakturTunai: [],
   hutangLama: [],
   penjualan: [],
@@ -482,9 +507,13 @@ export function mutasiStok(s: State = state): MutasiStok[] {
       (f.baris ?? []).forEach((b, i) => {
         if (!b.produkId || !b.jumlahDasar) return;
         const tgl = f.tanggal ?? hariIni();
-        hasil.push({ id: `${f.nomor}:${i}`, waktuIso: waktuDari(tgl, 9), tanggal: tgl, produkId: b.produkId, jenis: 'faktur', nomor: f.nomor,
+        hasil.push({ id: `${f.nomor}:${i}`, waktuIso: f.waktuIso && isoHari(new Date(f.waktuIso)) === tgl ? f.waktuIso : waktuDari(tgl, 9), tanggal: tgl, produkId: b.produkId, jenis: 'faktur', nomor: f.nomor,
           keterangan: `Faktur ${f.nomorDistributor} · ${sp.nomor}`, jumlah: b.jumlahDasar, modal: b.harga * b.qty / b.jumlahDasar, distributorId: sp.distributorId, satuanProdukId: b.satuanProdukId, hargaSatuan: b.harga, oleh: f.oleh });
       });
+  for (const f of s.fakturMasuk)
+    f.baris.forEach((b, i) => hasil.push({ id: `${f.nomor}:${i}`, waktuIso: f.waktuIso, tanggal: f.tanggal, produkId: b.produkId, jenis: 'faktur', nomor: f.nomor,
+      keterangan: `Faktur ${f.nomorDistributor}${b.bonus ? ' · bonus' : ''}${b.ikutan ? ' · barang ikutan' : ''}`, jumlah: b.jumlahDasar,
+      modal: (b.hargaNetto * b.qty) / b.jumlahDasar, distributorId: f.distributorId, satuanProdukId: b.satuanProdukId, hargaSatuan: b.bonus ? undefined : b.hargaNetto, oleh: f.oleh }));
   for (const f of s.fakturTunai)
     f.baris.forEach((b, i) => hasil.push({ id: `${f.nomor}:${i}`, waktuIso: f.waktuIso, tanggal: f.tanggal, produkId: b.produkId, jenis: 'faktur-tunai', nomor: f.nomor,
       keterangan: `Faktur tunai${f.nomorNota ? ` (${f.nomorNota})` : ''}`, jumlah: b.jumlahDasar, modal: (b.qty * b.harga) / b.jumlahDasar, distributorId: f.distributorId, satuanProdukId: b.satuanProdukId, hargaSatuan: b.harga, oleh: f.oleh }));
@@ -910,6 +939,9 @@ export function terimaDariSP(
     cara: 'cash' | 'tempo';
     baris: { barisId: string; qty: number; harga: number; produkId?: string; satuanProdukId?: string }[];
     tutupSisa: boolean;
+    /** Rincian faktur sesuai kertas (lapis satuan, harga netto) — menggantikan rincian otomatis. */
+    barisFaktur?: NonNullable<FakturSP['baris']>;
+    totalFaktur?: number;
   },
 ): string {
   const nomor = nomorBaru('PB');
@@ -943,7 +975,7 @@ export function terimaDariSP(
     return [diterima];
   });
   const semuaDiterima = barisBaru.every((b) => b.diterima);
-  const total = data.baris.reduce((t, x) => t + x.qty * x.harga, 0);
+  const total = data.totalFaktur ?? data.baris.reduce((t, x) => t + x.qty * x.harga, 0);
   const barisFaktur = data.baris.filter((x) => x.qty > 0).map((x) => {
     const b = sp.baris.find((y) => y.id === x.barisId)!;
     const pid = x.produkId ?? b.produkId;
@@ -963,7 +995,7 @@ export function terimaDariSP(
             ...x,
             baris: barisBaru,
             status,
-            faktur: [...x.faktur, { nomor, nomorDistributor: data.nomorDistributor, waktu: sekarang(), tanggal: hariIni(), cara: data.cara, total, oleh: namaAkun[s.peran], baris: barisFaktur }],
+            faktur: [...x.faktur, { nomor, nomorDistributor: data.nomorDistributor, waktu: sekarang(), waktuIso: new Date().toISOString(), tanggal: hariIni(), cara: data.cara, total, oleh: namaAkun[s.peran], baris: data.barisFaktur ?? barisFaktur }],
           }
         : x,
     ),
@@ -1312,6 +1344,98 @@ export function tutupLaci(data: {
 
 export const nomorArus = (j: 'KK' | 'KM' | 'BD' | 'ST' | 'PD' | 'SA' | 'KR' | 'PR') => nomorBaru(j);
 
+/* ---------- Barang Masuk (faktur distributor) ---------- */
+
+export interface InputBarangMasuk {
+  produkId: string;
+  /** Baris Surat Pesanan asal (bila dari Pesanan Toko). */
+  spBarisId?: string;
+  lapis: { satuanProdukId: string; qty: number; harga: number }[];
+  diskonRp: number;
+  bonus?: boolean;
+  ikutan?: boolean;
+}
+
+/**
+ * Simpan barang masuk dari faktur distributor (dari Surat Pesanan atau tanpa SP).
+ * Stok & harga beli dari baris lapis (harga netto setelah diskon), hutang (tempo) atau bukti bayar (cash).
+ */
+export function terimaBarangMasuk(data: {
+  spId?: string; distributorId: string; nomorDistributor: string; cara: 'cash' | 'tempo'; ruko?: string;
+  barang: InputBarangMasuk[]; diskonFaktur: number; totalKertas: number; catatanCek?: string[];
+  bayar?: { sumber: ArusKas['sumber']; bank?: string }; tutupSisa?: boolean;
+}): { nomor: string; total: number; arus?: ArusKas } {
+  const isiDari = (pid: string, sid: string) => ambilSatuan(ambilProduk(pid), sid).isi;
+  const hit = hitungFakturMasuk(data.barang.map((b, i) => ({
+    kunci: String(i), diskonRp: b.diskonRp, bonus: b.bonus,
+    lapis: b.lapis.map((l, j) => ({ kunci: `${i}:${j}`, qty: l.qty, harga: l.harga, isi: isiDari(b.produkId, l.satuanProdukId) })),
+  })), data.diskonFaktur);
+  const baris = data.barang.flatMap((b, i) => b.lapis.map((l, j) => {
+    const h = hit.barang[i].lapis.find((x) => x.kunci === `${i}:${j}`);
+    return h ? { produkId: b.produkId, satuanProdukId: l.satuanProdukId, qty: l.qty, harga: l.harga, hargaNetto: h.hargaNetto, jumlahDasar: h.jumlahDasar, bonus: b.bonus || undefined, ikutan: b.ikutan || undefined } : null;
+  }).filter((x): x is NonNullable<typeof x> => !!x));
+  let nomor: string;
+  if (data.spId) {
+    // Dari Pesanan Toko: jumlah per baris SP dihitung dari total satuan dasar semua lapis (alokasi ke pesanan pelanggan tetap jalan).
+    const sp = state.sp.find((x) => x.id === data.spId)!;
+    nomor = terimaDariSP(data.spId, {
+      nomorDistributor: data.nomorDistributor, cara: data.cara, tutupSisa: !!data.tutupSisa, totalFaktur: hit.total,
+      baris: sp.baris.filter((b) => !b.diterima).map((b) => {
+        const i = data.barang.findIndex((x) => x.spBarisId === b.id);
+        const pid = i >= 0 ? data.barang[i].produkId : b.produkId;
+        // Barang permintaan (belum terdaftar saat SP dibuat) dihitung dalam satuan dasar barang yang dipilih.
+        const sid = b.satuanProdukId ?? (pid ? ambilProduk(pid).satuan.find((x) => x.isi === 1)?.id : undefined);
+        const isiSP = pid && sid ? isiDari(pid, sid) : 1;
+        const r = i >= 0 ? hit.barang[i] : undefined;
+        const qty = r ? r.jumlahDasar / isiSP : 0;
+        return { barisId: b.id, qty, harga: qty ? r!.netto / qty : 0, produkId: pid, satuanProdukId: sid };
+      }),
+      barisFaktur: baris.map((b) => { const p = ambilProduk(b.produkId); return { nama: `${p.nama}${b.bonus ? ' (bonus)' : ''}`, satuan: ambilSatuan(p, b.satuanProdukId).label, qty: b.qty, harga: b.hargaNetto, produkId: b.produkId, satuanProdukId: b.satuanProdukId, jumlahDasar: b.jumlahDasar }; }),
+    });
+  } else {
+    nomor = nomorBaru('PB');
+    const f: FakturMasuk = {
+      id: id('fm'), nomor, nomorDistributor: data.nomorDistributor, distributorId: data.distributorId, tanggal: hariIni(), waktuIso: new Date().toISOString(),
+      cara: data.cara, ruko: data.ruko?.trim() || undefined, totalKertas: data.totalKertas, subtotal: hit.subtotal, diskonBaris: hit.diskonBaris,
+      diskonFaktur: hit.diskonFaktur, total: hit.total, oleh: akunAktif(), catatanCek: data.catatanCek ?? [], baris,
+    };
+    ubah((s) => ({ ...s, fakturMasuk: [...s.fakturMasuk, f] }));
+  }
+  let arus: ArusKas | undefined;
+  if (data.cara === 'cash' && hit.total > 0 && data.bayar) {
+    const fid = data.spId ? `fk:${nomor}` : `fm:${state.fakturMasuk.find((x) => x.nomor === nomor)!.id}`;
+    const nama = ambilDistributorData(data.distributorId);
+    arus = catatArus({
+      jenis: 'bayar-distributor', nomor: nomorBaru('BD'), sumber: data.bayar.sumber, bank: data.bayar.sumber === 'bank' ? data.bayar.bank : undefined,
+      tunai: data.bayar.sumber === 'bank' ? 0 : -hit.total, transfer: data.bayar.sumber === 'bank' ? -hit.total : 0,
+      penerima: nama, keterangan: `Bayar cash faktur ${data.nomorDistributor} · ${nama}`, faktur: [{ id: fid, nomor: data.nomorDistributor, jumlah: hit.total }],
+    });
+  }
+  return { nomor, total: hit.total, arus };
+}
+
+const ambilDistributorData = (did: string) => distributorContoh.find((d) => d.id === did)?.nama ?? did.replace(/^lain:/, '');
+
+/** Semua barang masuk (dari Pesanan Toko, tanpa SP, faktur tunai) untuk Daftar Barang Masuk. */
+export function daftarBarangMasuk(s: State = state) {
+  const status = new Map(daftarFaktur(s).map((f) => [f.id, f]));
+  const dariSP = s.sp.flatMap((sp) => sp.faktur.map((f) => ({
+    id: `fk:${f.nomor}`, jenis: 'sp' as const, nomor: f.nomor, nomorDistributor: f.nomorDistributor, distributorId: sp.distributorId,
+    tanggal: f.tanggal ?? hariIni(), cara: f.cara, total: f.total, oleh: f.oleh, sumber: sp.nomor, barang: new Set((f.baris ?? []).map((b) => b.produkId ?? b.nama)).size, cek: [] as string[],
+  })));
+  const tanpaSP = s.fakturMasuk.map((f) => ({
+    id: `fm:${f.id}`, jenis: 'tanpa-sp' as const, nomor: f.nomor, nomorDistributor: f.nomorDistributor, distributorId: f.distributorId,
+    tanggal: f.tanggal, cara: f.cara, total: f.total, oleh: f.oleh, sumber: 'Tanpa SP', barang: new Set(f.baris.map((b) => b.produkId)).size, cek: f.catatanCek,
+  }));
+  const tunai = s.fakturTunai.map((f) => ({
+    id: `ft:${f.id}`, jenis: 'tunai' as const, nomor: f.nomor, nomorDistributor: f.nomorNota || '(tanpa nota)', distributorId: f.distributorId,
+    tanggal: f.tanggal, cara: 'cash' as const, total: f.total, oleh: f.oleh, sumber: 'Faktur tunai', barang: new Set(f.baris.map((b) => b.produkId)).size, cek: [] as string[],
+  }));
+  return [...dariSP, ...tanpaSP, ...tunai]
+    .map((x) => ({ ...x, faktur: status.get(x.id) }))
+    .sort((a, b) => b.tanggal.localeCompare(a.tanggal) || b.nomor.localeCompare(a.nomor));
+}
+
 /* ---------- Brankas & rekening (Back Office) ---------- */
 
 /** Catatan uang oleh pemilik di Back Office: tidak terikat laci mana pun. */
@@ -1624,6 +1748,15 @@ export function daftarFaktur(s: State = state): FakturHutang[] {
         };
       }),
     ),
+    ...s.fakturMasuk.map((f) => ({
+      id: `fm:${f.id}`, nomor: f.nomor, nomorDistributor: f.nomorDistributor, distributorId: f.distributorId, tanggal: f.tanggal,
+      jatuhTempo: f.cara === 'cash' ? f.tanggal : tambahHari(f.tanggal, termin(f.distributorId)), total: f.total, lama: false,
+      asli: {
+        nomor: f.nomor, nomorDistributor: f.nomorDistributor, waktu: new Date(f.waktuIso).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+        tanggal: f.tanggal, cara: f.cara, total: f.total, oleh: f.oleh, spNomor: 'Tanpa Surat Pesanan',
+        baris: f.baris.map((b) => { const p = ambilProduk(b.produkId); return { nama: `${p.nama}${b.bonus ? ' (bonus)' : ''}`, satuan: ambilSatuan(p, b.satuanProdukId).label, qty: b.qty, harga: b.hargaNetto }; }),
+      },
+    })),
     ...s.fakturTunai.map((f) => ({
       id: `ft:${f.id}`, nomor: f.nomor, nomorDistributor: f.nomorNota || f.nomor, distributorId: f.distributorId, tanggal: f.tanggal,
       jatuhTempo: f.tanggal, total: f.total, lama: false,
@@ -1764,6 +1897,12 @@ export function buatFakturTunai(d: {
   arusContoh('lc-k2', '[Kasir A]', n229.waktuIso, { jenis: 'penjualan', nomor: n229.nomor, tunai: 0, transfer: n229.total, keterangan: 'Penjualan · Amir' });
   arusContoh('lc-k2', '[Kasir A]', n230.waktuIso, { jenis: 'penjualan', nomor: n230.nomor, tunai: n230.total, transfer: 0, keterangan: 'Penjualan · Umum' });
   arusContoh('lc-k2', '[Kasir A]', jamKe(0, 9, 40), { jenis: 'kas-masuk', nomor: 'KM-2610-0001', tunai: 35000, transfer: 0, kategori: 'Jual kardus/karung bekas', keterangan: 'Jual 20 kardus bekas ke pengepul' });
+
+  // Surat Pesanan yang sudah dikirim dan menunggu barang datang (untuk dicoba di Barang Masuk → Dari Pesanan Toko).
+  tandaiSPDikirim(buatSP({ distributorId: 'dist-a', sumber: 'stok', baris: [
+    { produkId: 'dunhill-blue', satuanProdukId: 'dh-ktn', labelSatuan: 'Karton isi 10 Slop', qty: 1, hargaPerkiraan: 3050000, untukPesanan: [] },
+    { produkId: 'amild', satuanProdukId: 'amild-slp', labelSatuan: 'Slop isi 10', qty: 5, hargaPerkiraan: 312000, untukPesanan: [] },
+  ] }));
 
   // Kasir A hari ini: faktur tunai (beli gula di toko sebelah, stok habis) dan pengeluaran kemasan.
   state = { ...state, peran: 'kasir' };
