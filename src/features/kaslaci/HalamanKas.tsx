@@ -3,7 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { InputRupiah } from '../../components/InputRupiah';
 import { PilihPeriode, periodeDari, teksPeriode, type Periode } from '../../components/PilihPeriode';
 import { Dialog } from '../../components/Dialog';
-import { distributorContoh } from '../../data/contoh';
+import { bankContoh, distributorContoh, PIN_PEMILIK_CONTOH } from '../../data/contoh';
+import { BilahAtas, KartuRingkas, KotakFilter, PilihanChip, Sel, TabelDaftar } from '../../components/Daftar';
 import { KATEGORI_PENGELUARAN, akunAktif, catatArus, daftarFaktur, hariIni, laciTerbuka, nomorArus, ringkasLaci, useToko, type ArusKas, type FakturHutang } from '../../data/toko';
 import { isoHari, selisihHari, tambahHari } from '../../domain/kasbon';
 import { rupiah } from '../../lib/format';
@@ -30,10 +31,10 @@ export function Pengeluaran() {
   const [form, setForm] = useState(!!params.get('baru'));
   const [periode, setPeriode] = useState<Periode>(() => periodeDari('7-hari', '', { dari: '', sampai: '' }));
   const [fKat, setFKat] = useState('');
+  const [fSumber, setFSumber] = useState<'semua' | ArusKas['sumber']>('semua');
   const [cari, setCari] = useState('');
   const [d, setD] = useState<ArusKas | null>(null);
   const semua = toko.peran === 'pemilik';
-  const adaLaci = !!laciTerbuka(undefined, toko);
 
   if (form) {
     return <FormPengeluaran onBatal={() => { setForm(false); setParams({}); }} onSelesai={(a) => { setForm(false); setParams({}); setD(a); }} />;
@@ -41,28 +42,32 @@ export function Pengeluaran() {
 
   const q = cari.trim().toLowerCase();
   const katDari = (a: ArusKas) => (a.rincian ?? [{ kategori: a.kategori ?? '-', keterangan: a.keterangan, jumlah: Math.abs(a.tunai + a.transfer) }]);
-  const daftar = toko.arus
-    .filter((a) => a.jenis === 'pengeluaran' && a.sumber === 'laci' && (semua || a.akun === akunAktif(toko)) && diPeriode(a.waktuIso, periode))
+  const dasar = toko.arus
+    .filter((a) => a.jenis === 'pengeluaran' && (semua || a.akun === akunAktif(toko)) && diPeriode(a.waktuIso, periode));
+  const daftar = dasar
+    .filter((a) => fSumber === 'semua' || a.sumber === fSumber)
     .filter((a) => !fKat || katDari(a).some((x) => x.kategori === fKat))
-    .filter((a) => !q || a.nomor.toLowerCase().includes(q) || (a.penerima ?? '').toLowerCase().includes(q) || katDari(a).some((x) => x.keterangan.toLowerCase().includes(q)))
+    .filter((a) => !q || a.nomor.toLowerCase().includes(q) || (a.penerima ?? '').toLowerCase().includes(q) || (a.referensi ?? '').toLowerCase().includes(q)
+      || katDari(a).some((x) => x.keterangan.toLowerCase().includes(q)))
     .sort((a, b) => b.waktuIso.localeCompare(a.waktuIso));
-  const total = daftar.reduce((t, a) => t - a.tunai - a.transfer, 0);
+  const nilai = (a: ArusKas) => Math.abs(a.tunai + a.transfer);
+  const jumlah = (xs: ArusKas[]) => xs.reduce((t, a) => t + nilai(a), 0);
   const perKat = new Map<string, number>();
   daftar.forEach((a) => katDari(a).forEach((x) => perKat.set(x.kategori, (perKat.get(x.kategori) ?? 0) + x.jumlah)));
+  const namaSumber = (a: ArusKas) => (a.sumber === 'laci' ? 'Laci kasir' : a.sumber === 'brankas' ? 'Brankas' : `Rekening${a.bank ? ` ${a.bank}` : ''}`);
+  const banyak = (k: 'semua' | ArusKas['sumber']) => dasar.filter((a) => k === 'semua' || a.sumber === k).length;
 
   return (
     <div className="ps-halaman">
       <KepalaKas />
-      <div className="ps-atas">
-        <div className="kartu kb-angka" style={{ minWidth: 240 }}>
-          <span className="teks-pudar">Pengeluaran laci · {teksPeriode(periode)}</span>
-          <strong>{rupiah(total)}</strong>
-          <span className="teks-pudar">{daftar.length} bukti{semua ? ' · semua akun' : ''}</span>
-        </div>
-        <button type="button" className="tombol tombol--utama" disabled={!adaLaci} title={adaLaci ? undefined : 'Buka kasir dulu'} onClick={() => setForm(true)}>+ Pengeluaran baru</button>
-      </div>
-
-      <div className="kartu tumpuk">
+      <BilahAtas kanan={<button type="button" className="tombol tombol--utama" onClick={() => setForm(true)}>+ Pengeluaran baru</button>} />
+      <KartuRingkas item={[
+        { judul: `Pengeluaran · ${teksPeriode(periode)}`, nilai: rupiah(jumlah(dasar)), catatan: `${dasar.length} bukti${semua ? ' · semua akun' : ''}`, aktif: fSumber === 'semua', onKlik: () => setFSumber('semua') },
+        { judul: 'Dari laci kasir', nilai: rupiah(jumlah(dasar.filter((a) => a.sumber === 'laci'))), catatan: 'tunai', aktif: fSumber === 'laci', onKlik: () => setFSumber('laci') },
+        { judul: 'Dari brankas', nilai: rupiah(jumlah(dasar.filter((a) => a.sumber === 'brankas'))), catatan: 'tunai, PIN pemilik', aktif: fSumber === 'brankas', onKlik: () => setFSumber('brankas') },
+        { judul: 'Dari rekening', nilai: rupiah(jumlah(dasar.filter((a) => a.sumber === 'bank'))), catatan: 'transfer, PIN pemilik', aktif: fSumber === 'bank', onKlik: () => setFSumber('bank') },
+      ]} />
+      <KotakFilter ringkas={[teksPeriode(periode), fKat || 'semua kategori', fSumber === 'semua' ? 'semua sumber' : fSumber === 'bank' ? 'rekening' : fSumber, q && `"${cari}"`].filter(Boolean).join(' · ')}>
         <PilihPeriode awal="7-hari" onUbah={setPeriode} />
         <div className="rt-filter">
           <label className="isian">
@@ -74,68 +79,73 @@ export function Pengeluaran() {
           </label>
           <label className="isian">
             Cari
-            <input className="isian__kontrol" value={cari} onChange={(e) => setCari(e.target.value)} placeholder="no. bukti, penerima, keterangan" />
+            <input className="isian__kontrol" value={cari} onChange={(e) => setCari(e.target.value)} placeholder="no. bukti, penerima, no. referensi, keterangan" />
           </label>
         </div>
+        <PilihanChip label="Sumber dana" nilai={fSumber} onUbah={setFSumber} pilihan={[
+          { k: 'semua', judul: 'Semua sumber', jumlah: banyak('semua') }, { k: 'laci', judul: 'Laci kasir', jumlah: banyak('laci') },
+          { k: 'brankas', judul: 'Brankas', jumlah: banyak('brankas') }, { k: 'bank', judul: 'Rekening', jumlah: banyak('bank') },
+        ]} />
         {perKat.size > 0 && (
-          <div className="lc-bagi-lihat" style={{ borderTop: 0, paddingTop: 0 }}>
+          <div className="lc-bagi-lihat">
             {[...perKat].sort((a, b) => b[1] - a[1]).map(([k, v]) => <span key={k}>{k} <strong>{rupiah(v)}</strong></span>)}
           </div>
         )}
-      </div>
-
-      {daftar.length === 0 ? (
-        <div className="kartu ps-kosong-besar"><h2>Tidak ada pengeluaran</h2><p className="teks-pudar">Tidak ada bukti kas keluar untuk filter ini.</p></div>
-      ) : (
-        <div className="kartu bd-tabel-kartu">
-          <table className="ps-tabel ps-tabel--hp bd-tabel">
-            <thead>
-              <tr><th>No. bukti</th><th>Tanggal</th><th>Kategori</th><th>Keterangan</th><th>Penerima</th><th className="kanan">Nilai</th><th>Oleh</th></tr>
-            </thead>
-            <tbody>
-              {daftar.map((a) => {
-                const r = katDari(a);
-                return (
-                  <tr key={a.id} onClick={() => setD(a)}>
-                    <td data-label="No. bukti"><strong>{a.nomor}</strong></td>
-                    <td data-label="Tanggal">{waktu(a.waktuIso)}</td>
-                    <td data-label="Kategori">{[...new Set(r.map((x) => x.kategori))].join(', ')}</td>
-                    <td data-label="Keterangan">{r.map((x) => x.keterangan).join('; ')}</td>
-                    <td data-label="Penerima">{a.penerima}</td>
-                    <td data-label="Nilai" className="kanan"><strong>{rupiah(Math.abs(a.tunai + a.transfer))}</strong></td>
-                    <td data-label="Oleh">{a.akun}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot><tr><td colSpan={5} className="kanan"><strong>Total</strong></td><td className="kanan"><strong>{rupiah(total)}</strong></td><td /></tr></tfoot>
-          </table>
-        </div>
-      )}
+      </KotakFilter>
+      <TabelDaftar
+        data={daftar}
+        kunci={(a) => a.id}
+        onKlik={setD}
+        kosong={<><h2>Tidak ada pengeluaran</h2><p className="teks-pudar">Tidak ada bukti kas keluar untuk filter ini.</p></>}
+        kolom={[
+          { judul: 'No. bukti', isi: (a) => <Sel utama={<strong>{a.nomor}</strong>} bawah={waktu(a.waktuIso)} /> },
+          { judul: 'Penerima', isi: (a) => <Sel utama={a.penerima} bawah={a.referensi ? `ref. ${a.referensi}` : undefined} /> },
+          { judul: 'Kategori', isi: (a) => [...new Set(katDari(a).map((x) => x.kategori))].join(', ') },
+          { judul: 'Keterangan', bungkus: true, isi: (a) => katDari(a).map((x) => x.keterangan).join('; ') },
+          { judul: 'Dibayar dari', isi: (a) => namaSumber(a) },
+          { judul: 'Total', kanan: true, isi: (a) => <strong>{rupiah(nilai(a))}</strong>, total: rupiah(jumlah(daftar)) },
+          { judul: 'Oleh', isi: (a) => a.akun },
+        ]}
+      />
       {d && <DialogBuktiKasKeluar a={d} onTutup={() => setD(null)} />}
     </div>
   );
 }
 
-/** Formulir bukti kas keluar: kepala (tanggal, no. bukti, dibayar dari, penerima) + baris rincian. */
+/**
+ * Formulir bukti kas keluar (pola Expense QuickBooks / Biaya Majoo):
+ * kepala — tanggal, no. bukti, dibayar dari (laci / brankas / rekening), penerima, no. referensi, memo;
+ * rincian — kategori, keterangan, jumlah (beberapa baris); potongan; total; lampiran.
+ */
 function FormPengeluaran({ onBatal, onSelesai }: { onBatal: () => void; onSelesai: (a: ArusKas) => void }) {
   const toko = useToko();
   const laci = laciTerbuka(undefined, toko);
   const uang = uangLaci(toko);
   const kosong = () => ({ id: Math.random().toString(36).slice(2), kategori: '', keterangan: '', jumlah: 0 });
   const [baris, setBaris] = useState([kosong()]);
+  const [sumber, setSumber] = useState<ArusKas['sumber']>(laci ? 'laci' : 'brankas');
+  const [bank, setBank] = useState('');
   const [penerima, setPenerima] = useState('');
+  const [referensi, setReferensi] = useState('');
+  const [memo, setMemo] = useState('');
+  const [potongan, setPotongan] = useState(0);
+  const [pin, setPin] = useState('');
   const ubah = (id: string, patch: Partial<ReturnType<typeof kosong>>) => setBaris((xs) => xs.map((x) => (x.id === id ? { ...x, ...patch } : x)));
   const isi = baris.filter((x) => x.jumlah > 0);
-  const total = isi.reduce((t, x) => t + x.jumlah, 0);
+  const subtotal = isi.reduce((t, x) => t + x.jumlah, 0);
+  const total = Math.max(0, subtotal - potongan);
   const lengkap = isi.length > 0 && isi.every((x) => x.kategori && x.keterangan.trim());
-  const lebih = total > uang;
-  const siap = !!laci && lengkap && !!penerima.trim() && !lebih;
+  const lebih = sumber === 'laci' && total > uang;
+  const perluPin = sumber !== 'laci' && toko.peran !== 'pemilik';
+  const siap = lengkap && !!penerima.trim() && !lebih && total > 0 && (sumber !== 'laci' || !!laci) && (sumber !== 'bank' || !!bank)
+    && (!perluPin || pin === PIN_PEMILIK_CONTOH) && potongan <= subtotal;
   const simpan = () => {
     if (!siap) return;
     const rincian = isi.map((x) => ({ kategori: x.kategori, keterangan: x.keterangan.trim(), jumlah: x.jumlah }));
     onSelesai(catatArus({
-      jenis: 'pengeluaran', nomor: nomorArus('KK'), tunai: -total, transfer: 0, penerima: penerima.trim(),
+      jenis: 'pengeluaran', nomor: nomorArus('KK'), sumber, bank: sumber === 'bank' ? bank : undefined,
+      tunai: sumber === 'bank' ? 0 : -total, transfer: sumber === 'bank' ? -total : 0,
+      penerima: penerima.trim(), referensi: referensi.trim() || undefined, memo: memo.trim() || undefined, potongan: potongan || undefined,
       kategori: rincian.length === 1 ? rincian[0].kategori : 'Beberapa kategori', keterangan: rincian.map((x) => x.keterangan).join('; '), rincian,
     }));
   };
@@ -148,12 +158,35 @@ function FormPengeluaran({ onBatal, onSelesai }: { onBatal: () => void; onSelesa
       <div className="kartu bd-kepala">
         <label className="isian">Tanggal<input className="isian__kontrol" value={tanggalPendek(hariIni())} readOnly /></label>
         <label className="isian">No. bukti<input className="isian__kontrol" value="KK-… (otomatis)" readOnly /></label>
-        <label className="isian">Dibayar dari<input className="isian__kontrol" value={laci ? `Laci ${laci.akun} · ${rupiah(uang)}` : 'Laci belum dibuka'} readOnly /></label>
         <label className="isian">
           Nama penerima (wajib)
-          <input className="isian__kontrol" value={penerima} onChange={(e) => setPenerima(e.target.value)} placeholder="mis. Pak Udin (kuli)" />
+          <input className="isian__kontrol" value={penerima} onChange={(e) => setPenerima(e.target.value)} placeholder="mis. Pak Udin (kuli), PLN" />
         </label>
+        <label className="isian">
+          No. referensi (opsional)
+          <input className="isian__kontrol" value={referensi} onChange={(e) => setReferensi(e.target.value)} placeholder="no. nota / kuitansi penerima" />
+        </label>
+        <div className="isian bd-kepala__lebar">
+          Dibayar dari
+          <div className="kb-cepat kk-sumber" role="group" aria-label="Dibayar dari">
+            <button type="button" className="tombol" disabled={!laci} aria-pressed={sumber === 'laci'} onClick={() => setSumber('laci')}>Laci kasir{laci ? ` · ${rupiah(uang)}` : ' (belum dibuka)'}</button>
+            <button type="button" className="tombol" aria-pressed={sumber === 'brankas'} onClick={() => setSumber('brankas')}>Brankas</button>
+            <button type="button" className="tombol" aria-pressed={sumber === 'bank'} onClick={() => setSumber('bank')}>Rekening (transfer)</button>
+          </div>
+          <span className="isian__bantuan">
+            {sumber === 'laci' ? 'Tunai dari laci kasir; mengurangi uang di laci.' : sumber === 'brankas' ? 'Tunai dari brankas pemilik. Perlu PIN pemilik.' : 'Transfer dari rekening toko. Perlu PIN pemilik.'}
+          </span>
+        </div>
+        {sumber === 'bank' && (
+          <div className="isian bd-kepala__lebar">
+            Rekening
+            <div className="kb-cepat">
+              {bankContoh.map((x) => <button key={x} type="button" className="tombol tombol--kecil" aria-pressed={bank === x} onClick={() => setBank(x)}>{x}</button>)}
+            </div>
+          </div>
+        )}
       </div>
+
       <div className="kartu bd-tabel-kartu">
         <table className="ps-tabel ps-tabel--hp bd-tabel bd-form">
           <thead><tr><th style={{ width: 40 }}>#</th><th>Kategori</th><th>Keterangan (wajib)</th><th className="kanan">Jumlah</th><th aria-label="Hapus" /></tr></thead>
@@ -178,16 +211,33 @@ function FormPengeluaran({ onBatal, onSelesai }: { onBatal: () => void; onSelesa
         </table>
         <button type="button" className="tombol tombol--putus" style={{ marginTop: 10 }} onClick={() => setBaris((xs) => [...xs, kosong()])}>+ Tambah baris</button>
       </div>
+
       <div className="kartu bd-kaki">
         <div className="bd-kaki__angka">
-          <div className="ringkas-total"><span>Baris</span><strong>{isi.length}</strong></div>
-          <div className="ringkas-total ringkas-total--besar"><span>Total kas keluar (dari laci)</span><strong>{rupiah(total)}</strong></div>
-          {lebih && <p className="catatan catatan--peringatan" style={{ margin: 0 }}>Melebihi uang di laci ({rupiah(uang)}).</p>}
-          <p className="teks-pudar" style={{ margin: 0, fontSize: 12.5 }}>Foto nota (opsional) bisa ditambahkan di versi jadi. Bukti dicetak untuk ditandatangani penerima.</p>
+          <label className="isian">
+            Memo (opsional)
+            <input className="isian__kontrol" value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="catatan internal" />
+          </label>
+          <div className="isian">
+            Lampiran foto nota (opsional)
+            <button type="button" className="tombol tombol--putus" style={{ alignSelf: 'flex-start' }} disabled>+ Foto nota (versi jadi)</button>
+          </div>
+          {perluPin && (
+            <label className="isian">
+              PIN pemilik · uang dari {sumber === 'bank' ? 'rekening' : 'brankas'}
+              <input className="isian__kontrol" type="password" inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value)} />
+            </label>
+          )}
         </div>
-        <div className="baris-tombol" style={{ justifyContent: 'flex-end' }}>
-          <button type="button" className="tombol" onClick={onBatal}>Batal</button>
-          <button type="button" className="tombol tombol--utama" disabled={!siap} onClick={simpan}>Simpan & cetak bukti</button>
+        <div className="bd-kaki__angka">
+          <div className="ringkas-total"><span>Subtotal ({isi.length} baris)</span><strong>{rupiah(subtotal)}</strong></div>
+          <div className="ringkas-total"><span>Potongan (opsional)</span><span style={{ width: 160 }}><InputRupiah id="kk-potongan" nilai={potongan} onUbah={setPotongan} /></span></div>
+          <div className="ringkas-total ringkas-total--besar"><span>Total kas keluar</span><strong>{rupiah(total)}</strong></div>
+          {lebih && <p className="catatan catatan--peringatan" style={{ margin: 0 }}>Melebihi uang di laci ({rupiah(uang)}). Pilih brankas/rekening atau kurangi jumlah.</p>}
+          <div className="baris-tombol" style={{ justifyContent: 'flex-end' }}>
+            <button type="button" className="tombol" onClick={onBatal}>Batal</button>
+            <button type="button" className="tombol tombol--utama" disabled={!siap} onClick={simpan}>Simpan & cetak bukti</button>
+          </div>
         </div>
       </div>
     </div>
@@ -286,7 +336,8 @@ export function BayarDistributor() {
         </div>
       )}
 
-      <div className="kartu tumpuk">
+      <KotakFilter ringkas={[tab === 'pembayaran' ? teksPeriode(periode) : { 'belum-lunas': 'Belum lunas', lewat: 'Lewat jatuh tempo', 'minggu-ini': 'Jatuh tempo 7 hari', lunas: 'Lunas', semua: 'Semua status' }[fStatus],
+        fDist ? ambilDistributor(fDist).nama : 'semua distributor', q && `"${cari}"`].filter(Boolean).join(' · ')}>
         {tab === 'pembayaran' && <PilihPeriode awal="bulan-ini" onUbah={setPeriode} />}
         <div className="rt-filter">
           <label className="isian">
@@ -308,7 +359,7 @@ export function BayarDistributor() {
             ))}
           </div>
         )}
-      </div>
+      </KotakFilter>
 
       {tab === 'faktur' && (
         tampil.length === 0 ? (
@@ -599,7 +650,7 @@ export function LaporanHarian() {
   return (
     <div className="ps-halaman">
       <KepalaKas />
-      <div className="kartu tumpuk">
+      <KotakFilter ringkas={[teksPeriode(periode), semua ? fAkun || 'semua akun' : undefined].filter(Boolean).join(' · ')}>
         <PilihPeriode awal="7-hari" onUbah={setPeriode} />
         {semua && (
           <div className="rt-filter">
@@ -612,7 +663,7 @@ export function LaporanHarian() {
             </label>
           </div>
         )}
-      </div>
+      </KotakFilter>
       {daftar.length === 0 ? (
         <div className="kartu ps-kosong-besar"><h2>Tidak ada laporan</h2><p className="teks-pudar">Laporan dibuat setiap buka–tutup kasir.</p></div>
       ) : (

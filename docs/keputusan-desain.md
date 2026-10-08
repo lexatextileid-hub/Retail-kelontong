@@ -196,9 +196,9 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
   Jumlah pembagian harus sama dengan uang fisik.
 - **Pengeluaran: satu catatan, dua pintu input**, sumber dana dipilih di keduanya:
   - **Back Office:** laci kasir mana pun, brankas, atau rekening bank mana pun.
-  - **Kasir:** hanya dari **laci sendiri**. Pengeluaran dari brankas/bank dicatat di Back Office.
+  - **Kasir:** sumber dana dipilih: **laci kasir** (bawaan), **brankas**, atau **rekening (transfer)**. Brankas/rekening perlu **PIN pemilik** dan saldonya tidak ditampilkan ke kasir.
   Back Office menampilkan semua pengeluaran dari kedua pintu (cermin); kasir hanya melihat pengeluaran yang ia catat.
-- **Format pengeluaran:** tanggal (otomatis), kategori, jumlah, sumber dana, **keterangan (wajib)**, **nama penerima (wajib)**, foto nota (opsional, karena tidak semua ada nota), dicatat oleh (otomatis).
+- **Format pengeluaran** (mengikuti Expense QuickBooks / Biaya Majoo): kepala — tanggal (otomatis), no. bukti (otomatis), **dibayar dari** (laci / brankas / rekening + nama bank), **nama penerima (wajib)**, no. referensi nota/kuitansi (opsional); rincian — beberapa baris **kategori, keterangan (wajib), jumlah**; potongan (opsional); total; memo (opsional); foto nota (opsional); dicatat oleh (otomatis). Daftar: no. bukti, tanggal, penerima, kategori, keterangan, dibayar dari, total, oleh; ringkasan per sumber dana; filter periode, kategori, sumber, cari.
 - Setiap pengeluaran bisa **dicetak sebagai bukti kas keluar** (lewat stasiun printer atau unduh PDF) dengan kolom tanda tangan penerima, untuk ditandatangani manual.
 - **Ongkos angkut barang dari distributor = pengeluaran biasa** (kategori bongkar muat & angkut), tidak ditambahkan ke modal barang.
 - **Kategori awal** (bisa diubah di Pengaturan): bongkar muat & angkut; retribusi & keamanan pasar; kemasan; kebutuhan toko harian; listrik, air, internet; gaji & uang makan; sewa ruko; perbaikan & perawatan; lain-lain (wajib keterangan).
@@ -438,6 +438,7 @@ Setiap barang memilih satu metode:
 ## Tampilan
 
 - **Format daftar seragam** (Pesanan Pelanggan, Kasbon, Retur, Riwayat, Kas Laci, Bayar Distributor, Piutang): tombol utama kanan atas → kartu ringkasan (bisa diklik sebagai filter) → kotak filter (periode / pelanggan / distributor / cari / status) → tabel gaya akuntansi dengan baris total; klik baris membuka detail. Di HP tabel berubah menjadi kartu per baris. Komponen bersama: `src/components/Daftar.tsx`.
+- **Kotak filter bisa diciutkan**; saat diciutkan tampil ringkasan filter aktif. Posisi buka/ciut diingat per halaman (di HP bawaan ciut).
 
 - Warna biru–putih (lihat `src/styles/global.css`), font Plus Jakarta Sans.
 - Gaya bersih seperti aplikasi kasir Indonesia (Moka, majoo), bukan gaya "template AI".

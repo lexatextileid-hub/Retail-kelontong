@@ -41,7 +41,7 @@ export function DaftarPesanan() {
         { judul: 'Menunggu barang', nilai: di('menunggu').length, catatan: 'sudah dipesan ke distributor', aktif: f === 'menunggu', onKlik: () => setF('menunggu') },
         { judul: 'Belum dibayar', nilai: rupiah(jumlah(aktif, (x) => x.r.sisa)), catatan: 'sisa tagihan pesanan aktif' },
       ]} />
-      <KotakFilter>
+      <KotakFilter ringkas={[{ aktif: 'Aktif', tindakan: 'Perlu tindakan', menunggu: 'Menunggu barang', tempo: 'Tempo', selesai: 'Selesai', semua: 'Semua status' }[f], fPlg ? namaPelanggan(fPlg) : 'semua pelanggan', q && `"${cari}"`].filter(Boolean).join(' · ')}>
         <div className="rt-filter">
           <label className="isian">
             Pelanggan

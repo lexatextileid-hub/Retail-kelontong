@@ -33,7 +33,7 @@ export function DaftarKasbon({ dariOffice = false }: { dariOffice?: boolean }) {
         { judul: 'Lewat jatuh tempo', nilai: rupiah(jumlah(lewat, (x) => x.r.lewatTempo)), catatan: `${lewat.length} pelanggan`, warna: lewat.length ? 'merah' : undefined, aktif: f === 'lewat', onKlik: () => setF('lewat') },
         { judul: 'Belum lewat tempo', nilai: rupiah(jumlah(ada, (x) => x.r.saldo - x.r.lewatTempo)), catatan: 'masih berjalan' },
       ]} />
-      <KotakFilter>
+      <KotakFilter ringkas={[{ ada: 'Ada kasbon', lewat: 'Lewat tempo', semua: 'Semua pelanggan' }[f], q && `"${cari}"`].filter(Boolean).join(' · ')}>
         <div className="rt-filter">
           <label className="isian">
             Cari

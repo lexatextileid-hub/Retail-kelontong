@@ -154,13 +154,16 @@ export function DialogBuktiKasKeluar({ a, onTutup }: { a: ArusKas; onTutup: () =
         <div className="struk__tengah struk__tebal">BUKTI KAS KELUAR</div>
         <div>{a.nomor} · {new Date(a.waktuIso).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
         {!a.rincian && <div>Kategori: {a.kategori ?? (a.jenis === 'bayar-distributor' ? 'Bayar distributor' : 'Setor bank')}</div>}
-        <div>Sumber: {a.sumber === 'laci' ? `Laci ${a.akun}` : a.sumber === 'bank' ? `Bank ${a.bank ?? ''}` : 'Kas pemilik'}</div>
+        <div>Dibayar dari: {a.sumber === 'laci' ? `Laci ${a.akun}` : a.sumber === 'bank' ? `Rekening ${a.bank ?? ''} (transfer)` : 'Brankas'}</div>
+        {a.referensi && <div>No. referensi: {a.referensi}</div>}
         <div className="struk__garis" />
         {a.rincian ? a.rincian.map((x, i) => (
           <div key={i}><div>{x.kategori}</div><div className="struk__baris"><span>  {x.keterangan}</span><span>{rupiah(x.jumlah)}</span></div></div>
         )) : <div>{a.keterangan}</div>}
         {a.faktur?.map((f) => <div key={f.id} className="struk__baris"><span>  {f.nomor}</span><span>{rupiah(f.jumlah)}</span></div>)}
+        {!!a.potongan && <div className="struk__baris"><span>Potongan</span><span>−{rupiah(a.potongan)}</span></div>}
         <div className="struk__baris struk__tebal"><span>JUMLAH</span><span>{rupiah(jumlah)}</span></div>
+        {a.memo && <div>Memo: {a.memo}</div>}
         <div className="struk__garis" />
         <div>Dicatat: {a.akun}</div>
         <div style={{ marginTop: 18 }}>Penerima: {a.penerima ?? '______________'}</div>

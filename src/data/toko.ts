@@ -274,6 +274,10 @@ export interface ArusKas {
   kategori?: string;
   /** Rincian bukti kas keluar (bisa beberapa baris kategori). */
   rincian?: { kategori: string; keterangan: string; jumlah: number }[];
+  potongan?: number;
+  /** No. nota/kuitansi dari penerima (opsional). */
+  referensi?: string;
+  memo?: string;
   penerima?: string;
   bank?: string;
   /** jumlah = uang dibayar; diskon = potongan dari distributor (mengurangi hutang tanpa uang). */
@@ -996,7 +1000,8 @@ export function bukaLaci(tambahBrankas: number): SesiLaci {
 export function ringkasLaci(sesiId: string, s: State = state) {
   const sesi = s.sesiLaci.find((x) => x.id === sesiId)!;
   const arus = s.arus.filter((a) => a.sesiId === sesiId);
-  const per = (j: JenisArus, f: 'tunai' | 'transfer') => arus.filter((a) => a.jenis === j && (f === 'transfer' || a.sumber === 'laci')).reduce((t, a) => t + a[f], 0);
+  // Hanya uang lewat laci kasir (tunai) / dicatat kasir (transfer pelanggan). Pengeluaran dari brankas/rekening tidak masuk laci.
+  const per = (j: JenisArus, f: 'tunai' | 'transfer') => arus.filter((a) => a.jenis === j && a.sumber === 'laci').reduce((t, a) => t + a[f], 0);
   const jenisSemua: JenisArus[] = ['penjualan', 'kasbon', 'pesanan', 'retur', 'kas-masuk', 'titipan-brankas', 'pengeluaran', 'bayar-distributor', 'setor-bank'];
   const tunai = Object.fromEntries(jenisSemua.map((j) => [j, per(j, 'tunai')])) as Record<JenisArus, number>;
   const transfer = Object.fromEntries(jenisSemua.map((j) => [j, per(j, 'transfer')])) as Record<JenisArus, number>;

@@ -38,7 +38,7 @@ export function DaftarRetur() {
         { judul: 'Tukar barang', nilai: diPeriode.filter((r) => r.tukar.length).length, catatan: 'retur dengan barang pengganti' },
         { judul: 'Pengecualian', nilai: diPeriode.filter((r) => r.pengecualian).length, catatan: 'lewat batas / tanpa nota', warna: diPeriode.some((r) => r.pengecualian) ? 'merah' : undefined },
       ]} />
-      <KotakFilter>
+      <KotakFilter ringkas={[teksPeriode(periode), { semua: 'semua sumber', nota: 'dari nota', pesanan: 'dari pesanan', 'tanpa-nota': 'tanpa nota' }[sumber], fPelanggan ? namaPelanggan(fPelanggan) : 'semua pelanggan', q && `"${cari}"`].filter(Boolean).join(' · ')}>
         <PilihPeriode awal="7-hari" onUbah={setPeriode} />
         <div className="rt-filter">
           <label className="isian">

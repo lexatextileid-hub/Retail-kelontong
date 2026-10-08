@@ -68,7 +68,7 @@ export function Riwayat() {
         { judul: 'Bayar kasbon', nilai: rupiah(kasbonMasuk), catatan: `${banyak('kasbon')} pembayaran` },
         { judul: 'Retur', nilai: rupiah(returPeriode), catatan: `${banyak('retur')} retur`, warna: returPeriode ? 'merah' : undefined },
       ]} />
-      <KotakFilter>
+      <KotakFilter ringkas={[teksPeriode(periode), { semua: 'semua jenis', jual: 'penjualan', kasbon: 'bayar kasbon', retur: 'retur' }[jenis], q && `"${cari}"`].filter(Boolean).join(' · ')}>
         <PilihPeriode onUbah={setPeriode} />
         <div className="rt-filter">
           <label className="isian">

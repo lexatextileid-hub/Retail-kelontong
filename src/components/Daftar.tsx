@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import '../styles/pesanan.css';
 import '../styles/penjualan.css';
 import '../styles/kasbon.css';
@@ -48,8 +48,38 @@ export function KartuRingkas({ item }: { item: ItemRingkas[] }) {
   );
 }
 
-export function KotakFilter({ children }: { children: ReactNode }) {
-  return <div className="kartu tumpuk">{children}</div>;
+/**
+ * Kotak filter yang bisa diciutkan. Isi tetap terpasang (hanya disembunyikan) supaya pilihan filter tidak hilang.
+ * `ringkas`: ringkasan filter aktif yang tampil saat diciutkan. Posisi buka/ciut diingat per halaman.
+ */
+export function KotakFilter({ children, ringkas }: { children: ReactNode; ringkas?: ReactNode }) {
+  const kunci = `tokoku.filter.${typeof location !== 'undefined' ? location.hash.split('?')[0] : ''}`;
+  const [ciut, setCiut] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem(kunci);
+      if (v !== null) return v === '1';
+    } catch { /* penyimpanan tidak tersedia */ }
+    return typeof window !== 'undefined' && window.innerWidth <= 720;
+  });
+  const ubah = () => {
+    setCiut((c) => {
+      try { localStorage.setItem(kunci, c ? '0' : '1'); } catch { /* abaikan */ }
+      return !c;
+    });
+  };
+  return (
+    <div className="kartu kf">
+      <button type="button" className="kf__kepala" aria-expanded={!ciut} onClick={ubah}>
+        <span className="kf__judul">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z" /></svg>
+          Filter
+        </span>
+        {ciut && ringkas && <span className="kf__ringkas">{ringkas}</span>}
+        <span className="kf__aksi">{ciut ? 'Tampilkan' : 'Ciutkan'} <span aria-hidden="true">{ciut ? '▾' : '▴'}</span></span>
+      </button>
+      <div className="kf__isi tumpuk" style={ciut ? { display: 'none' } : undefined}>{children}</div>
+    </div>
+  );
 }
 
 /** Baris tombol pilihan (status, jenis) dengan jumlah. */
