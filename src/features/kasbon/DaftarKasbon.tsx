@@ -88,7 +88,7 @@ export function DaftarKasbon({ dariOffice = false }: { dariOffice?: boolean }) {
                   )}
                 </span>
                 <span className="teks-pudar" style={{ fontSize: 13 }}>
-                  {r.banyakNota > 0 ? `${r.banyakNota} tagihan · tertua ${r.tertuaHari} hari` : 'Tidak ada tagihan'} · tempo {p.tempoHari} hari
+                  {r.banyakNota > 0 ? `${r.banyakNota} tagihan · tertua ${r.tertuaHari} hari` : 'Tidak ada tagihan'} · {p.tempoHari ? `tempo ${p.tempoHari} hari` : 'tempo belum diatur'}
                 </span>
                 {r.lewatTempo > 0 && <span className="teks-bahaya" style={{ fontSize: 13 }}>Lewat tempo {rupiah(r.lewatTempo)}</span>}
                 {r.lewatTempo === 0 && tempo !== null && r.jatuhTempoTerdekat && (

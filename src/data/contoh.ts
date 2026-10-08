@@ -131,12 +131,9 @@ export const stokContoh: Record<string, number> = {
 
 export interface PelangganContoh extends Pelanggan {
   hp?: string;
-  /** Tempo bayar kasbon (hari sejak nota). Diatur pemilik di Back Office. */
+  /** Tempo bayar kasbon (hari sejak nota). 0 = belum diatur. Hanya dengan persetujuan pemilik (PIN). */
   tempoHari: number;
 }
-
-/** Tempo bawaan pelanggan baru dari kasir (pemilik bisa mengubah di Back Office). */
-export const TEMPO_BAWAAN_HARI = 7;
 
 export const pelangganContoh: PelangganContoh[] = [
   { id: 'umum', nama: 'Umum', jenis: 'umum', batasKasbon: 0, tempoHari: 0 },

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Dialog } from '../../components/Dialog';
-import type { PelangganContoh } from '../../data/contoh';
+import { PIN_PEMILIK_CONTOH, type PelangganContoh } from '../../data/contoh';
+import { useToko } from '../../data/toko';
 import { kunciNama } from '../../domain/satuanBawaan';
 import { rupiah } from '../../lib/format';
 import { ambilProduk, ambilSatuan, angka, type Nota, type Tertahan } from './model';
@@ -129,11 +130,17 @@ export function DialogPelangganBaru({
   onTutup,
 }: {
   daftar: PelangganContoh[];
-  onSimpan: (nama: string, hp: string) => void;
+  onSimpan: (nama: string, hp: string, tempoHari: number) => void;
   onTutup: () => void;
 }) {
   const [nama, setNama] = useState('');
   const [hp, setHp] = useState('');
+  const [tempo, setTempo] = useState(0);
+  const [pin, setPin] = useState('');
+  const { peran } = useToko();
+  // Tempo bayar harus disetujui pemilik: akun selain pemilik memakai PIN pemilik.
+  const perluPin = tempo > 0 && peran !== 'pemilik';
+  const siap = !!nama.trim() && (!perluPin || pin === PIN_PEMILIK_CONTOH);
   const mirip = nama.trim()
     ? daftar.filter((p) => {
         const a = kunciNama(p.nama);
@@ -147,7 +154,7 @@ export function DialogPelangganBaru({
         className="tumpuk"
         onSubmit={(e) => {
           e.preventDefault();
-          if (nama.trim()) onSimpan(nama.trim(), hp.trim());
+          if (siap) onSimpan(nama.trim(), hp.trim(), tempo);
         }}
       >
         <label className="isian">
@@ -161,10 +168,23 @@ export function DialogPelangganBaru({
           Nomor HP
           <input id="pelanggan-hp" className="isian__kontrol" inputMode="tel" value={hp} onChange={(e) => setHp(e.target.value)} />
         </label>
+        <label className="isian">
+          Tempo bayar kasbon (hari) · opsional
+          <input id="pelanggan-tempo" className="isian__kontrol" inputMode="numeric" value={tempo || ''} placeholder="kosong = belum diatur"
+            onChange={(e) => setTempo(Number(e.target.value.replace(/\D/g, '')) || 0)} />
+          <span className="isian__bantuan">Tempo harus disetujui pemilik{peran !== 'pemilik' ? ', isi PIN pemilik di bawah' : ''}. Bisa juga diatur nanti di Back Office.</span>
+        </label>
+        {perluPin && (
+          <label className="isian">
+            PIN pemilik
+            <input id="pelanggan-pin" className="isian__kontrol" type="password" inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value)} />
+            {pin.length >= 4 && pin !== PIN_PEMILIK_CONTOH && <span className="teks-bahaya" style={{ fontSize: 12.5 }}>PIN salah.</span>}
+          </label>
+        )}
         <p className="teks-pudar" style={{ margin: 0, fontSize: 13 }}>
           Batas kasbon otomatis Rp 0. Pemilik yang mengatur batas kasbon dan diskon di Back Office.
         </p>
-        <button type="submit" className="tombol tombol--utama" disabled={!nama.trim()}>Simpan pelanggan</button>
+        <button type="submit" className="tombol tombol--utama" disabled={!siap}>Simpan pelanggan</button>
       </form>
     </Dialog>
   );

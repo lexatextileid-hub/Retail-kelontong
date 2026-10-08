@@ -45,7 +45,7 @@ export function DetailKasbon() {
             {plg.lewatTempo > 0 && <span className="chip-status chip-status--merah">Lewat tempo {rupiah(plg.lewatTempo)}</span>}
           </div>
           <span className="teks-pudar">
-            {plg.hp ?? 'HP belum ada'} · tempo {plg.tempoHari} hari · batas {plg.batasKasbon ? rupiah(plg.batasKasbon) : 'belum diatur'}
+            {plg.hp ?? 'HP belum ada'} · {plg.tempoHari ? `tempo ${plg.tempoHari} hari` : 'tempo belum diatur'} · batas {plg.batasKasbon ? rupiah(plg.batasKasbon) : 'belum diatur'}
           </span>
           <span className="teks-pudar" style={{ fontSize: 12.5 }}>Batas dan tempo diatur pemilik di Back Office.</span>
         </div>

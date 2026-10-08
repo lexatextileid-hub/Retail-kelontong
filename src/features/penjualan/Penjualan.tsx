@@ -153,8 +153,8 @@ export function Penjualan() {
     setDialog(null);
   };
 
-  const simpanPelanggan = (nama: string, hp: string) => {
-    const baruId = tambahPelanggan(nama, hp);
+  const simpanPelanggan = (nama: string, hp: string, tempoHari: number) => {
+    const baruId = tambahPelanggan(nama, hp, tempoHari);
     setAktif((k) => ({ ...k, pelangganId: baruId }));
     setDialog(null);
   };

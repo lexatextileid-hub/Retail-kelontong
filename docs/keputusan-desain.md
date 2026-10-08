@@ -239,7 +239,7 @@ Setiap barang memilih satu metode:
 - Pembayaran campuran: sisa yang tidak dibayar hanya bisa jadi kasbon untuk pelanggan terdaftar.
 - **Satu tagihan per pelanggan** berisi: nota kasbon dari kasir, **kasbon lama**, dan **pesanan tempo**. Pesanan tempo sama dengan kasbon; bedanya biasanya ada DP. Pesanan baru **dihitung kasbon setelah barang diterima pelanggan** (nota/surat jalan terbit), senilai barang yang diserahkan dikurangi DP dan pembayaran.
 - **Tempo bayar per pelanggan** (hari sejak nota), diatur pemilik. Jatuh tempo = tanggal nota + tempo. Pelanggan yang punya tagihan **lewat jatuh tempo**: ditandai merah di Kasbon dan Penjualan, dan **kasbon baru perlu PIN pemilik** walau masih dalam batas.
-- Pelanggan baru dari kasir: tempo bawaan 7 hari (bisa diubah pemilik).
+- Pelanggan baru dari kasir: **tempo bayar harus disetujui pemilik** (akun selain pemilik memakai PIN pemilik). Bila tidak diisi, tempo "belum diatur" sampai pemilik mengaturnya di Back Office.
 - **Tidak ada tagih lewat WhatsApp.**
 - Bayar transfer: nama bank (BCA, BRI, dsb.) dicatat **sebagai keterangan saja**.
 - Pembayaran kasbon yang mengenai pesanan dicatat juga di pesanan itu (status pesanan ikut jadi Lunas).

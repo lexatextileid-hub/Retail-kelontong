@@ -3,7 +3,7 @@
  * Nanti diganti Supabase. Bentuk data di sini mengikuti rancangan tabel.
  */
 import { useSyncExternalStore } from 'react';
-import { diskonContoh, hargaBeliContoh, modalContoh, pelangganContoh, stokContoh, TEMPO_BAWAAN_HARI, type PelangganContoh } from './contoh';
+import { diskonContoh, hargaBeliContoh, modalContoh, pelangganContoh, stokContoh, type PelangganContoh } from './contoh';
 import { alokasiTertua, isoHari, selisihHari, tambahHari } from '../domain/kasbon';
 import { hitungHargaBaris, TARGET_UNTUNG_PERSEN, untungDariModal } from '../domain/harga';
 import { ambilProduk, ambilSatuan } from '../features/penjualan/model';
@@ -492,9 +492,12 @@ export const hariIni = () => isoHari(new Date());
 export const ambilPelanggan = (id: string, s: State = state) =>
   s.pelanggan.find((p) => p.id === id) ?? s.pelanggan[0];
 
-/** Pelanggan baru dari kasir: hanya nama + HP, batas kasbon Rp 0. */
-export function tambahPelanggan(nama: string, hp?: string): string {
-  const p: PelangganContoh = { id: id('plg'), nama, hp, jenis: 'terdaftar', batasKasbon: 0, tempoHari: TEMPO_BAWAAN_HARI };
+/**
+ * Pelanggan baru dari kasir: nama + HP, batas kasbon Rp 0.
+ * Tempo bayar hanya terisi bila disetujui pemilik (PIN); selain itu 0 = belum diatur.
+ */
+export function tambahPelanggan(nama: string, hp?: string, tempoHari = 0): string {
+  const p: PelangganContoh = { id: id('plg'), nama, hp, jenis: 'terdaftar', batasKasbon: 0, tempoHari };
   ubah((s) => ({ ...s, pelanggan: [...s.pelanggan, p] }));
   return p.id;
 }
