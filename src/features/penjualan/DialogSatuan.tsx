@@ -30,6 +30,8 @@ export function DialogAturBarang({
   onSimpan,
   onHapus,
   onTutup,
+  bolehUbahHarga = false,
+  teksTombol,
 }: {
   produk: Produk;
   pelanggan: Pelanggan;
@@ -39,6 +41,9 @@ export function DialogAturBarang({
   onSimpan: (h: HasilAtur) => void;
   onHapus?: () => void;
   onTutup: () => void;
+  /** Harga per satuan boleh diubah untuk semua barang (mis. pesanan grosir yang harganya dinegosiasikan). */
+  bolehUbahHarga?: boolean;
+  teksTombol?: string;
 }) {
   const daftar = satuanJual(produk);
   const [satuanId, setSatuanId] = useState(awal?.satuanProdukId ?? daftar[0].id);
@@ -58,7 +63,8 @@ export function DialogAturBarang({
     awal?.hargaManual !== undefined ? awal.hargaManual.toLocaleString('id-ID') : '',
   );
   const hargaBawaan = satuan.hargaJual ?? 0;
-  const hargaManual = timbang && teksHarga.trim() !== '' && keAngka(teksHarga) !== hargaBawaan ? keAngka(teksHarga) : undefined;
+  const ubahHarga = (timbang || bolehUbahHarga) && produk.metodeHarga !== 'bertingkat';
+  const hargaManual = ubahHarga && teksHarga.trim() !== '' && keAngka(teksHarga) !== hargaBawaan ? keAngka(teksHarga) : undefined;
 
   const angkaQty = keAngka(teksQty);
   const qty = timbang ? Math.round((pakaiGram ? angkaQty / 1000 : angkaQty) * 1000) / 1000 : Math.max(0, Math.floor(angkaQty));
@@ -109,7 +115,7 @@ export function DialogAturBarang({
           <button type="button" className="tombol tombol--bahaya" onClick={onHapus}>Hapus</button>
         )}
         <button type="submit" form="form-atur-barang" className="tombol tombol--utama tombol--besar" disabled={!hasil}>
-          {awal ? 'Simpan perubahan' : 'Tambah ke keranjang'}
+          {teksTombol ?? (awal ? 'Simpan perubahan' : 'Tambah ke keranjang')}
         </button>
       </div>
     </>
@@ -161,9 +167,9 @@ export function DialogAturBarang({
           </p>
         )}
 
-        {timbang && (
+        {ubahHarga && (
           <div className="atur-bagian">
-            <label htmlFor="atur-harga" className="label-kecil">Harga per kg</label>
+            <label htmlFor="atur-harga" className="label-kecil">Harga per {labelUnit}</label>
             <div className="input-rp">
               <span aria-hidden="true">Rp</span>
               <input
@@ -183,7 +189,7 @@ export function DialogAturBarang({
                 Harga diubah · kembali ke harga bawaan {rupiah(hargaBawaan)}
               </button>
             ) : (
-              <p className="teks-pudar atur-bantu">Harga bawaan {rupiah(hargaBawaan)}/kg. Ketik harga lain bila harga hari ini berbeda.</p>
+              <p className="teks-pudar atur-bantu">Harga bawaan {rupiah(hargaBawaan)}/{labelUnit}. Ketik harga lain bila berbeda.</p>
             )}
           </div>
         )}

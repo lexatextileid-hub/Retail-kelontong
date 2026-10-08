@@ -4,12 +4,18 @@
  * Selama `halaman` kosong, yang tampil adalah ringkasan rencana modul tersebut.
  */
 import type { ReactNode } from 'react';
+import type { Peran } from './data/toko';
+import { BuatPesanan } from './features/pesanan/BuatPesanan';
+import { DaftarPesanan } from './features/pesanan/DaftarPesanan';
+import { DetailPesanan } from './features/pesanan/DetailPesanan';
 import { Penjualan } from './features/penjualan/Penjualan';
 
 export interface SubMenu {
   path: string;
   judul: string;
   halaman?: ReactNode;
+  /** Tidak tampil di menu samping (mis. halaman detail). */
+  tersembunyi?: boolean;
 }
 
 export interface Menu {
@@ -20,9 +26,18 @@ export interface Menu {
   rencana: string[];
   halaman?: ReactNode;
   anak?: SubMenu[];
+  /** Peran yang boleh membuka menu ini; kosong = semua peran yang boleh membuka modenya. */
+  izin?: Peran[];
 }
 
 export type NamaMode = 'kasir' | 'gudang' | 'admin';
+
+/** Mode yang boleh dibuka tiap peran. */
+export const modeUntukPeran: Record<Peran, NamaMode[]> = {
+  pemilik: ['kasir', 'gudang', 'admin'],
+  admin: ['kasir', 'gudang'],
+  kasir: ['kasir'],
+};
 
 export const menuKasir: Menu[] = [
   {
@@ -39,7 +54,11 @@ export const menuKasir: Menu[] = [
       'Harga disesuaikan saat faktur baru masuk; di bawah target untung perlu persetujuan pemilik',
       'Serah terima sebagian boleh; surat jalan otomatis bila diantar',
     ],
-    anak: [{ path: 'daftar', judul: 'Daftar Pesanan' }, { path: 'baru', judul: 'Buat Pesanan' }],
+    anak: [
+      { path: 'daftar', judul: 'Daftar Pesanan', halaman: <DaftarPesanan /> },
+      { path: 'baru', judul: 'Buat Pesanan', halaman: <BuatPesanan /> },
+      { path: 'detail/:id', judul: 'Detail', halaman: <DetailPesanan />, tersembunyi: true },
+    ],
   },
   {
     path: 'kasbon', judul: 'Kasbon', ikon: 'kasbon',
@@ -92,10 +111,24 @@ export const menuGudang: Menu[] = [
     ],
   },
   {
+    path: 'surat-pesanan', judul: 'Surat Pesanan', ikon: 'pembelian', izin: ['pemilik', 'admin'],
+    ringkasan: 'Order ke distributor: saran dari stok menipis & pesanan pelanggan, atau buat manual.',
+    rencana: [
+      'Saran SP: stok di bawah minimum + barang pesanan yang belum ada; jumlah dari 3 cara (sampai maksimum, order tetap, rata-rata penjualan)',
+      'SP manual: barang terdaftar atau baris permintaan (barang belum terdaftar)',
+      'Kirim ke distributor lewat WhatsApp, salin, atau cetak',
+    ],
+    anak: [
+      { path: 'saran', judul: 'Saran SP' },
+      { path: 'daftar', judul: 'Daftar SP' },
+      { path: 'baru', judul: 'Buat SP' },
+    ],
+  },
+  {
     path: 'barang-masuk', judul: 'Barang Masuk', ikon: 'masuk',
     ringkasan: 'Input faktur distributor atau pembelian tanpa nota.',
     rencana: ['Satuan urut besar → kecil; isi kemasan wajib dicek fisik', 'Tandai baris untuk pesanan atau barang ikutan', 'Cash/tempo; total dicocokkan dengan kertas faktur'],
-    anak: [{ path: 'faktur', judul: 'Faktur Distributor' }, { path: 'tanpa-nota', judul: 'Tanpa Nota' }],
+    anak: [{ path: 'dari-sp', judul: 'Terima dari SP' }, { path: 'tanpa-nota', judul: 'Tanpa Nota' }],
   },
   {
     path: 'siapkan-pesanan', judul: 'Siapkan Pesanan', ikon: 'siapkan',

@@ -65,6 +65,10 @@
 .kepala__kanan { margin-left: auto; display: flex; align-items: center; gap: 16px; flex: none; }
 .kepala__tanggal { font-size: 13px; color: var(--teks-3); }
 .kepala__pengguna { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; }
+.kepala__peran {
+  height: 32px; border: 1px solid var(--garis-kuat); border-radius: var(--radius); background: var(--permukaan-2);
+  font-size: 12.5px; font-weight: 600; padding: 0 6px; cursor: pointer;
+}
 .kepala__avatar {
   width: 32px; height: 32px; border-radius: 50%; background: var(--biru-muda); color: var(--biru-tua);
   display: flex; align-items: center; justify-content: center; font-weight: 700;
@@ -88,7 +92,7 @@
   .samping { display: none; }
   .app__isi { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
   .kepala { height: 52px; padding: 0 12px 0 6px; }
-  .kepala__tanggal, .kepala__pengguna span:last-child { display: none; }
+  .kepala__tanggal, .kepala__akun { display: none; }
   .bawah {
     display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
@@ -100,3 +104,7 @@
 /* ---------- Halaman modul yang belum dibangun ---------- */
 .rencana { max-width: 760px; display: flex; flex-direction: column; gap: 16px; padding: 24px; }
 .rencana ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--teks-2); }
+
+@media (max-width: 520px) {
+  .kepala__pemisah, .kepala__sub { display: none; }
+}

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Ikon } from '../components/Ikon';
-import { daftarMode, type Menu, type NamaMode } from '../navigasi';
+import { namaAkun, namaPeran, setPeran, useToko, type Peran } from '../data/toko';
+import { daftarMode, modeUntukPeran, type Menu, type NamaMode } from '../navigasi';
 
 const KUNCI_CIUT = 'rk-menu-ciut';
 
@@ -35,12 +36,20 @@ export function LayoutAplikasi({ mode }: { mode: NamaMode }) {
   const { pathname } = useLocation();
   const [ciut, setCiut] = useState(bacaCiut);
   const [laci, setLaci] = useState(false);
-  const aktif = daftarMode.find((m) => m.kode === mode)!;
+  const { peran } = useToko();
+  const modeBoleh = daftarMode.filter((m) => modeUntukPeran[peran].includes(m.kode));
+  const dasar = daftarMode.find((m) => m.kode === mode)!;
+  const aktif = { ...dasar, menu: dasar.menu.filter((m) => !m.izin || m.izin.includes(peran)) };
 
   useEffect(() => setLaci(false), [pathname]);
 
   const menuAktif = aktif.menu.find((m) => pathname.startsWith(`/${mode}/${m.path}`));
-  const subAktif = menuAktif?.anak?.find((a) => pathname.startsWith(`/${mode}/${menuAktif.path}/${a.path}`));
+  const subAktif = menuAktif?.anak?.find((a) => pathname.startsWith(`/${mode}/${menuAktif.path}/${a.path.split('/:')[0]}`));
+
+  // Peran tidak boleh membuka mode/menu ini → arahkan ke mode pertama yang boleh.
+  if (!modeUntukPeran[peran].includes(mode)) return <Navigate to={`/${modeBoleh[0].kode}`} replace />;
+  const menuDasar = dasar.menu.find((m) => pathname.startsWith(`/${mode}/${m.path}`));
+  if (menuDasar && !aktif.menu.includes(menuAktif!)) return <Navigate to={`/${mode}`} replace />;
 
   const ubahCiut = () => {
     // Di HP, tombol ☰ membuka laci menu; di layar lebar, menciutkan menu samping.
@@ -69,8 +78,8 @@ export function LayoutAplikasi({ mode }: { mode: NamaMode }) {
         </div>
 
         {!sempit ? (
-          <div className="samping__mode" role="group" aria-label="Pilih mode">
-            {daftarMode.map((m) => (
+          <div className="samping__mode" role="group" aria-label="Pilih mode" style={{ gridTemplateColumns: `repeat(${modeBoleh.length}, minmax(0, 1fr))` }}>
+            {modeBoleh.map((m) => (
               <NavLink key={m.kode} to={`/${m.kode}`} className={() => (m.kode === mode ? 'aktif' : '')}>
                 {m.judul}
               </NavLink>
@@ -120,10 +129,20 @@ export function LayoutAplikasi({ mode }: { mode: NamaMode }) {
           </div>
           <div className="kepala__kanan">
             <span className="kepala__tanggal">{tanggalHariIni()}</span>
-            <span className="kepala__pengguna">
-              <span className="kepala__avatar" aria-hidden="true">K</span>
-              <span>[Nama Kasir]</span>
-            </span>
+            <label className="kepala__pengguna" title="Pratinjau: ganti peran untuk mencoba hak akses">
+              <span className="kepala__avatar" aria-hidden="true">{namaPeran[peran].slice(0, 1)}</span>
+              <span className="kepala__akun">{namaAkun[peran]}</span>
+              <select
+                className="kepala__peran"
+                value={peran}
+                onChange={(e) => setPeran(e.target.value as Peran)}
+                aria-label="Peran (pratinjau)"
+              >
+                {(Object.keys(namaPeran) as Peran[]).map((p) => (
+                  <option key={p} value={p}>{namaPeran[p]}</option>
+                ))}
+              </select>
+            </label>
           </div>
         </header>
 
@@ -165,7 +184,7 @@ function ItemMenu({ mode, menu, ciut, pathname }: { mode: NamaMode; menu: Menu; 
       </NavLink>
       {!ciut && terbuka && menu.anak && (
         <div className="samping__anak">
-          {menu.anak.map((a) => (
+          {menu.anak.filter((a) => !a.tersembunyi).map((a) => (
             <NavLink key={a.path} to={`${dasar}/${a.path}`}>{a.judul}</NavLink>
           ))}
         </div>

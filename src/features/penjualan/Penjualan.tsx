@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { diskonContoh, pelangganContoh, produkContoh, stokContoh, type PelangganContoh } from '../../data/contoh';
+import { diskonContoh, pelangganContoh, produkContoh, type PelangganContoh } from '../../data/contoh';
+import { stokBebas, stokTerkunci, useToko } from '../../data/toko';
 import { hitungHargaBaris } from '../../domain/harga';
 import { kategoriBawaan } from '../../domain/kategoriBawaan';
 import type { Produk } from '../../domain/tipe';
@@ -36,6 +37,7 @@ export function Penjualan() {
   const [nomor, setNomor] = useState(231);
   const [keranjangHp, setKeranjangHp] = useState(false);
 
+  useToko();
   const plg = pelanggan.find((p) => p.id === aktif.pelangganId) ?? pelanggan[0];
 
   // Barang yang sedang dipesan (keranjang tertahan), dalam satuan dasar
@@ -184,7 +186,8 @@ export function Penjualan() {
           {daftarProduk.map((p) => {
             const daftar = satuanJual(p);
             const kecil = daftar[0];
-            const stok = stokContoh[p.id] ?? 0;
+            const stok = stokBebas(p.id);
+            const kunci = stokTerkunci(p.id);
             const pesan = dipesan.get(p.id) ?? 0;
             const sd = singkatan(p.satuanDasarId);
             const harga =
@@ -200,7 +203,8 @@ export function Penjualan() {
                 {daftar.length > 1 && <span className="kartu-barang__lain">{daftar.length} satuan</span>}
                 <span className={stok - pesan <= 0 ? 'kartu-barang__stok kartu-barang__stok--habis' : 'kartu-barang__stok'}>
                   {stok <= 0 ? 'Stok habis' : `Stok ${bolehDesimal(p.satuanDasarId) ? `${angka(stok)} kg` : stokTeks}`}
-                  {pesan > 0 && ` · ${angka(pesan)} ${sd} dipesan`}
+                  {pesan > 0 && ` · ${angka(pesan)} ${sd} ditahan`}
+                  {kunci > 0 && ` · ${angka(kunci)} ${sd} terkunci pesanan`}
                 </span>
               </button>
             );
@@ -266,7 +270,7 @@ export function Penjualan() {
               produk={produk}
               hasil={hasil}
               namaPelanggan={plg.nama}
-              stokSisa={(stokContoh[produk.id] ?? 0) - (dipesan.get(produk.id) ?? 0)}
+              stokSisa={stokBebas(produk.id) - (dipesan.get(produk.id) ?? 0)}
               onQty={(qty) => (qty > 0 ? ubahBaris(baris.id, { qty }) : hapusBaris(baris.id))}
               onUbah={() => setAtur({ produk, barisId: baris.id })}
             />
