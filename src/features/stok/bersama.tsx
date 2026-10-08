@@ -28,15 +28,16 @@ export const ChipUmur = ({ warna, hari }: { warna: WarnaUmur; hari?: number }) =
  * Harga jual kecil · sedang · besar (kesepakatan lama): per satuan jual urut kecil → besar,
  * atau tingkat harga untuk barang bertingkat (harga per satuan dasar). Untung dari modal.
  */
-export function hargaJualTingkat(p: Produk, modal?: number) {
+export function hargaJualTingkat(p: Produk, modal?: number, beliPerSatuan: Record<string, { harga: number }> = {}) {
   const dasar = singkatan(p.satuanDasarId);
   const daftar = p.metodeHarga === 'bertingkat'
     ? [...p.tingkatHarga].sort((a, b) => a.mulaiJumlah - b.mulaiJumlah).map((t) => ({
-      judul: t.mulaiJumlah > 0 ? `≥ ${t.mulaiJumlah} ${dasar}` : `per ${dasar}`, harga: t.harga, isi: 1,
+      judul: t.mulaiJumlah > 0 ? `≥ ${t.mulaiJumlah} ${dasar}` : `per ${dasar}`, harga: t.harga, isi: 1, beli: undefined as number | undefined,
     }))
-    : p.satuan.filter((s) => s.dijual && s.hargaJual).sort((a, b) => a.isi - b.isi).map((s) => ({ judul: s.label, harga: s.hargaJual!, isi: s.isi }));
+    : p.satuan.filter((s) => s.dijual && s.hargaJual).sort((a, b) => a.isi - b.isi).map((s) => ({ judul: s.label, harga: s.hargaJual!, isi: s.isi, beli: beliPerSatuan[s.id]?.harga }));
   return daftar.map((x) => {
-    const modalTotal = modal !== undefined ? modal * x.isi : undefined;
+    // Satuan yang dibeli memakai harga beli satuan itu sendiri; satuan lain dari harga beli terakhir per satuan dasar.
+    const modalTotal: number | undefined = x.beli ? x.beli : modal !== undefined ? modal * x.isi : undefined;
     return { ...x, untungRp: modalTotal !== undefined ? x.harga - modalTotal : undefined, untungPersen: modalTotal ? untungDariModal(x.harga, modalTotal) : undefined };
   });
 }

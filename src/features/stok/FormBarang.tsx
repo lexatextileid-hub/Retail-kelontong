@@ -10,7 +10,6 @@ import type { MetodeHarga, Produk, SatuanProduk, TingkatHarga } from '../../doma
 import { rupiah } from '../../lib/format';
 import { IsianPin } from '../kaslaci/DialogLaci';
 import { ambilProduk } from '../penjualan/model';
-import { tanggalPendek } from '../kasbon/bersama';
 
 type BarisSatuan = SatuanProduk & { kunci: string };
 type BarisTingkat = TingkatHarga & { kunci: string };
@@ -74,10 +73,12 @@ export function FormBarang() {
   const [kode, setKode] = useState(lama?.kode ?? '');
   const [dasar, setDasar] = useState(lama?.satuanDasarId ?? '');
   const [metode, setMetode] = useState<MetodeHarga>(lama?.metodeHarga ?? 'per_satuan');
-  const [satuan, setSatuan] = useState<BarisSatuan[]>(() => (lama?.satuan ?? []).map((s) => ({ ...s, kunci: kunci() })));
+  const [satuan, setSatuan] = useState<BarisSatuan[]>(() => (lama?.satuan ?? []).map((s) => ({
+    ...s, kunci: kunci(), hargaBeli: info?.beliPerSatuan[s.id]?.harga ?? s.hargaBeli,
+  })));
+  // Baris satuan dasar ditandai tersendiri (bukan dari isi = 1), supaya mengetik "10" tidak mengubah baris jadi satuan dasar.
+  const [dasarKunci, setDasarKunci] = useState<string>(() => satuan.find((x) => x.isi === 1)?.kunci ?? '');
   const [tingkat, setTingkat] = useState<BarisTingkat[]>(() => (lama?.tingkatHarga.length ? lama.tingkatHarga : [{ mulaiJumlah: 0, harga: 0 }]).map((t) => ({ ...t, kunci: kunci() })));
-  /** Harga beli per satuan dasar (dasar hitung untung). */
-  const [beli, setBeli] = useState<number>(info?.beliAcuan ?? 0);
   const [minimum, setMinimum] = useState(lama?.stokMinimum ?? 0);
   const [maksimum, setMaksimum] = useState(lama?.stokMaksimum ?? 0);
   const [letak, setLetak] = useState(lama?.letak ?? '');
@@ -89,10 +90,12 @@ export function FormBarang() {
   // Baris satuan dasar selalu ada (isi 1) dan mengikuti pilihan satuan dasar.
   const pilihDasar = (sid: string) => {
     setDasar(sid);
+    const k = dasarKunci || kunci();
+    setDasarKunci(k);
     setSatuan((xs) => {
-      const lain = xs.filter((x) => x.isi !== 1);
-      const d = xs.find((x) => x.isi === 1);
-      return [{ ...(d ?? { id: '', kunci: kunci(), dibeli: false, dijual: true, isi: 1 }), satuanId: sid, label: namaSatuan(sid), isi: 1 } as BarisSatuan, ...lain];
+      const lain = xs.filter((x) => x.kunci !== k);
+      const d = xs.find((x) => x.kunci === k);
+      return [{ ...(d ?? { id: '', dibeli: false, dijual: true }), kunci: k, satuanId: sid, label: namaSatuan(sid), isi: 1 } as BarisSatuan, ...lain];
     });
   };
   const ubahSatuan = (k: string, patch: Partial<BarisSatuan>) => setSatuan((xs) => xs.map((x) => {
@@ -102,13 +105,19 @@ export function FormBarang() {
     return baru;
   }));
 
-  const urut = [...satuan].sort((a, b) => a.isi - b.isi);
+  const urut = [...satuan].sort((a, b) => (a.kunci === dasarKunci ? -1 : b.kunci === dasarKunci ? 1 : 0));
+  const isiSalah = (s: BarisSatuan) => s.kunci !== dasarKunci && !(s.isi > 1);
+  // Harga beli acuan per satuan dasar untuk satuan yang tidak dibeli (mis. eceran):
+  // faktur terakhir, atau perkiraan dari satuan beli terkecil yang diisi harganya.
+  const perkiraan = satuan.filter((x) => x.dibeli && x.hargaBeli && !isiSalah(x)).sort((a, b) => a.isi - b.isi)[0];
+  const acuanDasar = dariFaktur?.modal ?? (perkiraan ? perkiraan.hargaBeli! / perkiraan.isi : undefined);
+  const modalBaris = (s: BarisSatuan) => (s.dibeli && s.hargaBeli ? s.hargaBeli : acuanDasar ? acuanDasar * s.isi : undefined);
   const masalah: string[] = [];
   if (!nama.trim()) masalah.push('Nama barang wajib.');
   if (!lama && produkContoh.some((p) => p.nama.trim().toLowerCase() === nama.trim().toLowerCase())) masalah.push('Nama barang sudah ada.');
   if (!kategori) masalah.push('Pilih kategori.');
   if (!dasar) masalah.push('Pilih satuan dasar.');
-  if (satuan.some((s) => s.isi !== 1 && s.isi <= 1)) masalah.push('Isi satuan besar harus lebih dari 1.');
+  if (satuan.some(isiSalah)) masalah.push('Isi satuan besar harus lebih dari 1.');
   if (new Set(satuan.map((s) => s.isi)).size !== satuan.length) masalah.push('Dua satuan tidak boleh punya isi yang sama.');
   if (!satuan.some((s) => s.dijual)) masalah.push('Minimal satu satuan dijual.');
   if (metode === 'per_satuan' && satuan.some((s) => s.dijual && !s.hargaJual)) masalah.push('Isi harga jual untuk setiap satuan yang dijual.');
@@ -117,7 +126,7 @@ export function FormBarang() {
   const perluPin = toko.peran !== 'pemilik';
   const pinOk = !perluPin || pin === PIN_PEMILIK_CONTOH;
   // Satuan besar berupa ukuran (kg, liter) sementara satuan dasar kemasan → kemungkinan terbalik.
-  const terbalik = dasar && !ukuran(dasar) ? satuan.filter((s) => s.isi > 1 && ukuran(s.satuanId)) : [];
+  const terbalik = dasar && !ukuran(dasar) ? satuan.filter((s) => s.kunci !== dasarKunci && s.isi > 1 && ukuran(s.satuanId)) : [];
 
   const simpan = () => {
     setCoba(true);
@@ -128,9 +137,13 @@ export function FormBarang() {
       sku: lama?.sku ?? buatSku(kategori, produkContoh.map((x) => x.sku)),
       kode: kode.trim().toUpperCase() || undefined, letak: letak.trim() || undefined,
       nama: nama.trim(), kategoriId: kategori, satuanDasarId: dasar, stokMinimum: minimum, stokMaksimum: maksimum || undefined, metodeHarga: metode,
-      // Harga beli dari form hanya disimpan sebagai perkiraan bila belum ada faktur.
-      hargaBeliAcuan: dariFaktur ? lama?.hargaBeliAcuan : beli || undefined,
-      satuan: urut.map(({ kunci: _k, ...s }) => ({ ...s, id: s.id || `${idBaru}-${s.satuanId}${s.isi > 1 ? s.isi : ''}`, hargaJual: metode === 'per_satuan' && s.dijual ? s.hargaJual : undefined })),
+      hargaBeliAcuan: undefined,
+      satuan: [...urut].sort((a, b) => a.isi - b.isi).map(({ kunci: _k, ...s }) => ({
+        ...s, id: s.id || `${idBaru}-${s.satuanId}${s.isi > 1 ? s.isi : ''}`,
+        hargaJual: metode === 'per_satuan' && s.dijual ? s.hargaJual : undefined,
+        // Harga beli per satuan beli (perkiraan); faktur nanti menimpa dengan harga sebenarnya.
+        hargaBeli: s.dibeli ? s.hargaBeli || undefined : undefined,
+      })),
       tingkatHarga: metode === 'bertingkat' ? [...tingkat].sort((a, b) => a.mulaiJumlah - b.mulaiJumlah).map(({ kunci: _k, ...t }) => t) : [],
       aktif, musiman: musiman || undefined,
     };
@@ -224,38 +237,40 @@ export function FormBarang() {
               {urut.map((s) => (
                 <tr key={s.kunci} style={{ cursor: 'default' }}>
                   <td data-label="Satuan">
-                    {s.isi === 1 ? <strong>{namaSatuan(s.satuanId)} (dasar)</strong> : (
+                    {s.kunci === dasarKunci ? <strong>{namaSatuan(s.satuanId)} (dasar)</strong> : (
                       <select className="isian__kontrol" aria-label="Satuan" value={s.satuanId} onChange={(e) => ubahSatuan(s.kunci, { satuanId: e.target.value })}>
                         {satuanBawaan.map((x) => <option key={x.singkatan} value={x.singkatan}>{x.nama}</option>)}
                       </select>
                     )}
                     <input className="isian__kontrol sb-label" aria-label="Nama tampil" value={s.label} onChange={(e) => ubahSatuan(s.kunci, { label: e.target.value })} />
-                    {s.isi > 1 && <div className="teks-pudar" style={{ fontSize: 12 }}>1 {namaSatuan(s.satuanId)} = {s.isi.toLocaleString('id-ID')} {namaSatuan(dasar)}</div>}
+                    {s.kunci !== dasarKunci && (isiSalah(s)
+                      ? <div className="teks-bahaya" style={{ fontSize: 12 }}>Isi harus lebih dari 1</div>
+                      : <div className="teks-pudar" style={{ fontSize: 12 }}>1 {namaSatuan(s.satuanId)} = {s.isi.toLocaleString('id-ID')} {namaSatuan(dasar)}</div>)}
                   </td>
                   <td data-label="Isi" className="kanan">
-                    {s.isi === 1 ? '1' : <input className="isian__kontrol kk-qty" type="number" min={2} aria-label="Isi" value={s.isi || ''} onChange={(e) => ubahSatuan(s.kunci, { isi: Number(e.target.value) })} />}
+                    {s.kunci === dasarKunci ? '1' : <input className="isian__kontrol kk-qty" type="number" min={2} aria-label="Isi" value={s.isi || ''} onChange={(e) => ubahSatuan(s.kunci, { isi: Number(e.target.value) })} />}
                   </td>
                   <td data-label="Beli"><input type="checkbox" className="kb-centang" aria-label={`Dibeli ${s.label}`} checked={s.dibeli} onChange={(e) => ubahSatuan(s.kunci, { dibeli: e.target.checked })} /></td>
                   <td data-label="Jual"><input type="checkbox" className="kb-centang" aria-label={`Dijual ${s.label}`} checked={s.dijual} onChange={(e) => ubahSatuan(s.kunci, { dijual: e.target.checked })} /></td>
                   <td data-label="Harga beli" className="kanan">
-                    {dariFaktur ? <span>{rupiah(beli * s.isi)}</span>
-                      : <InputRupiah id={`hb-${s.kunci}`} nilai={Math.round(beli * s.isi)} label={`Harga beli ${s.label}`} onUbah={(n) => setBeli(n / s.isi)} />}
+                    {s.dibeli ? (info?.beliPerSatuan[s.id]
+                      ? <><strong>{rupiah(s.hargaBeli ?? 0)}</strong><div className="teks-pudar" style={{ fontSize: 12 }}>{info.beliPerSatuan[s.id].nomor}</div></>
+                      : <InputRupiah id={`hb-${s.kunci}`} nilai={s.hargaBeli ?? 0} label={`Harga beli ${s.label}`} onUbah={(n) => ubahSatuan(s.kunci, { hargaBeli: n })} />)
+                      : modalBaris(s) ? <span className="teks-pudar">≈ {rupiah(modalBaris(s)!)}</span> : '-'}
                   </td>
                   {metode === 'per_satuan' && (s.dijual
-                    ? <HargaUntung id={s.label} modalTotal={beli ? beli * s.isi : undefined} harga={s.hargaJual ?? 0} onHarga={(n) => ubahSatuan(s.kunci, { hargaJual: n })} />
+                    ? <HargaUntung id={s.label} modalTotal={modalBaris(s)} harga={s.hargaJual ?? 0} onHarga={(n) => ubahSatuan(s.kunci, { hargaJual: n })} />
                     : <><td data-label="Harga jual" className="kanan teks-pudar">tidak dijual</td><td /><td /></>)}
-                  <td data-label="">{s.isi !== 1 && <button type="button" className="tautan teks-bahaya" onClick={() => setSatuan((xs) => xs.filter((x) => x.kunci !== s.kunci))}>Hapus</button>}</td>
+                  <td data-label="">{s.kunci !== dasarKunci && <button type="button" className="tautan teks-bahaya" onClick={() => setSatuan((xs) => xs.filter((x) => x.kunci !== s.kunci))}>Hapus</button>}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
-        {dariFaktur && (
-          <p className="teks-pudar" style={{ fontSize: 12.5, margin: '8px 0 0' }}>
-            Harga beli dari faktur terakhir {dariFaktur.nomor} ({tanggalPendek(dariFaktur.tanggal)}). Berubah otomatis saat faktur baru masuk.
-          </p>
-        )}
-        {!dariFaktur && dasar && <p className="teks-pudar" style={{ fontSize: 12.5, margin: '8px 0 0' }}>Harga beli perkiraan — isi di satuan mana saja; dipakai sampai faktur pertama masuk.</p>}
+        <p className="teks-pudar" style={{ fontSize: 12.5, margin: '8px 0 0' }}>
+          Setiap satuan yang dibeli (✓ Beli) punya harga beli sendiri — mis. per slop dan per karton bisa berbeda. Yang sudah pernah difaktur memakai harga faktur terakhir;
+          yang belum diisi perkiraan. Satuan yang tidak dibeli (eceran) dihitung dari {dariFaktur ? `faktur terakhir ${dariFaktur.nomor}` : 'satuan beli terkecil'}.
+        </p>
         {terbalik.length > 0 && (
           <p className="catatan catatan--peringatan" style={{ margin: '8px 0 0' }}>
             Periksa satuan: "1 {namaSatuan(terbalik[0].satuanId)} = {terbalik[0].isi} {namaSatuan(dasar)}" tampak terbalik.
@@ -278,7 +293,7 @@ export function FormBarang() {
                       <input className="isian__kontrol kk-qty" style={{ marginLeft: 0 }} type="number" min={0} aria-label="Mulai jumlah" value={t.mulaiJumlah}
                         onChange={(e) => setTingkat((xs) => xs.map((x) => (x.kunci === t.kunci ? { ...x, mulaiJumlah: Number(e.target.value) } : x)))} />
                     </td>
-                    <HargaUntung id={`tk-${t.kunci}`} modalTotal={beli || undefined} harga={t.harga} onHarga={(n) => setTingkat((xs) => xs.map((x) => (x.kunci === t.kunci ? { ...x, harga: n } : x)))} />
+                    <HargaUntung id={`tk-${t.kunci}`} modalTotal={acuanDasar} harga={t.harga} onHarga={(n) => setTingkat((xs) => xs.map((x) => (x.kunci === t.kunci ? { ...x, harga: n } : x)))} />
                     <td data-label="">{t.mulaiJumlah !== 0 && <button type="button" className="tautan teks-bahaya" onClick={() => setTingkat((xs) => xs.filter((x) => x.kunci !== t.kunci))}>Hapus</button>}</td>
                   </tr>
                 ))}

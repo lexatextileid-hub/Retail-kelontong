@@ -27,6 +27,9 @@ export interface MutasiStok {
   /** Untuk barang masuk: modal per satuan dasar. */
   modal?: number;
   distributorId?: string;
+  /** Barang masuk: satuan beli dan harga per satuan itu (dari faktur). */
+  satuanProdukId?: string;
+  hargaSatuan?: number;
   oleh: string;
 }
 

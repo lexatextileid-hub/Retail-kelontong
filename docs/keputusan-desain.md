@@ -119,7 +119,8 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 
 - **Patokan utama: untung dari modal (markup).** Modal Rp 10.000 + 10% = Rp 11.000.
 - Di form barang, tiap satuan (dan tiap tingkat harga grosir) punya **harga beli, harga jual, untung %, untung Rp — isi salah satu dari harga jual / untung % / untung Rp**, yang lain terhitung otomatis. Persen diatur per level satuan (grosir biasanya lebih kecil). Untung di bawah target ditandai merah.
-- **Dasar hitung untung di form dan daftar barang = harga beli terakhir** (dari faktur terakhir; barang baru tanpa faktur memakai harga beli perkiraan yang diisi di form, cukup di satu satuan — satuan lain dihitung dari isinya). Laporan laba tetap memakai modal FIFO.
+- **Dasar hitung untung di form dan daftar barang = harga beli terakhir.** **Satuan beli bisa lebih dari satu** (mis. per slop dan per karton) dan **masing-masing punya harga beli sendiri** (karton biasanya lebih murah per bungkus): yang sudah pernah difaktur memakai harga faktur terakhir satuan itu, yang belum memakai harga beli perkiraan yang diisi di form. Satuan yang tidak dibeli (eceran) dihitung dari harga beli terakhir per satuan dasar, atau — sebelum ada faktur — dari satuan beli terkecil (paling hati-hati untuk untung). Laporan laba tetap memakai modal FIFO.
+- Baris satuan dasar ditandai tersendiri (bukan karena isinya 1); satuan besar wajib isi > 1.
 - **Pembulatan** harga hasil hitung ke kelipatan yang diatur di Pengaturan (mis. ke atas ke Rp 100); % ditampilkan dari harga setelah dibulatkan.
 - Laporan memakai **untung dari penjualan (margin)**. Label selalu ditulis jelas ("dari modal" / "dari penjualan").
 - Harga beli naik → sistem bisa mengusulkan harga jual baru dengan % untung yang sama.

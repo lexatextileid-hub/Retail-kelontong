@@ -40,6 +40,6 @@
 .sb-form-harga td[data-label='Satuan'] { width: 230px; }
 .sb-form-harga td[data-label='Satuan'] > select, .sb-form-harga .sb-label { display: block; width: 100%; }
 .sb-form-harga .kk-qty { width: 72px; }
-.sb-form-harga .input-rp { width: 120px; }
+.sb-form-harga .input-rp { width: 150px; }
 .sb-form-harga .sb-persen input { width: 64px; }
 .sb-form-harga th, .sb-form-harga td { padding-left: 6px; padding-right: 6px; }

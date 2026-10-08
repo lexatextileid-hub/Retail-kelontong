@@ -24,6 +24,8 @@ export interface SatuanProduk {
   dibeli: boolean; // dipakai saat beli dari distributor
   dijual: boolean; // muncul di kasir
   hargaJual?: number; // dipakai jika metode harga = per_satuan
+  /** Harga beli perkiraan per satuan ini (satuan beli), dipakai sampai ada faktur untuk satuan ini. */
+  hargaBeli?: number;
 }
 
 /** Harga per satuan dasar yang berlaku mulai jumlah tertentu (dalam satuan dasar). */

@@ -279,3 +279,17 @@ describe('buku stok', () => {
     expect(i.lapisan.reduce((a, l) => a + l.sisa, 0)).toBeCloseTo(i.stok - 0, 3);
   });
 });
+
+describe('harga beli per satuan beli', () => {
+  it('faktur mencatat harga per satuan beli; perkiraan memakai satuan beli terkecil', async () => {
+    const t = await import('./toko');
+    expect(t.infoBarang('sarimi').beliPerSatuan['sarimi-ktn50']?.harga).toBeGreaterThan(0);
+    const p = { ...t.__state() && (await import('../features/penjualan/model')).ambilProduk('amild'), hargaBeliAcuan: undefined,
+      satuan: [
+        { id: 'a', satuanId: 'bks', label: 'Bungkus', isi: 1, dibeli: false, dijual: true },
+        { id: 'b', satuanId: 'slp', label: 'Slop', isi: 10, dibeli: true, dijual: true, hargaBeli: 310000 },
+        { id: 'c', satuanId: 'ktn', label: 'Karton', isi: 100, dibeli: true, dijual: false, hargaBeli: 3050000 },
+      ] };
+    expect(t.beliPerkiraan(p)).toBe(31000); // dari slop (satuan beli terkecil), bukan karton yang lebih murah
+  });
+});

@@ -131,17 +131,17 @@ export function DetailBarang() {
               { judul: 'Satuan', isi: (s) => <Sel utama={<strong>{s.label}</strong>} bawah={s.isi === 1 ? 'satuan dasar' : `${s.isi.toLocaleString('id-ID')} ${dasar}`} /> },
               { judul: 'Dipakai', isi: (s) => [s.dibeli && 'beli', s.dijual && 'jual'].filter(Boolean).join(' · ') || '-' },
               { judul: 'Barcode', isi: (s) => s.barcode ?? '-' },
-              { judul: 'Harga beli terakhir', kanan: true, isi: (s) => (i.beliAcuan ? rupiah(i.beliAcuan * s.isi) : '-') },
+              { judul: 'Harga beli terakhir', kanan: true, isi: (s) => (i.beliPerSatuan[s.id] ? <Sel utama={rupiah(i.beliPerSatuan[s.id].harga)} bawah={i.beliPerSatuan[s.id].nomor} /> : i.beliAcuan ? <Sel utama={rupiah(i.beliAcuan * s.isi)} bawah="dihitung dari isi" /> : '-') },
               { judul: 'Harga jual', kanan: true, isi: (s) => (p.metodeHarga === 'per_satuan' && s.hargaJual ? rupiah(s.hargaJual) : p.metodeHarga === 'bertingkat' ? 'bertingkat' : '-') },
               { judul: 'Untung', kanan: true, isi: (s) => {
-                const h = hargaJualTingkat(p, i.beliAcuan).find((x) => x.judul === s.label);
+                const h = hargaJualTingkat(p, i.beliAcuan, i.beliPerSatuan).find((x) => x.judul === s.label);
                 return h?.untungRp !== undefined ? <Sel utama={rupiah(h.untungRp)} bawah={teksPersen(h.untungPersen)} /> : '-';
               } },
             ]}
           />
           {p.metodeHarga === 'bertingkat' && (
             <TabelDaftar
-              data={hargaJualTingkat(p, i.beliAcuan)}
+              data={hargaJualTingkat(p, i.beliAcuan, i.beliPerSatuan)}
               kunci={(x) => x.judul}
               kosong={null}
               kolom={[

@@ -123,7 +123,7 @@ export function DaftarBarang() {
           ) },
           {
             judul: 'Harga jual · untung*', isi: ({ p, i }) => {
-              const h = hargaJualTingkat(p, i.beliAcuan);
+              const h = hargaJualTingkat(p, i.beliAcuan, i.beliPerSatuan);
               return (
                 <div className="sb-harga">
                   {h.slice(0, 3).map((x) => (

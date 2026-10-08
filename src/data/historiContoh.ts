@@ -71,9 +71,10 @@ export function buatHistoriContoh(hariIni = isoHari(new Date())): MutasiStok[] {
         const h = f.mulai - k * f.isiUlangHari;
         if (h < 5) break;
         const t = tambahHari(hariIni, -h);
+        const m0 = Math.round(modalBeli * (0.97 + r() * 0.05));
         masuk.push({
           id: `hf-${pr.id}-${h}`, waktuIso: waktu(t, 9), tanggal: t, produkId: pr.id, jenis: 'faktur', nomor: `PB-${t.slice(2, 4)}${t.slice(5, 7)}-H${String(urut++).padStart(3, '0')}`,
-          keterangan: 'Barang masuk (faktur contoh)', jumlah: per, modal: Math.round(modalBeli * (0.97 + r() * 0.05)), distributorId: beli?.distributorId, oleh: '[Admin A]',
+          keterangan: 'Barang masuk (faktur contoh)', jumlah: per, modal: m0, hargaSatuan: m0 * isiBeli, distributorId: beli?.distributorId, satuanProdukId: beli?.satuanProdukId, oleh: '[Admin A]',
         });
       }
     }

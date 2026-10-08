@@ -104,7 +104,7 @@ export interface FakturSP {
   cara: 'cash' | 'tempo';
   total: number;
   oleh: string;
-  baris?: { nama: string; satuan: string; qty: number; harga: number; produkId?: string; jumlahDasar?: number }[];
+  baris?: { nama: string; satuan: string; qty: number; harga: number; produkId?: string; satuanProdukId?: string; jumlahDasar?: number }[];
 }
 
 export interface SuratPesanan {
@@ -461,11 +461,11 @@ export function mutasiStok(s: State = state): MutasiStok[] {
         if (!b.produkId || !b.jumlahDasar) return;
         const tgl = f.tanggal ?? hariIni();
         hasil.push({ id: `${f.nomor}:${i}`, waktuIso: waktuDari(tgl, 9), tanggal: tgl, produkId: b.produkId, jenis: 'faktur', nomor: f.nomor,
-          keterangan: `Faktur ${f.nomorDistributor} · ${sp.nomor}`, jumlah: b.jumlahDasar, modal: b.harga * b.qty / b.jumlahDasar, distributorId: sp.distributorId, oleh: f.oleh });
+          keterangan: `Faktur ${f.nomorDistributor} · ${sp.nomor}`, jumlah: b.jumlahDasar, modal: b.harga * b.qty / b.jumlahDasar, distributorId: sp.distributorId, satuanProdukId: b.satuanProdukId, hargaSatuan: b.harga, oleh: f.oleh });
       });
   for (const f of s.fakturTunai)
     f.baris.forEach((b, i) => hasil.push({ id: `${f.nomor}:${i}`, waktuIso: f.waktuIso, tanggal: f.tanggal, produkId: b.produkId, jenis: 'faktur-tunai', nomor: f.nomor,
-      keterangan: `Faktur tunai${f.nomorNota ? ` (${f.nomorNota})` : ''}`, jumlah: b.jumlahDasar, modal: (b.qty * b.harga) / b.jumlahDasar, distributorId: f.distributorId, oleh: f.oleh }));
+      keterangan: `Faktur tunai${f.nomorNota ? ` (${f.nomorNota})` : ''}`, jumlah: b.jumlahDasar, modal: (b.qty * b.harga) / b.jumlahDasar, distributorId: f.distributorId, satuanProdukId: b.satuanProdukId, hargaSatuan: b.harga, oleh: f.oleh }));
   for (const n of s.penjualan)
     n.baris.forEach((b, i) => hasil.push({ id: `${n.nomor}:${i}`, waktuIso: n.waktuIso, tanggal: n.tanggal, produkId: b.produkId, jenis: 'penjualan', nomor: n.nomor,
       keterangan: `Penjualan · ${ambilPelanggan(n.pelangganId, s).nama}`, jumlah: -b.jumlahDasar, oleh: n.struk.kasir }));
@@ -504,6 +504,8 @@ export interface InfoBarang {
   beliTerakhir?: { tanggal: string; nomor: string; modal: number; distributorId?: string };
   /** Dasar hitung untung di harga jual: harga beli terakhir (per satuan dasar); belum ada faktur → harga beli perkiraan. */
   beliAcuan?: number;
+  /** Harga beli terakhir per satuan beli (dari faktur), mis. per slop dan per karton bisa berbeda. */
+  beliPerSatuan: Record<string, { harga: number; tanggal: string; nomor: string }>;
 }
 
 /** Angka gerak dan nilai satu barang (stok, FIFO, umur, status gerak, terjual, cukup untuk berapa hari). */
@@ -534,10 +536,18 @@ export function infoBarang(produkId: string, s: State = state): InfoBarang {
     terjual30, rataHarian, cukupHari: rataHarian > 0 ? Math.floor(Math.max(0, stok) / rataHarian) : undefined,
     terakhirTerjual: keluarJual[keluarJual.length - 1]?.tanggal, masukPertama: mut[0]?.tanggal,
     beliTerakhir: beli ? { tanggal: beli.tanggal, nomor: beli.nomor, modal: beli.modal ?? 0, distributorId: beli.distributorId } : undefined,
-    beliAcuan: beli?.modal ?? p.hargaBeliAcuan ?? modal,
+    beliAcuan: beli?.modal ?? beliPerkiraan(p) ?? modal,
+    beliPerSatuan: Object.fromEntries(masuk.filter((m) => m.satuanProdukId && m.hargaSatuan)
+      .map((m) => [m.satuanProdukId!, { harga: m.hargaSatuan!, tanggal: m.tanggal, nomor: m.nomor }])),
   };
   peta.set(produkId, info);
   return info;
+}
+
+/** Harga beli perkiraan per satuan dasar: dari satuan beli terkecil yang diisi harganya (paling hati-hati untuk untung). */
+export function beliPerkiraan(p: Produk) {
+  const s = p.satuan.filter((x) => x.dibeli && x.hargaBeli).sort((a, b) => a.isi - b.isi)[0];
+  return s ? s.hargaBeli! / s.isi : p.hargaBeliAcuan;
 }
 
 /** Simpan barang baru / perubahan data barang (pratinjau: langsung ke data contoh). */
@@ -852,7 +862,7 @@ export function terimaDariSP(
     const p = pid ? ambilProduk(pid) : undefined;
     const sid = x.satuanProdukId ?? b.satuanProdukId;
     const isi = p && sid ? ambilSatuan(p, sid).isi : undefined;
-    return { nama: p?.nama ?? b.permintaan ?? '-', satuan: p && sid ? ambilSatuan(p, sid).label : b.labelSatuan, qty: x.qty, harga: x.harga, produkId: p?.id, jumlahDasar: isi ? x.qty * isi : undefined };
+    return { nama: p?.nama ?? b.permintaan ?? '-', satuan: p && sid ? ambilSatuan(p, sid).label : b.labelSatuan, qty: x.qty, harga: x.harga, produkId: p?.id, satuanProdukId: p && sid ? sid : undefined, jumlahDasar: isi ? x.qty * isi : undefined };
   });
   const status: StatusSP = semuaDiterima ? 'selesai' : data.tutupSisa ? 'ditutup' : 'sebagian';
 
