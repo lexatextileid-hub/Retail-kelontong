@@ -19,6 +19,7 @@ const profil: Record<string, Profil> = {
   sarimi: { mulai: 100, p: 0.95, min: 10, maks: 40, isiUlangHari: 10 },
   taro: { mulai: 100, p: 0.9, min: 10, maks: 30, isiUlangHari: 10 },
   amild: { mulai: 100, p: 0.95, min: 3, maks: 10, isiUlangHari: 10 },
+  'dunhill-blue': { mulai: 100, p: 0.8, min: 2, maks: 7, isiUlangHari: 25 },
   'air-600': { mulai: 100, p: 0.9, min: 6, maks: 24, isiUlangHari: 14 },
   skm: { mulai: 100, p: 0.6, min: 1, maks: 4, isiUlangHari: 21 },
   kecap: { mulai: 120, p: 0.05, min: 1, maks: 2 },

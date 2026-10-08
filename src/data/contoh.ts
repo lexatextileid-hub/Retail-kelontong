@@ -74,6 +74,15 @@ export const produkContoh: Produk[] = [
     ],
   },
   {
+    id: 'dunhill-blue', sku: 'RKK-00003', kode: 'DHB', nama: 'Dunhill Blue 16', kategoriId: 'RKK', satuanDasarId: 'bks',
+    letak: 'Etalase kasir', stokMinimum: 20, stokMaksimum: 150, metodeHarga: 'per_satuan', tingkatHarga: [], aktif: true,
+    satuan: [
+      { id: 'dh-bks', satuanId: 'bks', label: 'Bungkus', isi: 1, dibeli: false, dijual: true, hargaJual: 34000 },
+      { id: 'dh-slp', satuanId: 'slp', label: 'Slop isi 10 Bungkus', isi: 10, dibeli: true, dijual: true, hargaJual: 328000, hargaBeli: 310000 },
+      { id: 'dh-ktn', satuanId: 'ktn', label: 'Karton isi 10 Slop', isi: 100, dibeli: true, dijual: false, hargaBeli: 3050000 },
+    ],
+  },
+  {
     id: 'air-600', sku: 'MNM-00001', nama: 'Air Mineral 600 ml', kategoriId: 'MNM', satuanDasarId: 'pcs',
     letak: 'Rak toko, Gudang ruko 7', stokMinimum: 48, metodeHarga: 'per_satuan', tingkatHarga: [], aktif: true,
     satuan: [
@@ -125,7 +134,7 @@ export const produkContoh: Produk[] = [
 /** Stok contoh dalam satuan dasar. */
 export const stokContoh: Record<string, number> = {
   'gulaku-5': 22, 'gula-curah': 350, 'gula-1kg': 46, 'minyak-1l': 64, sarimi: 213, taro: 237,
-  amild: 47, 'rokok-hs': 18, 'air-600': 130, skm: 70, kecap: 15, deterjen: 0,
+  amild: 47, 'rokok-hs': 18, 'dunhill-blue': 64, 'air-600': 130, skm: 70, kecap: 15, deterjen: 0,
   'bawang-merah': 18.5, 'bawang-putih': 12.2, kemiri: 3.4,
 };
 
@@ -187,6 +196,7 @@ export const hargaBeliContoh: Record<string, HargaBeliTerakhir[]> = {
   taro: [{ distributorId: 'dist-c', satuanProdukId: 'taro-ktn', harga: 105000 }],
   amild: [{ distributorId: 'dist-a', satuanProdukId: 'amild-slp', harga: 312000 }],
   'rokok-hs': [{ distributorId: 'dist-a', satuanProdukId: 'hs-slp', harga: 195000 }],
+  'dunhill-blue': [{ distributorId: 'dist-a', satuanProdukId: 'dh-ktn', harga: 3050000 }],
   'air-600': [{ distributorId: 'dist-b', satuanProdukId: 'air-ktn', harga: 64000 }],
   skm: [{ distributorId: 'dist-c', satuanProdukId: 'skm-ktn', harga: 552000 }],
   kecap: [{ distributorId: 'dist-c', satuanProdukId: 'kecap-ktn', harga: 246000 }],
@@ -199,7 +209,7 @@ export const hargaBeliContoh: Record<string, HargaBeliTerakhir[]> = {
 /** Modal rata-rata stok yang ada saat ini, per satuan dasar (contoh). */
 export const modalContoh: Record<string, number> = {
   'gulaku-5': 85000, 'gula-curah': 15600, 'gula-1kg': 16300, 'minyak-1l': 17000, sarimi: 3000, taro: 2100,
-  amild: 31200, 'rokok-hs': 19500, 'air-600': 2670, skm: 11500, kecap: 20500, deterjen: 19000,
+  amild: 31200, 'rokok-hs': 19500, 'dunhill-blue': 30500, 'air-600': 2670, skm: 11500, kecap: 20500, deterjen: 19000,
   'bawang-merah': 32000, 'bawang-putih': 30000, kemiri: 44000,
 };
 
@@ -214,6 +224,7 @@ export const aturStokContoh: Record<string, { maks: number; orderTetap: number; 
   taro: { maks: 400, orderTetap: 4, rataHarian: 20 },
   amild: { maks: 120, orderTetap: 5, rataHarian: 6 },
   'rokok-hs': { maks: 20, orderTetap: 1, rataHarian: 0.5 },
+  'dunhill-blue': { maks: 150, orderTetap: 1, rataHarian: 4 },
   'air-600': { maks: 240, orderTetap: 5, rataHarian: 12 },
   skm: { maks: 96, orderTetap: 1, rataHarian: 3 },
   kecap: { maks: 48, orderTetap: 2, rataHarian: 1.5 },

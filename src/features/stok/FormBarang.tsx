@@ -11,12 +11,45 @@ import { rupiah } from '../../lib/format';
 import { IsianPin } from '../kaslaci/DialogLaci';
 import { ambilProduk } from '../penjualan/model';
 
-type BarisSatuan = SatuanProduk & { kunci: string };
+/** isiPer + dari = isi berantai seperti cara orang menyebut: "Karton isi 10 Slop", "Slop isi 10 Bungkus". */
+type BarisSatuan = SatuanProduk & { kunci: string; isiPer: number; dari: string };
 type BarisTingkat = TingkatHarga & { kunci: string };
 const kunci = () => Math.random().toString(36).slice(2);
 const namaSatuan = (sid: string) => satuanBawaan.find((s) => s.singkatan === sid)?.nama ?? sid;
 const ukuran = (sid: string) => satuanBawaan.find((s) => s.singkatan === sid)?.bolehDesimal ?? false;
-const labelOtomatis = (sid: string, isi: number, dasar: string) => (isi === 1 ? namaSatuan(sid) : `${namaSatuan(sid)} isi ${isi.toLocaleString('id-ID')} ${namaSatuan(dasar)}`);
+const labelOtomatis = (x: BarisSatuan, semua: BarisSatuan[], dasarKunci: string) => {
+  if (x.kunci === dasarKunci) return namaSatuan(x.satuanId);
+  const d = semua.find((y) => y.kunci === x.dari);
+  return `${namaSatuan(x.satuanId)} isi ${(x.isiPer || 0).toLocaleString('id-ID')} ${d ? namaSatuan(d.satuanId) : ''}`.trim();
+};
+
+/** Hitung isi (dalam satuan dasar) dari rantai isiPer × isi satuan acuannya. Rantai berputar → 0 (salah). */
+function hitungIsi(xs: BarisSatuan[], dasarKunci: string): BarisSatuan[] {
+  const peta = new Map(xs.map((x) => [x.kunci, x]));
+  const isiDari = (k: string, jejak: Set<string>): number => {
+    if (k === dasarKunci) return 1;
+    const x = peta.get(k);
+    if (!x || jejak.has(k)) return 0;
+    jejak.add(k);
+    return (x.isiPer || 0) * isiDari(x.dari || dasarKunci, jejak);
+  };
+  return xs.map((x) => ({ ...x, isi: isiDari(x.kunci, new Set()) }));
+}
+
+/** Urut kecil → besar, satuan dasar paling atas, yang belum benar di bawah. */
+const urutkan = (xs: BarisSatuan[], dasarKunci: string) =>
+  [...xs].sort((a, b) => (a.kunci === dasarKunci ? -1 : b.kunci === dasarKunci ? 1 : (a.isi || Infinity) - (b.isi || Infinity)));
+
+/** Dari data barang (isi dalam satuan dasar) → baris berantai: acuan = satuan lebih kecil terbesar yang membagi habis. */
+function keBaris(satuan: SatuanProduk[], beli: Record<string, { harga: number }> = {}): { baris: BarisSatuan[]; dasarKunci: string } {
+  const urut = [...satuan].sort((a, b) => a.isi - b.isi);
+  const baris: BarisSatuan[] = [];
+  for (const s of urut) {
+    const acuan = [...baris].reverse().find((b) => b.isi < s.isi && s.isi % b.isi === 0);
+    baris.push({ ...s, kunci: kunci(), hargaBeli: beli[s.id]?.harga ?? s.hargaBeli, dari: acuan?.kunci ?? '', isiPer: acuan ? s.isi / acuan.isi : 1 });
+  }
+  return { baris, dasarKunci: baris.find((b) => b.isi === 1)?.kunci ?? '' };
+}
 
 /** Untung % yang bisa diketik (desimal) tanpa melompat saat sedang diketik. */
 function InputPersen({ nilai, onUbah, label, merah }: { nilai?: number; onUbah: (n: number) => void; label: string; merah?: boolean }) {
@@ -73,11 +106,10 @@ export function FormBarang() {
   const [kode, setKode] = useState(lama?.kode ?? '');
   const [dasar, setDasar] = useState(lama?.satuanDasarId ?? '');
   const [metode, setMetode] = useState<MetodeHarga>(lama?.metodeHarga ?? 'per_satuan');
-  const [satuan, setSatuan] = useState<BarisSatuan[]>(() => (lama?.satuan ?? []).map((s) => ({
-    ...s, kunci: kunci(), hargaBeli: info?.beliPerSatuan[s.id]?.harga ?? s.hargaBeli,
-  })));
+  const [awal] = useState(() => keBaris(lama?.satuan ?? [], info?.beliPerSatuan));
+  const [satuan, setSatuan] = useState<BarisSatuan[]>(awal.baris);
   // Baris satuan dasar ditandai tersendiri (bukan dari isi = 1), supaya mengetik "10" tidak mengubah baris jadi satuan dasar.
-  const [dasarKunci, setDasarKunci] = useState<string>(() => satuan.find((x) => x.isi === 1)?.kunci ?? '');
+  const [dasarKunci, setDasarKunci] = useState<string>(awal.dasarKunci);
   const [tingkat, setTingkat] = useState<BarisTingkat[]>(() => (lama?.tingkatHarga.length ? lama.tingkatHarga : [{ mulaiJumlah: 0, harga: 0 }]).map((t) => ({ ...t, kunci: kunci() })));
   const [minimum, setMinimum] = useState(lama?.stokMinimum ?? 0);
   const [maksimum, setMaksimum] = useState(lama?.stokMaksimum ?? 0);
@@ -95,18 +127,25 @@ export function FormBarang() {
     setSatuan((xs) => {
       const lain = xs.filter((x) => x.kunci !== k);
       const d = xs.find((x) => x.kunci === k);
-      return [{ ...(d ?? { id: '', dibeli: false, dijual: true }), kunci: k, satuanId: sid, label: namaSatuan(sid), isi: 1 } as BarisSatuan, ...lain];
+      const baru = [{ ...(d ?? { id: '', dibeli: false, dijual: true }), kunci: k, satuanId: sid, label: namaSatuan(sid), isi: 1, isiPer: 1, dari: '' } as BarisSatuan, ...lain];
+      return hitungIsi(baru.map((x) => (x.kunci !== k && !x.dari ? { ...x, dari: k } : x)), k);
     });
   };
-  const ubahSatuan = (k: string, patch: Partial<BarisSatuan>) => setSatuan((xs) => xs.map((x) => {
-    if (x.kunci !== k) return x;
-    const baru = { ...x, ...patch };
-    if ((patch.satuanId || patch.isi) && x.label === labelOtomatis(x.satuanId, x.isi, dasar)) baru.label = labelOtomatis(baru.satuanId, baru.isi, dasar);
-    return baru;
-  }));
+  // Ubah satu baris lalu hitung ulang rantai isi; nama tampil ikut berubah selama belum diketik manual.
+  const ubahSatuan = (k: string, patch: Partial<BarisSatuan>) => setSatuan((xs) => {
+    const lamaOto = new Map(xs.map((x) => [x.kunci, labelOtomatis(x, xs, dasarKunci)]));
+    const ganti = hitungIsi(xs.map((x) => (x.kunci === k ? { ...x, ...patch } : x)), dasarKunci);
+    return ganti.map((x) => (x.label === lamaOto.get(x.kunci) && !('label' in patch && x.kunci === k) ? { ...x, label: labelOtomatis(x, ganti, dasarKunci) } : x));
+  });
+  const rapikan = () => setSatuan((xs) => urutkan(xs, dasarKunci));
 
-  const urut = [...satuan].sort((a, b) => (a.kunci === dasarKunci ? -1 : b.kunci === dasarKunci ? 1 : 0));
-  const isiSalah = (s: BarisSatuan) => s.kunci !== dasarKunci && !(s.isi > 1);
+  const urut = satuan;
+  const isiSalah = (s: BarisSatuan) => s.kunci !== dasarKunci && !(s.isiPer > 1 && s.isi > 1);
+  const rantai = (s: BarisSatuan): string => {
+    const d = satuan.find((y) => y.kunci === s.dari);
+    if (!d) return '';
+    return d.kunci === dasarKunci ? '' : ` = ${s.isi.toLocaleString('id-ID')} ${namaSatuan(dasar)}`;
+  };
   // Harga beli acuan per satuan dasar untuk satuan yang tidak dibeli (mis. eceran):
   // faktur terakhir, atau perkiraan dari satuan beli terkecil yang diisi harganya.
   const perkiraan = satuan.filter((x) => x.dibeli && x.hargaBeli && !isiSalah(x)).sort((a, b) => a.isi - b.isi)[0];
@@ -138,7 +177,7 @@ export function FormBarang() {
       kode: kode.trim().toUpperCase() || undefined, letak: letak.trim() || undefined,
       nama: nama.trim(), kategoriId: kategori, satuanDasarId: dasar, stokMinimum: minimum, stokMaksimum: maksimum || undefined, metodeHarga: metode,
       hargaBeliAcuan: undefined,
-      satuan: [...urut].sort((a, b) => a.isi - b.isi).map(({ kunci: _k, ...s }) => ({
+      satuan: [...urut].sort((a, b) => a.isi - b.isi).map(({ kunci: _k, isiPer: _i, dari: _d, ...s }) => ({
         ...s, id: s.id || `${idBaru}-${s.satuanId}${s.isi > 1 ? s.isi : ''}`,
         hargaJual: metode === 'per_satuan' && s.dijual ? s.hargaJual : undefined,
         // Harga beli per satuan beli (perkiraan); faktur nanti menimpa dengan harga sebenarnya.
@@ -228,7 +267,7 @@ export function FormBarang() {
           <table className="ps-tabel ps-tabel--hp bd-tabel bd-form sb-form-harga">
             <thead>
               <tr>
-                <th>Satuan</th><th className="kanan">Isi</th><th>Beli</th><th>Jual</th><th className="kanan">Harga beli</th>
+                <th>Satuan</th><th>Isi</th><th>Beli</th><th>Jual</th><th className="kanan">Harga beli</th>
                 {metode === 'per_satuan' && <><th className="kanan">Harga jual</th><th className="kanan">Untung %</th><th className="kanan">Untung Rp</th></>}
                 <th aria-label="Hapus" />
               </tr>
@@ -244,11 +283,20 @@ export function FormBarang() {
                     )}
                     <input className="isian__kontrol sb-label" aria-label="Nama tampil" value={s.label} onChange={(e) => ubahSatuan(s.kunci, { label: e.target.value })} />
                     {s.kunci !== dasarKunci && (isiSalah(s)
-                      ? <div className="teks-bahaya" style={{ fontSize: 12 }}>Isi harus lebih dari 1</div>
-                      : <div className="teks-pudar" style={{ fontSize: 12 }}>1 {namaSatuan(s.satuanId)} = {s.isi.toLocaleString('id-ID')} {namaSatuan(dasar)}</div>)}
+                      ? <div className="teks-bahaya" style={{ fontSize: 12 }}>Isi harus lebih dari 1 (dan tidak berputar)</div>
+                      : <div className="teks-pudar" style={{ fontSize: 12 }}>1 {namaSatuan(s.satuanId)} = {s.isiPer.toLocaleString('id-ID')} {namaSatuan(satuan.find((y) => y.kunci === s.dari)?.satuanId ?? dasar)}{rantai(s)}</div>)}
                   </td>
                   <td data-label="Isi" className="kanan">
-                    {s.kunci === dasarKunci ? '1' : <input className="isian__kontrol kk-qty" type="number" min={2} aria-label="Isi" value={s.isi || ''} onChange={(e) => ubahSatuan(s.kunci, { isi: Number(e.target.value) })} />}
+                    {s.kunci === dasarKunci ? '1' : (
+                      <div className="sb-isi">
+                        <input className="isian__kontrol kk-qty" type="number" min={2} aria-label="Isi" value={s.isiPer || ''}
+                          onChange={(e) => ubahSatuan(s.kunci, { isiPer: Number(e.target.value) })} onBlur={rapikan} />
+                        <select className="isian__kontrol" aria-label="Isi dalam satuan" value={s.dari || dasarKunci}
+                          onChange={(e) => { ubahSatuan(s.kunci, { dari: e.target.value }); setTimeout(rapikan); }}>
+                          {satuan.filter((y) => y.kunci !== s.kunci).map((y) => <option key={y.kunci} value={y.kunci}>{namaSatuan(y.satuanId)}</option>)}
+                        </select>
+                      </div>
+                    )}
                   </td>
                   <td data-label="Beli"><input type="checkbox" className="kb-centang" aria-label={`Dibeli ${s.label}`} checked={s.dibeli} onChange={(e) => ubahSatuan(s.kunci, { dibeli: e.target.checked })} /></td>
                   <td data-label="Jual"><input type="checkbox" className="kb-centang" aria-label={`Dijual ${s.label}`} checked={s.dijual} onChange={(e) => ubahSatuan(s.kunci, { dijual: e.target.checked })} /></td>
@@ -278,7 +326,12 @@ export function FormBarang() {
           </p>
         )}
         {dasar && <button type="button" className="tombol tombol--putus" style={{ marginTop: 10 }}
-          onClick={() => { const isi = Math.max(2, ...satuan.map((s) => s.isi * 10)); setSatuan((xs) => [...xs, { kunci: kunci(), id: '', satuanId: 'ktn', label: labelOtomatis('ktn', isi, dasar), isi, dibeli: true, dijual: false }]); }}>
+          onClick={() => setSatuan((xs) => {
+            const besar = [...xs].sort((a, b) => b.isi - a.isi)[0];
+            const baru: BarisSatuan = { kunci: kunci(), id: '', satuanId: 'ktn', label: '', isi: 0, isiPer: 10, dari: besar?.kunci ?? dasarKunci, dibeli: true, dijual: false };
+            const semua = hitungIsi([...xs, baru], dasarKunci);
+            return semua.map((x) => (x.kunci === baru.kunci ? { ...x, label: labelOtomatis(x, semua, dasarKunci) } : x));
+          })}>
           + Satuan besar (karton, renteng, slop…)
         </button>}
         {metode === 'bertingkat' && dasar && (
