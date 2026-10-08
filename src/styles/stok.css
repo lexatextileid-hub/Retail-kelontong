@@ -1,0 +1,29 @@
+/* Stok Barang */
+.sb-umur { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.sb-umur--normal { background: var(--permukaan-2); color: var(--teks-2); }
+.sb-umur--kuning { background: #fff6d6; color: #8a6200; }
+.sb-umur--oranye { background: #ffe7d1; color: #a24a00; }
+.sb-umur--merah { background: var(--bahaya-latar); color: var(--bahaya); }
+.sb-tipis { color: #a24a00; }
+.sb-harga { display: flex; flex-direction: column; gap: 2px; font-size: 13px; white-space: nowrap; }
+.sb-untung { color: #1d6b3c; font-size: 12px; }
+.sb-kepala-info { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sb-tab { display: flex; gap: 4px; border-bottom: 1px solid var(--garis); overflow-x: auto; scrollbar-width: none; }
+.sb-tab button { border: none; background: none; padding: 10px 14px; font: inherit; font-weight: 600; color: var(--teks-2); border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; }
+.sb-tab button[aria-selected='true'] { color: var(--biru); border-bottom-color: var(--biru); }
+.sb-ringkasan { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; padding: 18px; }
+.sb-angka { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sb-angka > span { font-size: 12.5px; }
+.sb-angka > strong { font-size: 16px; overflow-wrap: anywhere; }
+.sb-lebar { grid-column: 1 / -1; }
+.sb-cek { display: flex; flex-direction: column; gap: 8px; font-weight: 500; }
+.sb-cek label { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.sb-tingkat { display: grid; grid-template-columns: 180px 220px max-content; justify-content: start; gap: 12px; align-items: end; }
+@media (max-width: 900px) { .sb-ringkasan { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) {
+  .sb-ringkasan { grid-template-columns: 1fr 1fr; gap: 12px; padding: 14px; }
+  .sb-tingkat { grid-template-columns: 1fr 1fr; }
+  .sb-harga { white-space: normal; align-items: flex-end; }
+}
+.sb-gerak { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+@media (max-width: 720px) { .sb-gerak { align-items: flex-end; } }

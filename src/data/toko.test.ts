@@ -226,7 +226,7 @@ describe('laporan harian kasir', () => {
     const t = await import('./toko');
     t.setPeran('admin');
     const sesi = t.laciTerbuka() ?? t.bukaLaci(0);
-    const stok0 = t.__state().stokTambahan['gula-1kg'] ?? 0;
+    const stok0 = t.stokFisik('gula-1kg');
     t.catatArus({ jenis: 'penjualan', nomor: 'PJ-UJI-K1', tunai: 30000, transfer: 0, keterangan: 'uji' });
     t.catatArus({ jenis: 'pesanan', tahap: 'DP', nomor: 'PS-UJI', tunai: 0, transfer: 100000, keterangan: 'DP' });
     t.catatArus({ jenis: 'pesanan', tahap: 'Pelunasan', nomor: 'PS-UJI', tunai: 50000, transfer: 0, keterangan: 'lunas' });
@@ -234,7 +234,7 @@ describe('laporan harian kasir', () => {
     const { faktur, arus } = t.buatFakturTunai({ distributorId: 'lain:Toko Sebelah', namaPemasok: 'Toko Sebelah', baris: [{ produkId: 'gula-1kg', satuanProdukId: 'gula-1kg-bks', qty: 2, harga: 15000 }] });
     t.catatArus({ jenis: 'pengeluaran', nomor: 'KK-UJI-K', tunai: -5000, transfer: 0, kategori: 'Kemasan', penerima: 'x', keterangan: 'plastik' });
     expect(faktur.total).toBe(30000);
-    expect(t.__state().stokTambahan['gula-1kg']).toBe(stok0 + 2);
+    expect(t.stokFisik('gula-1kg')).toBe(stok0 + 2);
     expect(t.daftarFaktur().find((f) => f.id === `ft:${faktur.id}`)).toMatchObject({ status: 'lunas', sisa: 0 });
     expect(t.mutasiTempat('laci').find((m) => m.nomor === arus.nomor)?.rincian).toBe('Faktur tunai (tanpa nota)');
     expect(t.mutasiTempat('bank').find((m) => m.nomor === 'PS-UJI')?.rincian).toBe('Pesanan · DP');
@@ -249,5 +249,33 @@ describe('laporan harian kasir', () => {
     const k = l.kas;
     expect(k.saldoAwal + k.dariPemilik + k.pendapatan + k.bayarKasbon - k.returKembali - k.pengeluaran - k.setorBank).toBe(k.seharusnya);
     t.setPeran('pemilik');
+  });
+});
+
+describe('buku stok', () => {
+  it('pesanan dari stok: dikunci saat dipesan, keluar dari stok fisik saat diserahkan (stok bebas tidak naik lagi)', async () => {
+    const t = await import('./toko');
+    const fisik0 = t.stokFisik('amild');
+    const bebas0 = t.stokBebas('amild');
+    const id = t.buatPesanan({ pelangganId: 'amir', cara: 'ambil', tanggalJanji: t.hariIni(), baris: [{ produkId: 'amild', satuanProdukId: 'amild-bks', qty: 5 }] });
+    expect(t.stokBebas('amild')).toBe(bebas0 - 5);
+    expect(t.stokFisik('amild')).toBe(fisik0);
+    const p = t.__state().pesanan.find((x) => x.id === id)!;
+    t.serahkan(id, [{ barisId: p.baris[0].id, jumlahDasar: 5 }], false);
+    expect(t.stokFisik('amild')).toBe(fisik0 - 5);
+    expect(t.stokBebas('amild')).toBe(bebas0 - 5);
+    expect(t.mutasiBarang('amild').some((m) => m.jenis === 'serah-pesanan' && m.jumlah === -5)).toBe(true);
+  });
+
+  it('info barang: status gerak, umur, nilai stok dari FIFO', async () => {
+    const t = await import('./toko');
+    expect(t.infoBarang('sarimi').status).toBe('laku');
+    expect(t.infoBarang('kecap').status).toBe('lambat');
+    expect(t.infoBarang('deterjen').status).toBe('berhenti');
+    expect(t.infoBarang('bawang-merah').status).toBe('baru');
+    expect(t.infoBarang('rokok-hs').umur?.warna).toBe('merah');
+    const i = t.infoBarang('taro');
+    expect(i.nilai).toBe(Math.round(i.lapisan.reduce((a, l) => a + l.sisa * l.modal, 0)));
+    expect(i.lapisan.reduce((a, l) => a + l.sisa, 0)).toBeCloseTo(i.stok - 0, 3);
   });
 });

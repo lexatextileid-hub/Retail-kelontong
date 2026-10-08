@@ -47,6 +47,8 @@ export interface Produk {
   satuan: SatuanProduk[]; // termasuk baris satuan dasar (isi = 1)
   tingkatHarga: TingkatHarga[]; // dipakai jika metode = bertingkat
   aktif: boolean;
+  /** Barang musiman (mis. sirup Lebaran): tidak dicap "Berhenti" di luar musimnya. */
+  musiman?: boolean;
 }
 
 export type JenisPelanggan = 'umum' | 'terdaftar';

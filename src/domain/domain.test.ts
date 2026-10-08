@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { formatStok } from '../lib/format';
 import { ringkasTempat, saldoBerjalan, type MutasiKas } from './kas';
+import { hitungLapisan, modalRata, statusGerak, stokBertingkat, umurStok, type MutasiStok } from './stok';
 import { ambilFifo, modalBarisFaktur } from './fifo';
 import { hitungHargaBaris } from './harga';
 import { alokasiTertua, cekKasbon, selisihHari, tambahHari } from './kasbon';
@@ -267,5 +268,48 @@ describe('laporan kas per tempat uang', () => {
     expect(bulan.saldoAkhir).toBe(ringkasTempat(data, '2026-10-04', '2026-10-04').saldoAkhir);
     expect(ringkasTempat(data, '2026-10-03', '2026-10-03').saldoAkhir).toBe(ringkasTempat(data, '2026-10-04', '2026-10-04').saldoAwal);
     expect(saldoBerjalan(data).slice(-1)[0].saldo).toBe(bulan.saldoAkhir);
+  });
+});
+
+describe('buku stok, FIFO, umur, status gerak', () => {
+  const m = (tanggal: string, jumlah: number, modal?: number): MutasiStok =>
+    ({ id: tanggal + jumlah, waktuIso: `${tanggal}T10:00:00`, tanggal, produkId: 'x', jenis: jumlah > 0 ? 'faktur' : 'penjualan', nomor: '-', keterangan: '', jumlah, modal, oleh: '-' });
+  it('keluar menghabiskan lapisan tertua dulu; sisa lapisan baru dengan modalnya', () => {
+    const { lapisan, minus } = hitungLapisan([m('2026-01-01', 100, 3000), m('2026-02-01', 50, 3200), m('2026-03-01', -120)]);
+    expect(minus).toBe(0);
+    expect(lapisan).toHaveLength(1);
+    expect(lapisan[0]).toMatchObject({ tanggal: '2026-02-01', sisa: 30, modal: 3200 });
+    expect(modalRata(lapisan)).toBe(3200);
+  });
+  it('keluar melebihi stok → minus; barang masuk berikutnya menutup minus dulu', () => {
+    expect(hitungLapisan([m('2026-01-01', 10, 1000), m('2026-01-02', -15)]).minus).toBe(5);
+    const r = hitungLapisan([m('2026-01-01', 10, 1000), m('2026-01-02', -15), m('2026-01-03', 20, 1100)]);
+    expect(r).toMatchObject({ minus: 0, lapisan: [{ sisa: 15, modal: 1100 }] });
+  });
+  it('umur stok dari lapisan tertua: kuning 3 bln, oranye 6 bln, merah 12 bln', () => {
+    const lap = hitungLapisan([m('2025-09-01', 10, 1000), m('2026-09-01', 10, 1000)]).lapisan;
+    expect(umurStok(lap, '2026-10-08')?.warna).toBe('merah');
+    expect(umurStok(hitungLapisan([m('2026-03-01', 5, 1)]).lapisan, '2026-10-08')?.warna).toBe('oranye');
+    expect(umurStok(hitungLapisan([m('2026-06-15', 5, 1)]).lapisan, '2026-10-08')?.warna).toBe('kuning');
+    expect(umurStok(hitungLapisan([m('2026-09-15', 5, 1)]).lapisan, '2026-10-08')?.warna).toBe('normal');
+  });
+  it('status gerak dihitung dari jumlah minggu terjual dalam 13 minggu', () => {
+    const hari = '2026-10-08';
+    const tiapMinggu = (n: number) => Array.from({ length: n }, (_, i) => tambahHari(hari, -i * 7));
+    expect(statusGerak(tiapMinggu(7), hari, '2026-01-01').status).toBe('laku');
+    expect(statusGerak(tiapMinggu(6), hari, '2026-01-01').status).toBe('lambat');
+    expect(statusGerak(tiapMinggu(1), hari, '2026-01-01').status).toBe('berhenti');
+    // Banyak penjualan dalam satu minggu tetap dihitung 1 minggu
+    expect(statusGerak([hari, hari, tambahHari(hari, -1), tambahHari(hari, -2)], hari, '2026-01-01').mingguTerjual).toBe(1);
+    expect(statusGerak([], hari, tambahHari(hari, -30)).status).toBe('baru');
+    expect(statusGerak([], hari, '2026-01-01', true).status).toBe('musiman');
+    expect(statusGerak(tiapMinggu(14), hari, '2026-01-01').mingguTerjual).toBe(13);
+  });
+  it('stok bertingkat dari satuan besar ke kecil', () => {
+    const taro = [{ isi: 1, singkatan: 'pcs' }, { isi: 10, singkatan: 'rtg' }, { isi: 50, singkatan: 'ktn' }];
+    expect(stokBertingkat(237, taro)).toBe('4 ktn 3 rtg 7 pcs');
+    expect(stokBertingkat(0, taro)).toBe('0');
+    expect(stokBertingkat(-12, taro)).toBe('−1 rtg 2 pcs');
+    expect(stokBertingkat(18.5, [{ isi: 1, singkatan: 'kg' }])).toBe('18,5 kg');
   });
 });

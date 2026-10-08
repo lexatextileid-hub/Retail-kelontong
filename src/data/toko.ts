@@ -3,10 +3,13 @@
  * Nanti diganti Supabase. Bentuk data di sini mengikuti rancangan tabel.
  */
 import { useSyncExternalStore } from 'react';
-import { diskonContoh, distributorContoh, hargaBeliContoh, modalContoh, pelangganContoh, stokContoh, type PelangganContoh } from './contoh';
+import { diskonContoh, distributorContoh, hargaBeliContoh, modalContoh, pelangganContoh, produkContoh, type PelangganContoh } from './contoh';
+import { buatHistoriContoh } from './historiContoh';
+import { hitungLapisan, modalRata, statusGerak, umurStok, type Lapisan, type MutasiStok, type StatusGerak, type WarnaUmur } from '../domain/stok';
+import type { Produk } from '../domain/tipe';
 import { alokasiTertua, isoHari, selisihHari, tambahHari } from '../domain/kasbon';
 import { hitungHargaBaris, TARGET_UNTUNG_PERSEN, untungDariModal } from '../domain/harga';
-import { ambilProduk, ambilSatuan, bolehDesimal, singkatan, type Nota } from '../features/penjualan/model';
+import { ambilProduk, ambilSatuan, bolehDesimal, produkById, singkatan, type Nota } from '../features/penjualan/model';
 import type { KelompokKas, MutasiKas, TempatUang } from '../domain/kas';
 import { ringkasTempat, saldoPada } from '../domain/kas';
 import { kategoriBawaan } from '../domain/kategoriBawaan';
@@ -101,7 +104,7 @@ export interface FakturSP {
   cara: 'cash' | 'tempo';
   total: number;
   oleh: string;
-  baris?: { nama: string; satuan: string; qty: number; harga: number }[];
+  baris?: { nama: string; satuan: string; qty: number; harga: number; produkId?: string; jumlahDasar?: number }[];
 }
 
 export interface SuratPesanan {
@@ -362,7 +365,10 @@ interface State {
   pesanan: Pesanan[];
   sp: SuratPesanan[];
   urut: Record<'PS' | 'SP' | 'SJ' | 'PB' | 'KL' | 'BK' | 'PJ' | 'RT' | 'LC' | 'KK' | 'KM' | 'BD' | 'ST' | 'PD' | 'SA' | 'KR' | 'CK' | 'PR' | 'FT', number>;
-  stokTambahan: Record<string, number>; // stok umum yang masuk dari SP (pratinjau)
+  stokTambahan: Record<string, number>; // (lama) tidak dipakai lagi untuk menghitung stok — lihat mutasiStok
+  /** Saldo awal + riwayat stok contoh sebelum pratinjau dibuka. */
+  stokHistori: MutasiStok[];
+  versiProduk: number;
 }
 
 let state: State = {
@@ -383,6 +389,8 @@ let state: State = {
   sp: [],
   urut: { PS: 1, SP: 1, SJ: 1, PB: 1, KL: 1, BK: 1, PJ: 231, RT: 1, LC: 1, KK: 1, KM: 1, BD: 1, ST: 1, PD: 1, SA: 1, KR: 1, CK: 1, PR: 1, FT: 1 },
   stokTambahan: {},
+  stokHistori: buatHistoriContoh(),
+  versiProduk: 0,
 };
 const pendengar = new Set<() => void>();
 
@@ -430,7 +438,111 @@ export function stokTerkunci(produkId: string, s: State = state, kecualiPesananI
 
 /** Stok umum yang bebas dijual = stok + masuk dari SP − terkunci pesanan. */
 export function stokBebas(produkId: string, s: State = state, kecualiPesananId?: string): number {
-  return (stokContoh[produkId] ?? 0) + (s.stokTambahan[produkId] ?? 0) - stokTerkunci(produkId, s, kecualiPesananId);
+  return stokFisik(produkId, s) - stokTerkunci(produkId, s, kecualiPesananId);
+}
+
+/* ---------- Buku stok ---------- */
+
+const memoMutasi = new WeakMap<State, MutasiStok[]>();
+const waktuDari = (tanggal: string, jam = 12) => { const [y, m, d] = tanggal.split('-').map(Number); return new Date(y, m - 1, d, jam).toISOString(); };
+
+/**
+ * Semua mutasi stok dari dokumen sumbernya (stok tidak pernah diedit langsung):
+ * saldo awal & riwayat contoh, faktur dari Surat Pesanan, faktur tunai, penjualan, retur (barang bagus kembali, barang tukar keluar),
+ * serah pesanan.
+ */
+export function mutasiStok(s: State = state): MutasiStok[] {
+  const ada = memoMutasi.get(s);
+  if (ada) return ada;
+  const hasil: MutasiStok[] = [...s.stokHistori];
+  for (const sp of s.sp)
+    for (const f of sp.faktur)
+      (f.baris ?? []).forEach((b, i) => {
+        if (!b.produkId || !b.jumlahDasar) return;
+        const tgl = f.tanggal ?? hariIni();
+        hasil.push({ id: `${f.nomor}:${i}`, waktuIso: waktuDari(tgl, 9), tanggal: tgl, produkId: b.produkId, jenis: 'faktur', nomor: f.nomor,
+          keterangan: `Faktur ${f.nomorDistributor} · ${sp.nomor}`, jumlah: b.jumlahDasar, modal: b.harga * b.qty / b.jumlahDasar, distributorId: sp.distributorId, oleh: f.oleh });
+      });
+  for (const f of s.fakturTunai)
+    f.baris.forEach((b, i) => hasil.push({ id: `${f.nomor}:${i}`, waktuIso: f.waktuIso, tanggal: f.tanggal, produkId: b.produkId, jenis: 'faktur-tunai', nomor: f.nomor,
+      keterangan: `Faktur tunai${f.nomorNota ? ` (${f.nomorNota})` : ''}`, jumlah: b.jumlahDasar, modal: (b.qty * b.harga) / b.jumlahDasar, distributorId: f.distributorId, oleh: f.oleh }));
+  for (const n of s.penjualan)
+    n.baris.forEach((b, i) => hasil.push({ id: `${n.nomor}:${i}`, waktuIso: n.waktuIso, tanggal: n.tanggal, produkId: b.produkId, jenis: 'penjualan', nomor: n.nomor,
+      keterangan: `Penjualan · ${ambilPelanggan(n.pelangganId, s).nama}`, jumlah: -b.jumlahDasar, oleh: n.struk.kasir }));
+  for (const r of s.retur) {
+    r.baris.filter((b) => b.kondisi === 'bagus').forEach((b, i) => hasil.push({ id: `${r.nomor}:b${i}`, waktuIso: r.waktuIso, tanggal: isoHari(new Date(r.waktuIso)), produkId: b.produkId,
+      jenis: 'retur-jual', nomor: r.nomor, keterangan: `Retur ${r.nomorAsal ?? 'tanpa nota'}`, jumlah: b.jumlahDasar, oleh: r.oleh }));
+    r.tukar.forEach((t, i) => hasil.push({ id: `${r.nomor}:t${i}`, waktuIso: r.waktuIso, tanggal: isoHari(new Date(r.waktuIso)), produkId: t.produkId,
+      jenis: 'tukar', nomor: r.nomor, keterangan: `Tukar barang ${r.nomorAsal ?? ''}`.trim(), jumlah: -t.jumlahDasar, oleh: r.oleh }));
+  }
+  for (const p of s.pesanan)
+    for (const st of p.serah)
+      st.baris.forEach((x, i) => {
+        const b = p.baris.find((y) => y.id === x.barisId);
+        if (b) hasil.push({ id: `${st.nomor}:${i}`, waktuIso: waktuDari(st.tanggal, 14), tanggal: st.tanggal, produkId: b.produkId, jenis: 'serah-pesanan', nomor: st.nomor,
+          keterangan: `Serah pesanan ${p.nomor} · ${ambilPelanggan(p.pelangganId, s).nama}`, jumlah: -x.jumlahDasar, oleh: st.oleh });
+      });
+  hasil.sort((a, b) => a.waktuIso.localeCompare(b.waktuIso));
+  memoMutasi.set(s, hasil);
+  return hasil;
+}
+
+export const mutasiBarang = (produkId: string, s: State = state) => mutasiStok(s).filter((m) => m.produkId === produkId);
+
+/** Stok fisik (toko + semua ruko) = jumlah mutasi. */
+export const stokFisik = (produkId: string, s: State = state) =>
+  Math.round(mutasiBarang(produkId, s).reduce((t, m) => t + m.jumlah, 0) * 1000) / 1000;
+
+const memoInfo = new WeakMap<State, Map<string, InfoBarang>>();
+
+export interface InfoBarang {
+  stok: number; terkunci: number; bebas: number;
+  lapisan: Lapisan[]; minus: number; modal?: number; nilai: number;
+  umur?: { hari: number; warna: WarnaUmur; tanggal: string };
+  status: StatusGerak; mingguTerjual: number;
+  terjual30: number; rataHarian: number; cukupHari?: number; terakhirTerjual?: string; masukPertama?: string;
+  beliTerakhir?: { tanggal: string; nomor: string; modal: number; distributorId?: string };
+}
+
+/** Angka gerak dan nilai satu barang (stok, FIFO, umur, status gerak, terjual, cukup untuk berapa hari). */
+export function infoBarang(produkId: string, s: State = state): InfoBarang {
+  let peta = memoInfo.get(s);
+  if (!peta) memoInfo.set(s, (peta = new Map()));
+  const ada = peta.get(produkId);
+  if (ada) return ada;
+  const p = ambilProduk(produkId);
+  const mut = mutasiBarang(produkId, s);
+  const hari = hariIni();
+  const { lapisan, minus } = hitungLapisan(mut, modalContoh[produkId] ?? 0);
+  const stok = stokFisik(produkId, s);
+  const terkunci = stokTerkunci(produkId, s);
+  const keluarJual = mut.filter((m) => m.jenis === 'penjualan' || m.jenis === 'serah-pesanan');
+  const dari30 = tambahHari(hari, -29);
+  const terjual30 = Math.abs(keluarJual.filter((m) => m.tanggal >= dari30).reduce((t, m) => t + m.jumlah, 0));
+  const rataHarian = terjual30 / 30;
+  const masuk = mut.filter((m) => m.jumlah > 0 && (m.jenis === 'faktur' || m.jenis === 'faktur-tunai' || m.jenis === 'saldo-awal'));
+  const beli = [...masuk].reverse().find((m) => m.jenis !== 'saldo-awal');
+  // Barang yang belum pernah masuk dianggap baru.
+  const g = statusGerak(keluarJual.map((m) => m.tanggal), hari, mut[0]?.tanggal ?? hari, p.musiman);
+  const modal = modalRata(lapisan) ?? beli?.modal ?? modalContoh[produkId];
+  const info: InfoBarang = {
+    stok, terkunci, bebas: stok - terkunci, lapisan, minus, modal,
+    nilai: Math.round(lapisan.reduce((t, l) => t + l.sisa * l.modal, 0)),
+    umur: umurStok(lapisan, hari), status: g.status, mingguTerjual: g.mingguTerjual,
+    terjual30, rataHarian, cukupHari: rataHarian > 0 ? Math.floor(Math.max(0, stok) / rataHarian) : undefined,
+    terakhirTerjual: keluarJual[keluarJual.length - 1]?.tanggal, masukPertama: mut[0]?.tanggal,
+    beliTerakhir: beli ? { tanggal: beli.tanggal, nomor: beli.nomor, modal: beli.modal ?? 0, distributorId: beli.distributorId } : undefined,
+  };
+  peta.set(produkId, info);
+  return info;
+}
+
+/** Simpan barang baru / perubahan data barang (pratinjau: langsung ke data contoh). */
+export function simpanProduk(p: Produk) {
+  const i = produkContoh.findIndex((x) => x.id === p.id);
+  if (i >= 0) produkContoh[i] = p; else produkContoh.push(p);
+  produkById.set(p.id, p);
+  ubah((s) => ({ ...s, versiProduk: s.versiProduk + 1 }));
 }
 
 /* ---------- Hitungan pesanan ---------- */
@@ -736,7 +848,8 @@ export function terimaDariSP(
     const pid = x.produkId ?? b.produkId;
     const p = pid ? ambilProduk(pid) : undefined;
     const sid = x.satuanProdukId ?? b.satuanProdukId;
-    return { nama: p?.nama ?? b.permintaan ?? '-', satuan: p && sid ? ambilSatuan(p, sid).label : b.labelSatuan, qty: x.qty, harga: x.harga };
+    const isi = p && sid ? ambilSatuan(p, sid).isi : undefined;
+    return { nama: p?.nama ?? b.permintaan ?? '-', satuan: p && sid ? ambilSatuan(p, sid).label : b.labelSatuan, qty: x.qty, harga: x.harga, produkId: p?.id, jumlahDasar: isi ? x.qty * isi : undefined };
   });
   const status: StatusSP = semuaDiterima ? 'selesai' : data.tutupSisa ? 'ditutup' : 'sebagian';
 

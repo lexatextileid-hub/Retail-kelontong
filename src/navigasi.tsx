@@ -17,6 +17,10 @@ import { Riwayat } from './features/riwayat/Riwayat';
 import { BayarDistributor, LaporanHarian, Pengeluaran } from './features/kaslaci/HalamanKas';
 import { LaciHariIni } from './features/kaslaci/LaciHariIni';
 import { BukuKas } from './features/keuangan/BukuKas';
+import { DaftarBarang } from './features/stok/DaftarBarang';
+import { DetailBarang } from './features/stok/DetailBarang';
+import { FormBarang } from './features/stok/FormBarang';
+import { UmurStok } from './features/stok/UmurStok';
 import { KasbonKaryawan } from './features/keuangan/KasbonKaryawan';
 import { LaporanHarianToko } from './features/keuangan/LaporanHarianToko';
 import { DaftarKasbon } from './features/kasbon/DaftarKasbon';
@@ -125,15 +129,17 @@ export const menuGudang: Menu[] = [
     path: 'stok-barang', judul: 'Stok Barang', ikon: 'stok',
     ringkasan: 'Daftar dan detail barang, tambah barang baru, umur stok.',
     rencana: [
-      'Daftar: nama, satuan, stok, harga beli, harga jual kecil/sedang/besar + untung',
-      'Detail: satuan, stok per kedatangan (FIFO), riwayat keluar-masuk, harga beli per distributor',
-      'Tambah barang baru: pemilik atau PIN pemilik; SKU otomatis',
+      'Daftar: stok bertingkat, cukup untuk berapa hari, status gerak (Laku/Lambat/Berhenti/Baru), umur, beli terakhir, harga jual + untung, nilai stok',
+      'Detail: ringkasan, kartu stok (saldo berjalan), satuan & harga, per kedatangan (FIFO), harga beli per distributor',
+      'Tambah / ubah barang: pemilik, atau admin dengan PIN pemilik; SKU otomatis',
       'Umur stok: kuning 3 bln, oranye 6 bln (retur), merah 12 bln (kerugian tahunan)',
     ],
     anak: [
-      { path: 'daftar', judul: 'Daftar Barang' },
-      { path: 'tambah', judul: 'Tambah Barang' },
-      { path: 'umur-stok', judul: 'Umur Stok' },
+      { path: 'daftar', judul: 'Daftar Barang', halaman: <DaftarBarang /> },
+      { path: 'tambah', judul: 'Tambah Barang', halaman: <FormBarang key="baru" /> },
+      { path: 'umur-stok', judul: 'Umur Stok', halaman: <UmurStok /> },
+      { path: 'detail/:id', judul: 'Detail Barang', halaman: <DetailBarang />, tersembunyi: true },
+      { path: 'ubah/:id', judul: 'Ubah Barang', halaman: <FormBarang key="ubah" />, tersembunyi: true },
     ],
   },
   {

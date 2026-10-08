@@ -95,11 +95,20 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 
 ## Stok Barang (Mode Gudang)
 
-- **Tempat utama mengelola barang**: Mode Gudang → Stok Barang → Tambah Barang Baru. Datanya satu; Back Office membaca dan merangkum dari sini.
-- Tambah barang baru hanya pemilik atau dengan PIN pemilik.
-- **Daftar:** nama, satuan, stok (format "4 krt 3 rtg 7 pcs"), harga beli terakhir, harga jual **kecil · sedang · besar** (barang bertingkat memakai kolom yang sama untuk tingkatannya; level ke-4+ ditandai "+1"). Di bawah tiap harga jual tampil laba Rp dan % (dari modal). Pencarian, filter kategori, filter stok tipis.
-- **Detail barang:** info & satuan; stok per kedatangan (lapisan FIFO: tanggal, distributor, sisa, modal); riwayat keluar-masuk (tanggal, kegiatan, dokumen, jumlah ±, saldo, oleh siapa); harga beli per distributor.
-- Harga beli, modal, dan laba hanya tampil untuk yang punya izin "lihat harga beli".
+- **Tempat utama mengelola barang**: Mode Gudang → Stok Barang. Datanya satu; Back Office membaca dan merangkum dari sini.
+- **Mode Gudang hanya untuk pemilik dan admin** (tiga peran saja; kasir tidak masuk Gudang), jadi **semua kolom tampil**, termasuk harga beli, modal, nilai stok, dan untung.
+- **Tambah / ubah barang: pemilik langsung; admin dengan PIN pemilik.** SKU otomatis dari kategori dan tidak pernah berubah; satuan dasar tidak bisa diubah setelah barang dibuat (stok tercatat dalam satuan itu). Barang baru stoknya 0, bertambah lewat Barang Masuk atau hitung stok.
+- **Stok = buku stok (mutasi), tidak diedit langsung.** Sumber mutasi: saldo awal, faktur dari Surat Pesanan, faktur tunai, penjualan, retur pembeli (barang bagus kembali), tukar barang, serah pesanan. Stok bebas = stok fisik − yang dikunci untuk pesanan.
+- **Jumlah stok ditampilkan dua-duanya**: bertingkat ("4 ktn 2 rtg 7 pcs") dan satuan dasar ("227 pcs").
+- **Daftar Barang** (format seragam): ringkasan barang aktif + nilai stok · stok menipis · habis/minus · barang berhenti (nilai mengendap); cari nama/SKU/kode; filter kategori, status gerak, kondisi stok, umur stok, urutan, barang nonaktif. Kolom: barang (nama, SKU, kategori), stok, **cukup untuk ± hari** (stok ÷ rata-rata terjual 30 hari), **gerak · umur**, harga jual **kecil · sedang · besar** dengan untung % dari modal (bertingkat: per tingkat; level ke-4+ ditandai "+n"), **nilai stok + beli terakhir** per satuan beli; total nilai stok.
+- **Detail Barang** (tab):
+  - **Ringkasan**: stok, dipesan/bebas, minimum, terjual 30 hari & rata-rata per hari, cukup untuk, terakhir terjual, status gerak (x dari 13 minggu), umur stok, modal FIFO, nilai stok, beli terakhir, letak; peringatan stok minus belum terjelaskan.
+  - **Kartu stok** (pola Accurate/Majoo): tanggal, no. sumber, jenis, keterangan, masuk (dengan modal), keluar, **saldo berjalan**; filter periode dan masuk/keluar; baris saldo sebelum periode.
+  - **Satuan & harga**: satuan, isi, dipakai beli/jual, barcode, modal, harga jual, untung; tabel tingkat harga untuk barang bertingkat.
+  - **Per kedatangan (FIFO)**: tanggal masuk, no. sumber, jumlah masuk, sisa, modal, nilai, umur.
+  - **Harga beli per distributor**: beli terakhir, harga per satuan beli, terendah, jumlah faktur.
+- **Status gerak barang (analisis FSN)**, otomatis tiap hari dari **jumlah minggu terjual dalam 13 minggu terakhir** (frekuensi, bukan jumlah — supaya satu pembelian grosir tidak membuat barang tampak laku): **Laku** ≥ 7 minggu · **Lambat** 2–6 · **Berhenti** 0–1 · **Baru** = barang pertama masuk < 90 hari · **Musiman** = barang bertanda musiman yang sedang tidak laku (tidak dicap Berhenti). Penjualan dan serah pesanan dihitung.
+- Ditunda: kelas **Andalan** (penyumbang omzet terbesar, analisis ABC) dan pilihan letak per ruko.
 - Di kasir, jika barang tidak ditemukan: tombol "Tambah barang baru" (pemilik/PIN pemilik) membuka form yang sama, nama terisi dari kata yang dicari; setelah disimpan barang langsung masuk keranjang.
 - **Tidak ada "Barang lain-lain"**: barang belum terdaftar tidak bisa dijual sebelum didaftarkan.
 - Di masa awal pemilik memegang kasir sambil merapikan data barang.
@@ -388,7 +397,7 @@ Setiap barang memilih satu metode:
 
 ## Umur stok
 
-- Dihitung per kedatangan (lapisan FIFO). Warna di Stok Barang dan Dashboard:
+- Dihitung per kedatangan (lapisan FIFO); umur barang = umur kedatangan tertua yang masih tersisa. Menu **Gudang → Stok Barang → Umur Stok** menampilkan barang berumur ≥ 3 bulan dengan nilai dan saran tindakan. Warna di Stok Barang dan Dashboard:
   - **< 3 bulan:** normal.
   - **3–6 bulan: kuning** — segera keluarkan (taruh depan, tawarkan, harga khusus).
   - **6–12 bulan: oranye** — mendesak; **saatnya retur ke distributor**.
