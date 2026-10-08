@@ -288,7 +288,9 @@ Setiap barang memilih satu metode:
 ## Pesanan grosir (barang belum ada, perlu order ke distributor)
 
 - **Menu tersendiri, terpisah dari POS.** POS untuk pembeli yang datang dan langsung membawa barang; Pesanan untuk pembeli yang memesan dulu.
-- Status: Dicatat → Barang datang → Disiapkan → Diserahkan/Diantar → Lunas.
+- Status: Perlu diorder → Menunggu barang → (Perlu persetujuan) → Barang siap → Disiapkan → Diserahkan sebagian → Tempo / Lunas, atau Dibatalkan.
+- **Kunci stok per baris:** bila stok bebas cukup, jumlahnya langsung dikunci untuk pesanan. Bila tidak cukup, **seluruh baris diorder** lewat SP, supaya stok eceran tidak terkuras.
+- Di layar Saran SP, baris dari pesanan memakai jumlah "sesuai pesanan" (dibulatkan ke satuan beli); kelebihan dari pembulatan masuk stok umum.
 - Kasir/pemilik mencatat dan menagih (Mode Kasir → Pesanan); gudang menyiapkan dan menyerahkan, cetak nota/surat jalan (Mode Gudang → Siapkan Pesanan). Satu data pesanan, status bergerak bersama.
 - **Barang numpang lewat:** faktur bisa berisi barang yang sudah dipesan pembeli (mis. 72 karton). Saat input faktur baris ditandai "untuk pesanan X": stok masuk lalu **langsung terkunci** untuk pesanan itu, tidak bisa dijual kasir.
 - Modal pesanan seperti ini diambil **langsung dari baris faktur tersebut** (bukan antrian FIFO stok umum), jadi untung pesanan tepat.

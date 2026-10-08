@@ -9,6 +9,9 @@ import { BuatPesanan } from './features/pesanan/BuatPesanan';
 import { DaftarPesanan } from './features/pesanan/DaftarPesanan';
 import { DetailPesanan } from './features/pesanan/DetailPesanan';
 import { Penjualan } from './features/penjualan/Penjualan';
+import { BuatSPManual } from './features/sp/BuatSPManual';
+import { DaftarSP } from './features/sp/DaftarSP';
+import { SaranSP } from './features/sp/SaranSP';
 
 export interface SubMenu {
   path: string;
@@ -119,16 +122,16 @@ export const menuGudang: Menu[] = [
       'Kirim ke distributor lewat WhatsApp, salin, atau cetak',
     ],
     anak: [
-      { path: 'saran', judul: 'Saran SP' },
-      { path: 'daftar', judul: 'Daftar SP' },
-      { path: 'baru', judul: 'Buat SP' },
+      { path: 'saran', judul: 'Saran SP', halaman: <SaranSP /> },
+      { path: 'daftar', judul: 'Daftar SP', halaman: <DaftarSP /> },
+      { path: 'baru', judul: 'Buat SP', halaman: <BuatSPManual /> },
     ],
   },
   {
     path: 'barang-masuk', judul: 'Barang Masuk', ikon: 'masuk',
     ringkasan: 'Input faktur distributor atau pembelian tanpa nota.',
     rencana: ['Satuan urut besar → kecil; isi kemasan wajib dicek fisik', 'Tandai baris untuk pesanan atau barang ikutan', 'Cash/tempo; total dicocokkan dengan kertas faktur'],
-    anak: [{ path: 'dari-sp', judul: 'Terima dari SP' }, { path: 'tanpa-nota', judul: 'Tanpa Nota' }],
+    anak: [{ path: 'dari-sp', judul: 'Terima dari SP', halaman: <DaftarSP hanyaTerbuka /> }, { path: 'tanpa-nota', judul: 'Tanpa Nota' }],
   },
   {
     path: 'siapkan-pesanan', judul: 'Siapkan Pesanan', ikon: 'siapkan',

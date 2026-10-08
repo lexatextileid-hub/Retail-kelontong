@@ -200,3 +200,23 @@ export const modalContoh: Record<string, number> = {
   amild: 31200, 'rokok-hs': 19500, 'air-600': 2670, skm: 11500, kecap: 20500, deterjen: 19000,
   'bawang-merah': 32000, 'bawang-putih': 30000, kemiri: 44000,
 };
+
+/** Aturan stok untuk saran Surat Pesanan (contoh): stok maksimum (satuan dasar),
+ *  jumlah order tetap (dalam satuan beli bawaan), dan rata-rata penjualan per hari (satuan dasar). */
+export const aturStokContoh: Record<string, { maks: number; orderTetap: number; rataHarian: number }> = {
+  'gulaku-5': { maks: 40, orderTetap: 5, rataHarian: 2 },
+  'gula-curah': { maks: 500, orderTetap: 6, rataHarian: 22 },
+  'gula-1kg': { maks: 80, orderTetap: 0, rataHarian: 6 },
+  'minyak-1l': { maks: 120, orderTetap: 6, rataHarian: 7 },
+  sarimi: { maks: 400, orderTetap: 4, rataHarian: 25 },
+  taro: { maks: 400, orderTetap: 4, rataHarian: 20 },
+  amild: { maks: 120, orderTetap: 5, rataHarian: 6 },
+  'rokok-hs': { maks: 20, orderTetap: 1, rataHarian: 0.5 },
+  'air-600': { maks: 240, orderTetap: 5, rataHarian: 12 },
+  skm: { maks: 96, orderTetap: 1, rataHarian: 3 },
+  kecap: { maks: 48, orderTetap: 2, rataHarian: 1.5 },
+  deterjen: { maks: 48, orderTetap: 2, rataHarian: 2 },
+  'bawang-merah': { maks: 40, orderTetap: 20, rataHarian: 2.5 },
+  'bawang-putih': { maks: 30, orderTetap: 15, rataHarian: 1.5 },
+  kemiri: { maks: 8, orderTetap: 5, rataHarian: 0.3 },
+};
