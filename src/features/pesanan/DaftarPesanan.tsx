@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BilahAtas, KartuRingkas, KotakFilter, PilihanChip, Sel, TabelDaftar } from '../../components/Daftar';
+import { KartuRingkas, KotakFilter, PilihanChip, Sel, TabelDaftar } from '../../components/Daftar';
 import { ringkasPesanan, useToko, type StatusPesanan } from '../../data/toko';
 import { rupiah } from '../../lib/format';
 import { ChipStatus, namaPelanggan, tanggalPanjang } from './bersama';
@@ -34,14 +34,13 @@ export function DaftarPesanan() {
 
   return (
     <div className="ps-halaman">
-      <BilahAtas kanan={<Link to="../baru" className="tombol tombol--utama">+ Buat pesanan</Link>} />
       <KartuRingkas item={[
         { judul: 'Pesanan aktif', nilai: rupiah(jumlah(aktif, (x) => x.r.total)), catatan: `${aktif.length} pesanan`, aktif: f === 'aktif', onKlik: () => setF('aktif') },
         { judul: 'Perlu tindakan', nilai: di('tindakan').length, catatan: 'order, setujui, siapkan, serahkan', aktif: f === 'tindakan', onKlik: () => setF('tindakan') },
         { judul: 'Menunggu barang', nilai: di('menunggu').length, catatan: 'sudah dipesan ke distributor', aktif: f === 'menunggu', onKlik: () => setF('menunggu') },
         { judul: 'Belum dibayar', nilai: rupiah(jumlah(aktif, (x) => x.r.sisa)), catatan: 'sisa tagihan pesanan aktif' },
       ]} />
-      <KotakFilter ringkas={[{ aktif: 'Aktif', tindakan: 'Perlu tindakan', menunggu: 'Menunggu barang', tempo: 'Tempo', selesai: 'Selesai', semua: 'Semua status' }[f], fPlg ? namaPelanggan(fPlg) : 'semua pelanggan', q && `"${cari}"`].filter(Boolean).join(' · ')}>
+      <KotakFilter cari={{ nilai: cari, onUbah: setCari, placeholder: 'Cari no. pesanan atau pelanggan' }} aksi={<Link to="../baru" className="tombol tombol--utama">+ Buat pesanan</Link>} ringkas={[{ aktif: 'Aktif', tindakan: 'Perlu tindakan', menunggu: 'Menunggu barang', tempo: 'Tempo', selesai: 'Selesai', semua: 'Semua status' }[f], fPlg ? namaPelanggan(fPlg) : 'semua pelanggan', q && `"${cari}"`].filter(Boolean).join(' · ')}>
         <div className="rt-filter">
           <label className="isian">
             Pelanggan
@@ -49,10 +48,6 @@ export function DaftarPesanan() {
               <option value="">Semua pelanggan</option>
               {pelanggan.filter((p) => p.jenis === 'terdaftar').map((p) => <option key={p.id} value={p.id}>{p.nama}</option>)}
             </select>
-          </label>
-          <label className="isian">
-            Cari
-            <input className="isian__kontrol" value={cari} onChange={(e) => setCari(e.target.value)} placeholder="no. pesanan atau nama pelanggan" />
           </label>
         </div>
         <PilihanChip label="Status" nilai={f} onUbah={setF} pilihan={[
@@ -70,7 +65,7 @@ export function DaftarPesanan() {
           { judul: 'No. pesanan', isi: ({ p }) => <Sel utama={<strong>{p.nomor}</strong>} bawah={p.dibuat} /> },
           { judul: 'Pelanggan', isi: ({ p }) => namaPelanggan(p.pelangganId) },
           { judul: 'Ambil / antar', isi: ({ p }) => <Sel utama={tanggalPanjang(p.tanggalJanji)} bawah={p.cara === 'antar' ? 'Diantar' : 'Diambil'} /> },
-          { judul: 'Barang', isi: ({ p }) => `${p.baris.length} barang` },
+          { judul: 'Jml. barang', isi: ({ p }) => `${p.baris.length} barang` },
           { judul: 'Total', kanan: true, isi: ({ r }) => rupiah(r.total), total: rupiah(jumlah(tampil, (x) => x.r.total)) },
           { judul: 'Dibayar', kanan: true, isi: ({ r }) => (r.dibayar ? rupiah(r.dibayar) : '-'), total: rupiah(jumlah(tampil, (x) => x.r.dibayar)) },
           { judul: 'Sisa', kanan: true, isi: ({ p, r }) => <strong>{p.dibatalkan ? '-' : rupiah(r.sisa)}</strong>, total: rupiah(jumlah(tampil, (x) => (x.p.dibatalkan ? 0 : x.r.sisa))) },

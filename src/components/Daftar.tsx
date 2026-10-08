@@ -49,35 +49,46 @@ export function KartuRingkas({ item }: { item: ItemRingkas[] }) {
 }
 
 /**
- * Kotak filter yang bisa diciutkan. Isi tetap terpasang (hanya disembunyikan) supaya pilihan filter tidak hilang.
- * `ringkas`: ringkasan filter aktif yang tampil saat diciutkan. Posisi buka/ciut diingat per halaman.
+ * Bilah alat daftar (pola Accurate): kotak cari + tombol Filter + aksi utama dalam satu baris.
+ * Panel filter tertutup secara bawaan supaya layar tidak penuh; isinya tetap terpasang (hanya disembunyikan)
+ * supaya pilihan filter tidak hilang. Saat tertutup, ringkasan filter aktif tampil di sebelah tombol.
  */
-export function KotakFilter({ children, ringkas }: { children: ReactNode; ringkas?: ReactNode }) {
+export function KotakFilter({ children, ringkas, cari, aksi }: {
+  children?: ReactNode;
+  ringkas?: ReactNode;
+  cari?: { nilai: string; onUbah: (s: string) => void; placeholder: string };
+  aksi?: ReactNode;
+}) {
   const kunci = `tokoku.filter.${typeof location !== 'undefined' ? location.hash.split('?')[0] : ''}`;
-  const [ciut, setCiut] = useState<boolean>(() => {
-    try {
-      const v = localStorage.getItem(kunci);
-      if (v !== null) return v === '1';
-    } catch { /* penyimpanan tidak tersedia */ }
-    return typeof window !== 'undefined' && window.innerWidth <= 720;
+  const [buka, setBuka] = useState<boolean>(() => {
+    try { return localStorage.getItem(kunci) === '1'; } catch { return false; }
   });
-  const ubah = () => {
-    setCiut((c) => {
-      try { localStorage.setItem(kunci, c ? '0' : '1'); } catch { /* abaikan */ }
-      return !c;
-    });
-  };
+  const ubah = () => setBuka((b) => {
+    try { localStorage.setItem(kunci, b ? '0' : '1'); } catch { /* abaikan */ }
+    return !b;
+  });
   return (
-    <div className="kartu kf">
-      <button type="button" className="kf__kepala" aria-expanded={!ciut} onClick={ubah}>
-        <span className="kf__judul">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z" /></svg>
-          Filter
-        </span>
-        {ciut && ringkas && <span className="kf__ringkas">{ringkas}</span>}
-        <span className="kf__aksi">{ciut ? 'Tampilkan' : 'Ciutkan'} <span aria-hidden="true">{ciut ? '▾' : '▴'}</span></span>
-      </button>
-      <div className="kf__isi tumpuk" style={ciut ? { display: 'none' } : undefined}>{children}</div>
+    <div className="kf">
+      <div className="kf__bilah">
+        {cari && (
+          <label className="pj__cari-kotak kf__cari">
+            <span className="sr">Cari</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" />
+            </svg>
+            <input value={cari.nilai} onChange={(e) => cari.onUbah(e.target.value)} placeholder={cari.placeholder} autoComplete="off" />
+          </label>
+        )}
+        {children && (
+          <button type="button" className={`tombol kf__tombol ${buka ? 'kf__tombol--aktif' : ''}`} aria-expanded={buka} onClick={ubah}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z" /></svg>
+            Filter <span aria-hidden="true">{buka ? '▴' : '▾'}</span>
+          </button>
+        )}
+        {!buka && ringkas && <span className="kf__ringkas" title={typeof ringkas === 'string' ? ringkas : undefined}>{ringkas}</span>}
+        {aksi && <div className="kf__aksi">{aksi}</div>}
+      </div>
+      {children && <div className="kartu kf__panel tumpuk" style={buka ? undefined : { display: 'none' }}>{children}</div>}
     </div>
   );
 }

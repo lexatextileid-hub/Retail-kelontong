@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import { BilahAtas, KartuRingkas, KotakFilter, PilihanChip, Sel, TabelDaftar } from '../../components/Daftar';
+import { KartuRingkas, KotakFilter, PilihanChip, Sel, TabelDaftar } from '../../components/Daftar';
 import { Dialog } from '../../components/Dialog';
 import { PilihPeriode, teksPeriode, type Periode } from '../../components/PilihPeriode';
 import { hariIni, useToko, type BayarKasbon, type NotaPenjualan, type Retur } from '../../data/toko';
@@ -62,20 +62,13 @@ export function Riwayat() {
 
   return (
     <div className="ps-halaman">
-      <BilahAtas kanan={<Link to="/kasir/penjualan" className="tombol tombol--utama">+ Penjualan baru</Link>} />
       <KartuRingkas item={[
         { judul: `Penjualan · ${teksPeriode(periode)}`, nilai: rupiah(omzet), catatan: `${jual.length} nota${jual.length ? ` · rata-rata ${rupiah(Math.round(omzet / jual.length))}` : ''}` },
         { judul: 'Bayar kasbon', nilai: rupiah(kasbonMasuk), catatan: `${banyak('kasbon')} pembayaran` },
         { judul: 'Retur', nilai: rupiah(returPeriode), catatan: `${banyak('retur')} retur`, warna: returPeriode ? 'merah' : undefined },
       ]} />
-      <KotakFilter ringkas={[teksPeriode(periode), { semua: 'semua jenis', jual: 'penjualan', kasbon: 'bayar kasbon', retur: 'retur' }[jenis], q && `"${cari}"`].filter(Boolean).join(' · ')}>
+      <KotakFilter cari={{ nilai: cari, onUbah: setCari, placeholder: 'Cari nomor nota atau pelanggan' }} aksi={<Link to="/kasir/penjualan" className="tombol tombol--utama">+ Penjualan baru</Link>} ringkas={[teksPeriode(periode), { semua: 'semua jenis', jual: 'penjualan', kasbon: 'bayar kasbon', retur: 'retur' }[jenis], q && `"${cari}"`].filter(Boolean).join(' · ')}>
         <PilihPeriode onUbah={setPeriode} />
-        <div className="rt-filter">
-          <label className="isian">
-            Cari
-            <input className="isian__kontrol" value={cari} onChange={(e) => setCari(e.target.value)} placeholder="nomor nota atau pelanggan" />
-          </label>
-        </div>
         <PilihanChip label="Jenis transaksi" nilai={jenis} onUbah={setJenis} pilihan={[
           { k: 'semua', judul: 'Semua', jumlah: banyak('semua') }, { k: 'jual', judul: 'Penjualan', jumlah: banyak('jual') },
           { k: 'kasbon', judul: 'Bayar kasbon', jumlah: banyak('kasbon') }, { k: 'retur', judul: 'Retur', jumlah: banyak('retur') },

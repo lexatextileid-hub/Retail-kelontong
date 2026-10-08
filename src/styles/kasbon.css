@@ -182,16 +182,22 @@ a.kb-tagihan__baris:hover { background: var(--permukaan-2); color: var(--teks); 
   .kb-angka strong { font-size: 18px; white-space: nowrap; }
   .rt-filter { grid-template-columns: 1fr; }
 }
-/* Kotak filter yang bisa diciutkan */
-.kf { padding: 0; }
-.kf__kepala {
-  width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 0; background: none; cursor: pointer;
-  font: inherit; color: var(--teks); text-align: left; border-radius: var(--radius-besar);
+/* Bilah alat daftar + panel filter (tertutup bawaan) */
+.kf { display: flex; flex-direction: column; gap: 10px; }
+.kf__bilah { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.kf__cari { flex: 1 1 260px; max-width: 420px; height: 42px; }
+.kf__tombol { display: inline-flex; align-items: center; gap: 6px; height: 42px; flex: none; }
+.kf__tombol--aktif { background: var(--biru-muda); border-color: var(--biru-garis); color: var(--biru-tua); }
+.kf__ringkas { flex: 1 1 160px; min-width: 0; font-size: 13px; color: var(--teks-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kf__aksi { margin-left: auto; display: flex; gap: 8px; flex: none; }
+.kf__panel { padding: 14px 16px; }
+@media (max-width: 520px) {
+  .kf__cari { flex-basis: 100%; max-width: none; }
+  .kf__ringkas { flex-basis: 100%; order: 3; }
 }
-.kf__kepala:hover { background: var(--permukaan-2); }
-.kf__judul { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; flex: none; }
-.kf__ringkas { flex: 1 1 auto; min-width: 0; font-size: 13px; color: var(--teks-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.kf__aksi { margin-left: auto; flex: none; font-size: 13px; font-weight: 600; color: var(--biru); }
-.kf__isi { padding: 4px 16px 16px; }
-.kartu.kf { padding: 0; }
 .kk-sumber .tombol { height: 40px; }
+/* Di HP ringkasan jadi satu baris geser, supaya daftar langsung terlihat */
+@media (max-width: 720px) {
+  .kk-ringkas { display: flex !important; overflow-x: auto; gap: 10px; padding-bottom: 2px; scroll-snap-type: x mandatory; }
+  .kk-ringkas > * { flex: 0 0 64%; scroll-snap-align: start; padding: 10px 14px; }
+}

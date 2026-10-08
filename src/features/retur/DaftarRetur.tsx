@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BilahAtas, KartuRingkas, KotakFilter, PilihanChip, Sel, TabelDaftar } from '../../components/Daftar';
+import { KartuRingkas, KotakFilter, PilihanChip, Sel, TabelDaftar } from '../../components/Daftar';
 import { PilihPeriode, periodeDari, teksPeriode, type Periode } from '../../components/PilihPeriode';
 import { useToko, type Retur } from '../../data/toko';
 import { isoHari } from '../../domain/kasbon';
@@ -31,14 +31,13 @@ export function DaftarRetur() {
 
   return (
     <div className="ps-halaman">
-      <BilahAtas kanan={<Link to="../baru" className="tombol tombol--utama">+ Tambah retur</Link>} />
       <KartuRingkas item={[
         { judul: `Retur · ${teksPeriode(periode)}`, nilai: rupiah(jumlah(diPeriode, (r) => r.nilaiRetur)), catatan: `${diPeriode.length} retur` },
         { judul: 'Uang dikembalikan', nilai: rupiah(jumlah(kembali, (r) => r.selisih)), catatan: 'tunai / transfer' },
         { judul: 'Tukar barang', nilai: diPeriode.filter((r) => r.tukar.length).length, catatan: 'retur dengan barang pengganti' },
         { judul: 'Pengecualian', nilai: diPeriode.filter((r) => r.pengecualian).length, catatan: 'lewat batas / tanpa nota', warna: diPeriode.some((r) => r.pengecualian) ? 'merah' : undefined },
       ]} />
-      <KotakFilter ringkas={[teksPeriode(periode), { semua: 'semua sumber', nota: 'dari nota', pesanan: 'dari pesanan', 'tanpa-nota': 'tanpa nota' }[sumber], fPelanggan ? namaPelanggan(fPelanggan) : 'semua pelanggan', q && `"${cari}"`].filter(Boolean).join(' · ')}>
+      <KotakFilter cari={{ nilai: cari, onUbah: setCari, placeholder: 'Cari RT-… atau nota asal' }} aksi={<Link to="../baru" className="tombol tombol--utama">+ Tambah retur</Link>} ringkas={[teksPeriode(periode), { semua: 'semua sumber', nota: 'dari nota', pesanan: 'dari pesanan', 'tanpa-nota': 'tanpa nota' }[sumber], fPelanggan ? namaPelanggan(fPelanggan) : 'semua pelanggan', q && `"${cari}"`].filter(Boolean).join(' · ')}>
         <PilihPeriode awal="7-hari" onUbah={setPeriode} />
         <div className="rt-filter">
           <label className="isian">
@@ -47,10 +46,6 @@ export function DaftarRetur() {
               <option value="">Semua pelanggan</option>
               {pelanggan.map((p) => <option key={p.id} value={p.id}>{p.nama}</option>)}
             </select>
-          </label>
-          <label className="isian">
-            Nomor
-            <input className="isian__kontrol" value={cari} onChange={(e) => setCari(e.target.value)} placeholder="RT-… atau nota asal" />
           </label>
         </div>
         <PilihanChip label="Sumber" nilai={sumber} onUbah={setSumber} pilihan={[
@@ -67,7 +62,7 @@ export function DaftarRetur() {
           { judul: 'No. retur', isi: (r) => <Sel utama={<strong>{r.nomor}</strong>} bawah={r.waktu} /> },
           { judul: 'Pelanggan', isi: (r) => namaPelanggan(r.pelangganId) },
           { judul: 'Asal', isi: (r) => <Sel utama={r.nomorAsal ?? 'Tanpa nota'} bawah={r.pengecualian ? 'pengecualian' : undefined} /> },
-          { judul: 'Barang', isi: (r) => <Sel utama={`${r.baris.length} kembali`} bawah={r.tukar.length ? `${r.tukar.length} pengganti` : undefined} /> },
+          { judul: 'Jml. barang', isi: (r) => <Sel utama={`${r.baris.length} kembali`} bawah={r.tukar.length ? `${r.tukar.length} pengganti` : undefined} /> },
           { judul: 'Alasan', isi: (r) => r.alasan, bungkus: true },
           { judul: 'Penyelesaian', isi: (r) => teksCara(r) },
           { judul: 'Nilai retur', kanan: true, isi: (r) => <strong>{rupiah(r.nilaiRetur)}</strong>, total: rupiah(jumlah(tampil, (r) => r.nilaiRetur)) },

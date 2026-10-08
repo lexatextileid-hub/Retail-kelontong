@@ -438,7 +438,7 @@ Setiap barang memilih satu metode:
 ## Tampilan
 
 - **Format daftar seragam** (Pesanan Pelanggan, Kasbon, Retur, Riwayat, Kas Laci, Bayar Distributor, Piutang): tombol utama kanan atas → kartu ringkasan (bisa diklik sebagai filter) → kotak filter (periode / pelanggan / distributor / cari / status) → tabel gaya akuntansi dengan baris total; klik baris membuka detail. Di HP tabel berubah menjadi kartu per baris. Komponen bersama: `src/components/Daftar.tsx`.
-- **Kotak filter bisa diciutkan**; saat diciutkan tampil ringkasan filter aktif. Posisi buka/ciut diingat per halaman (di HP bawaan ciut).
+- **Bilah alat daftar (pola Accurate):** satu baris berisi kotak cari, tombol **Filter**, ringkasan filter aktif, dan tombol tambah. **Panel filter tertutup secara bawaan** dan dibuka lewat tombol Filter (posisi diingat per halaman), supaya layar tidak penuh. Di HP kartu ringkasan menjadi satu baris yang bisa digeser.
 
 - Warna biru–putih (lihat `src/styles/global.css`), font Plus Jakarta Sans.
 - Gaya bersih seperti aplikasi kasir Indonesia (Moka, majoo), bukan gaya "template AI".

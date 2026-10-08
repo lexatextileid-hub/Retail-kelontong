@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BilahAtas, KartuRingkas, KotakFilter, PilihanChip, Sel, TabelDaftar } from '../../components/Daftar';
+import { KartuRingkas, KotakFilter, PilihanChip, Sel, TabelDaftar } from '../../components/Daftar';
 import { hariIni, ringkasKasbon, useToko } from '../../data/toko';
 import { selisihHari } from '../../domain/kasbon';
 import { rupiah } from '../../lib/format';
@@ -27,19 +27,12 @@ export function DaftarKasbon({ dariOffice = false }: { dariOffice?: boolean }) {
 
   return (
     <div className="ps-halaman">
-      <BilahAtas kanan={<Link to="../lama" className="tombol tombol--utama">+ Catat kasbon lama</Link>} />
       <KartuRingkas item={[
         { judul: dariOffice ? 'Total piutang pelanggan' : 'Total kasbon', nilai: rupiah(jumlah(ada, (x) => x.r.saldo)), catatan: `${ada.length} pelanggan`, aktif: f === 'ada', onKlik: () => setF('ada') },
         { judul: 'Lewat jatuh tempo', nilai: rupiah(jumlah(lewat, (x) => x.r.lewatTempo)), catatan: `${lewat.length} pelanggan`, warna: lewat.length ? 'merah' : undefined, aktif: f === 'lewat', onKlik: () => setF('lewat') },
         { judul: 'Belum lewat tempo', nilai: rupiah(jumlah(ada, (x) => x.r.saldo - x.r.lewatTempo)), catatan: 'masih berjalan' },
       ]} />
-      <KotakFilter ringkas={[{ ada: 'Ada kasbon', lewat: 'Lewat tempo', semua: 'Semua pelanggan' }[f], q && `"${cari}"`].filter(Boolean).join(' · ')}>
-        <div className="rt-filter">
-          <label className="isian">
-            Cari
-            <input className="isian__kontrol" value={cari} onChange={(e) => setCari(e.target.value)} placeholder="nama atau nomor HP" />
-          </label>
-        </div>
+      <KotakFilter cari={{ nilai: cari, onUbah: setCari, placeholder: 'Cari nama atau nomor HP' }} aksi={<Link to="../lama" className="tombol tombol--utama">+ Catat kasbon lama</Link>} ringkas={[{ ada: 'Ada kasbon', lewat: 'Lewat tempo', semua: 'Semua pelanggan' }[f], q && `"${cari}"`].filter(Boolean).join(' · ')}>
         <PilihanChip label="Status" nilai={f} onUbah={setF} pilihan={[
           { k: 'ada', judul: 'Ada kasbon', jumlah: ada.length }, { k: 'lewat', judul: 'Lewat tempo', jumlah: lewat.length }, { k: 'semua', judul: 'Semua pelanggan', jumlah: semua.length },
         ]} />

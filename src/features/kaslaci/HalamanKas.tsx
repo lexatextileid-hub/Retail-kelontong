@@ -4,7 +4,7 @@ import { InputRupiah } from '../../components/InputRupiah';
 import { PilihPeriode, periodeDari, teksPeriode, type Periode } from '../../components/PilihPeriode';
 import { Dialog } from '../../components/Dialog';
 import { bankContoh, distributorContoh, PIN_PEMILIK_CONTOH } from '../../data/contoh';
-import { BilahAtas, KartuRingkas, KotakFilter, PilihanChip, Sel, TabelDaftar } from '../../components/Daftar';
+import { KartuRingkas, KotakFilter, PilihanChip, Sel, TabelDaftar } from '../../components/Daftar';
 import { KATEGORI_PENGELUARAN, akunAktif, catatArus, daftarFaktur, hariIni, laciTerbuka, nomorArus, ringkasLaci, useToko, type ArusKas, type FakturHutang } from '../../data/toko';
 import { isoHari, selisihHari, tambahHari } from '../../domain/kasbon';
 import { rupiah } from '../../lib/format';
@@ -60,14 +60,14 @@ export function Pengeluaran() {
   return (
     <div className="ps-halaman">
       <KepalaKas />
-      <BilahAtas kanan={<button type="button" className="tombol tombol--utama" onClick={() => setForm(true)}>+ Pengeluaran baru</button>} />
       <KartuRingkas item={[
         { judul: `Pengeluaran · ${teksPeriode(periode)}`, nilai: rupiah(jumlah(dasar)), catatan: `${dasar.length} bukti${semua ? ' · semua akun' : ''}`, aktif: fSumber === 'semua', onKlik: () => setFSumber('semua') },
         { judul: 'Dari laci kasir', nilai: rupiah(jumlah(dasar.filter((a) => a.sumber === 'laci'))), catatan: 'tunai', aktif: fSumber === 'laci', onKlik: () => setFSumber('laci') },
         { judul: 'Dari brankas', nilai: rupiah(jumlah(dasar.filter((a) => a.sumber === 'brankas'))), catatan: 'tunai, PIN pemilik', aktif: fSumber === 'brankas', onKlik: () => setFSumber('brankas') },
         { judul: 'Dari rekening', nilai: rupiah(jumlah(dasar.filter((a) => a.sumber === 'bank'))), catatan: 'transfer, PIN pemilik', aktif: fSumber === 'bank', onKlik: () => setFSumber('bank') },
       ]} />
-      <KotakFilter ringkas={[teksPeriode(periode), fKat || 'semua kategori', fSumber === 'semua' ? 'semua sumber' : fSumber === 'bank' ? 'rekening' : fSumber, q && `"${cari}"`].filter(Boolean).join(' · ')}>
+      <KotakFilter cari={{ nilai: cari, onUbah: setCari, placeholder: 'Cari no. bukti, penerima, referensi' }} aksi={<button type="button" className="tombol tombol--utama" onClick={() => setForm(true)}>+ Pengeluaran baru</button>}
+        ringkas={[teksPeriode(periode), fKat || 'semua kategori', fSumber === 'semua' ? 'semua sumber' : fSumber === 'bank' ? 'rekening' : fSumber, q && `"${cari}"`].filter(Boolean).join(' · ')}>
         <PilihPeriode awal="7-hari" onUbah={setPeriode} />
         <div className="rt-filter">
           <label className="isian">
@@ -76,10 +76,6 @@ export function Pengeluaran() {
               <option value="">Semua kategori</option>
               {KATEGORI_PENGELUARAN.map((k) => <option key={k} value={k}>{k}</option>)}
             </select>
-          </label>
-          <label className="isian">
-            Cari
-            <input className="isian__kontrol" value={cari} onChange={(e) => setCari(e.target.value)} placeholder="no. bukti, penerima, no. referensi, keterangan" />
           </label>
         </div>
         <PilihanChip label="Sumber dana" nilai={fSumber} onUbah={setFSumber} pilihan={[
@@ -318,8 +314,7 @@ export function BayarDistributor() {
           <button type="button" aria-pressed={tab === 'faktur'} onClick={() => setTab('faktur')}>Faktur hutang</button>
           <button type="button" aria-pressed={tab === 'pembayaran'} onClick={() => setTab('pembayaran')}>Bukti pembayaran</button>
         </div>
-        <button type="button" className="tombol tombol--utama" disabled={!adaLaci || !terbuka.length} title={adaLaci ? undefined : 'Buka kasir dulu'}
-          onClick={() => setForm({ distributorId: fDist, faktur: [] })}>+ Pembayaran baru</button>
+
       </div>
 
       {tab === 'faktur' && (
@@ -336,7 +331,11 @@ export function BayarDistributor() {
         </div>
       )}
 
-      <KotakFilter ringkas={[tab === 'pembayaran' ? teksPeriode(periode) : { 'belum-lunas': 'Belum lunas', lewat: 'Lewat jatuh tempo', 'minggu-ini': 'Jatuh tempo 7 hari', lunas: 'Lunas', semua: 'Semua status' }[fStatus],
+      <KotakFilter
+        cari={{ nilai: cari, onUbah: setCari, placeholder: tab === 'faktur' ? 'Cari no. faktur / PB-…' : 'Cari BD-… atau no. faktur' }}
+        aksi={<button type="button" className="tombol tombol--utama" disabled={!adaLaci || !terbuka.length} title={adaLaci ? undefined : 'Buka kasir dulu'}
+          onClick={() => setForm({ distributorId: fDist, faktur: [] })}>+ Pembayaran baru</button>}
+        ringkas={[tab === 'pembayaran' ? teksPeriode(periode) : { 'belum-lunas': 'Belum lunas', lewat: 'Lewat jatuh tempo', 'minggu-ini': 'Jatuh tempo 7 hari', lunas: 'Lunas', semua: 'Semua status' }[fStatus],
         fDist ? ambilDistributor(fDist).nama : 'semua distributor', q && `"${cari}"`].filter(Boolean).join(' · ')}>
         {tab === 'pembayaran' && <PilihPeriode awal="bulan-ini" onUbah={setPeriode} />}
         <div className="rt-filter">
@@ -346,10 +345,6 @@ export function BayarDistributor() {
               <option value="">Semua distributor</option>
               {distributorContoh.map((x) => <option key={x.id} value={x.id}>{x.nama}</option>)}
             </select>
-          </label>
-          <label className="isian">
-            {tab === 'faktur' ? 'No. faktur' : 'No. bukti / faktur'}
-            <input className="isian__kontrol" value={cari} onChange={(e) => setCari(e.target.value)} placeholder={tab === 'faktur' ? 'nomor di kertas faktur / PB-…' : 'BD-… atau no. faktur'} />
           </label>
         </div>
         {tab === 'faktur' && (
