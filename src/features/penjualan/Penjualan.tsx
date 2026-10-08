@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { diskonContoh, produkContoh } from '../../data/contoh';
 import {
-  akunAktif, bayarKasbon, catatArus, pisahBayarKasbon, catatKasbonPenjualan, hariIni, laciTerakhirDitutup, laciTerbuka, catatPenjualan, nomorNotaBaru, pelangganDenganKasbon, ringkasKasbon, stokBebas, stokTerkunci,
+  akunAktif, bayarKasbon, catatArus, pakaiSaldo, pisahBayarKasbon, catatKasbonPenjualan, hariIni, laciTerakhirDitutup, laciTerbuka, catatPenjualan, nomorNotaBaru, pelangganDenganKasbon, ringkasKasbon, stokBebas, stokTerkunci,
   susunNotaPenjualan, tambahPelanggan, useToko,
 } from '../../data/toko';
 import { hitungHargaBaris } from '../../domain/harga';
@@ -127,9 +127,10 @@ export function Penjualan() {
     const n = susunNotaPenjualan({
       nomor: no, waktuIso: new Date().toISOString(), pelangganId: plg.id, kasir: akunAktif(),
       baris: aktif.baris, potongan: h.potongan, jenisPotongan: h.jenisPotongan,
-      tunai: h.tunai, transfer: h.transfer, kembalian: h.kembalian, kasbonBaru: h.kasbonBaru, bayarKasbon: h.bayarKasbon, sisaKasbon,
+      tunai: h.tunai, transfer: h.transfer, kembalian: h.kembalian, kasbonBaru: h.kasbonBaru, bayarKasbon: h.bayarKasbon, sisaKasbon, pakaiSaldo: h.pakaiSaldo,
     });
     catatPenjualan(n);
+    if (h.pakaiSaldo > 0) pakaiSaldo(plg.id, h.pakaiSaldo, `Belanja ${no}`);
     // Uang yang diterima dipisah: bagian bayar kasbon lama dicatat sebagai bayar kasbon, sisanya penjualan.
     const u = pisahBayarKasbon(h.tunai - h.kembalian, h.transfer, h.bayarKasbon);
     catatArus({ jenis: 'penjualan', nomor: no, tunai: u.jual.tunai, transfer: u.jual.transfer, keterangan: `Penjualan · ${plg.nama}` });

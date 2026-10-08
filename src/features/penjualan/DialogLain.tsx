@@ -60,6 +60,7 @@ export function IsiStruk({ nota, salinan }: { nota: Nota; salinan?: boolean }) {
         {nota.tunai > 0 && <div className="struk__baris"><span>Tunai</span><span>{rupiah(nota.tunai)}</span></div>}
         {nota.transfer > 0 && <div className="struk__baris"><span>Transfer</span><span>{rupiah(nota.transfer)}</span></div>}
         {nota.kembalian > 0 && <div className="struk__baris"><span>Kembalian</span><span>{rupiah(nota.kembalian)}</span></div>}
+        {(nota.pakaiSaldo ?? 0) > 0 && <div className="struk__baris"><span>Dibayar saldo</span><span>{rupiah(nota.pakaiSaldo!)}</span></div>}
         {nota.kasbonBaru > 0 && <div className="struk__baris"><span>Kasbon baru</span><span>{rupiah(nota.kasbonBaru)}</span></div>}
         {nota.sisaKasbon !== undefined && (nota.bayarKasbon > 0 || nota.kasbonBaru > 0) && (
           <div className="struk__baris struk__tebal"><span>Sisa kasbon</span><span>{rupiah(nota.sisaKasbon)}</span></div>

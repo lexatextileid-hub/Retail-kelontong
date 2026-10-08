@@ -41,7 +41,7 @@ export interface BarisPesanan {
 export interface Pembayaran {
   waktu: string;
   jumlah: number;
-  metode: 'tunai' | 'transfer' | 'retur';
+  metode: 'tunai' | 'transfer' | 'retur' | 'saldo';
   jenis: 'DP' | 'Pelunasan' | 'Cicilan' | 'Retur';
   oleh: string;
 }
@@ -142,7 +142,7 @@ export interface BayarKasbon {
   tanggal: string;
   waktu: string;
   jumlah: number;
-  metode: 'tunai' | 'transfer' | 'retur';
+  metode: 'tunai' | 'transfer' | 'retur' | 'saldo';
   bank?: string; // keterangan saja, mis. BCA
   lewat: 'kasbon' | 'penjualan' | 'retur';
   alokasi: { notaId: string; nomor: string; jumlah: number }[];
@@ -188,6 +188,8 @@ export interface NotaPenjualan {
   transfer: number;
   kasbonBaru: number;
   bayarKasbon: number;
+  /** Dibayar dari saldo pelanggan (bukan uang masuk baru). */
+  pakaiSaldo?: number;
   struk: Nota;
 }
 
@@ -264,7 +266,9 @@ export type JenisArus =
   | 'penjualan' | 'kasbon' | 'pesanan' | 'retur' | 'kas-masuk' | 'titipan-brankas'
   | 'pengeluaran' | 'bayar-distributor' | 'setor-bank'
   // dicatat pemilik di Back Office (brankas / rekening)
-  | 'saldo-awal' | 'modal' | 'prive' | 'pindah' | 'kasbon-karyawan' | 'cicilan-karyawan';
+  | 'saldo-awal' | 'modal' | 'prive' | 'pindah' | 'kasbon-karyawan' | 'cicilan-karyawan'
+  // saldo pelanggan dikembalikan (uang keluar)
+  | 'saldo-pelanggan';
 
 /** Arus uang yang dicatat kasir. tunai/transfer bertanda: + masuk, − keluar. */
 export interface ArusKas {
@@ -338,6 +342,22 @@ export interface Pencocokan {
   oleh: string;
 }
 
+/**
+ * Saldo pelanggan: uang pelanggan yang dititip di toko, mis. DP pesanan yang batal.
+ * Bisa dipakai bayar belanja / kasbon / pesanan, atau dikembalikan (tunai/transfer).
+ */
+export interface MutasiSaldo {
+  id: string;
+  nomor: string; // SL-…
+  pelangganId: string;
+  waktuIso: string;
+  /** + masuk, − dipakai / dikembalikan */
+  jumlah: number;
+  jenis: 'masuk' | 'pakai' | 'kembali';
+  keterangan: string;
+  oleh: string;
+}
+
 /** Hutang lama ke distributor (sebelum memakai aplikasi), tanpa rincian barang. */
 export interface HutangLama {
   id: string;
@@ -353,6 +373,7 @@ interface State {
   sesiLaci: SesiLaci[];
   arus: ArusKas[];
   pencocokan: Pencocokan[];
+  saldoPelanggan: MutasiSaldo[];
   fakturTunai: FakturTunai[];
   hutangLama: HutangLama[];
   penjualan: NotaPenjualan[];
@@ -364,7 +385,7 @@ interface State {
   bayarKasbon: BayarKasbon[];
   pesanan: Pesanan[];
   sp: SuratPesanan[];
-  urut: Record<'PS' | 'SP' | 'SJ' | 'PB' | 'KL' | 'BK' | 'PJ' | 'RT' | 'LC' | 'KK' | 'KM' | 'BD' | 'ST' | 'PD' | 'SA' | 'KR' | 'CK' | 'PR' | 'FT', number>;
+  urut: Record<'PS' | 'SP' | 'SJ' | 'PB' | 'KL' | 'BK' | 'PJ' | 'RT' | 'LC' | 'KK' | 'KM' | 'BD' | 'ST' | 'PD' | 'SA' | 'KR' | 'CK' | 'PR' | 'FT' | 'SL', number>;
   stokTambahan: Record<string, number>; // (lama) tidak dipakai lagi untuk menghitung stok — lihat mutasiStok
   /** Saldo awal + riwayat stok contoh sebelum pratinjau dibuka. */
   stokHistori: MutasiStok[];
@@ -376,6 +397,7 @@ let state: State = {
   sesiLaci: [],
   arus: [],
   pencocokan: [],
+  saldoPelanggan: [],
   fakturTunai: [],
   hutangLama: [],
   penjualan: [],
@@ -387,7 +409,7 @@ let state: State = {
   bayarKasbon: [],
   pesanan: [],
   sp: [],
-  urut: { PS: 1, SP: 1, SJ: 1, PB: 1, KL: 1, BK: 1, PJ: 231, RT: 1, LC: 1, KK: 1, KM: 1, BD: 1, ST: 1, PD: 1, SA: 1, KR: 1, CK: 1, PR: 1, FT: 1 },
+  urut: { PS: 1, SP: 1, SJ: 1, PB: 1, KL: 1, BK: 1, PJ: 231, RT: 1, LC: 1, KK: 1, KM: 1, BD: 1, ST: 1, PD: 1, SA: 1, KR: 1, CK: 1, PR: 1, FT: 1, SL: 1 },
   stokTambahan: {},
   stokHistori: buatHistoriContoh(),
   versiProduk: 0,
@@ -790,13 +812,15 @@ export function serahkan(pesananId: string, baris: { barisId: string; jumlahDasa
   return nomor;
 }
 
-export function terimaBayar(pesananId: string, jumlah: number, metode: 'tunai' | 'transfer', jenis: Pembayaran['jenis']) {
+export function terimaBayar(pesananId: string, jumlah: number, metode: 'tunai' | 'transfer' | 'saldo', jenis: Pembayaran['jenis']) {
   ubahPesanan(
     pesananId,
     (p) => ({ ...p, pembayaran: [...p.pembayaran, { waktu: sekarang(), jumlah, metode, jenis, oleh: namaAkun[state.peran] }] }),
     `${jenis} ${jumlah.toLocaleString('id-ID')} (${metode})`,
   );
   const p = state.pesanan.find((x) => x.id === pesananId)!;
+  // Dibayar dari saldo pelanggan: bukan uang masuk baru.
+  if (metode === 'saldo') { pakaiSaldo(p.pelangganId, jumlah, `${jenis} pesanan ${p.nomor}`); return; }
   catatArus({ jenis: 'pesanan', tahap: jenis === 'DP' ? 'DP' : 'Pelunasan', nomor: p.nomor, tunai: metode === 'tunai' ? jumlah : 0, transfer: metode === 'transfer' ? jumlah : 0, keterangan: `${jenis} pesanan ${p.nomor}` });
 }
 
@@ -811,7 +835,46 @@ export function batalkan(pesananId: string, alasan: string, dp: 'kembali' | 'sal
     const tunai = p.pembayaran.filter((b) => b.metode === 'tunai').reduce((t, b) => t + b.jumlah, 0);
     const transfer = p.pembayaran.filter((b) => b.metode === 'transfer').reduce((t, b) => t + b.jumlah, 0);
     if (tunai + transfer > 0) catatArus({ jenis: 'pesanan', nomor: p.nomor, tunai: -tunai, transfer: -transfer, keterangan: `Uang pesanan ${p.nomor} dikembalikan (batal)` });
+    // Bagian yang dulu dibayar dari saldo pelanggan kembali ke saldo.
+    const dariSaldo = p.pembayaran.filter((b) => b.metode === 'saldo').reduce((t, b) => t + b.jumlah, 0);
+    if (dariSaldo > 0) catatSaldo(p.pelangganId, dariSaldo, 'masuk', `Pesanan ${p.nomor} batal (bagian dari saldo)`);
   }
+  // Disimpan sebagai saldo pelanggan: uang tetap di toko, bisa dipakai atau dikembalikan nanti.
+  if (dp === 'saldo') {
+    const uang = p.pembayaran.filter((b) => b.metode !== 'retur').reduce((t, b) => t + b.jumlah, 0);
+    if (uang > 0) catatSaldo(p.pelangganId, uang, 'masuk', `Pesanan ${p.nomor} batal`);
+  }
+}
+
+/* ---------- Saldo pelanggan ---------- */
+
+export const saldoPelanggan = (pelangganId: string, s: State = state) =>
+  s.saldoPelanggan.filter((x) => x.pelangganId === pelangganId).reduce((t, x) => t + x.jumlah, 0);
+
+export const riwayatSaldo = (pelangganId: string, s: State = state) =>
+  s.saldoPelanggan.filter((x) => x.pelangganId === pelangganId).sort((a, b) => b.waktuIso.localeCompare(a.waktuIso));
+
+function catatSaldo(pelangganId: string, jumlah: number, jenis: MutasiSaldo['jenis'], keterangan: string): MutasiSaldo {
+  const x: MutasiSaldo = { id: id('sl'), nomor: nomorBaru('SL'), pelangganId, waktuIso: new Date().toISOString(), jumlah, jenis, keterangan, oleh: namaAkun[state.peran] };
+  ubah((s) => ({ ...s, saldoPelanggan: [...s.saldoPelanggan, x] }));
+  return x;
+}
+
+/** Pakai saldo untuk membayar (belanja, kasbon, pesanan). Tidak melebihi saldo. */
+export function pakaiSaldo(pelangganId: string, jumlah: number, keterangan: string) {
+  const n = Math.min(jumlah, saldoPelanggan(pelangganId));
+  if (n > 0) catatSaldo(pelangganId, -n, 'pakai', keterangan);
+  return n;
+}
+
+/** Kembalikan saldo ke pelanggan: uang keluar dari laci (tunai) atau rekening (transfer). */
+export function kembalikanSaldo(pelangganId: string, jumlah: number, metode: 'tunai' | 'transfer', bank?: string) {
+  const n = Math.min(jumlah, saldoPelanggan(pelangganId));
+  if (n <= 0) return undefined;
+  const x = catatSaldo(pelangganId, -n, 'kembali', 'Saldo dikembalikan');
+  catatArus({ jenis: 'saldo-pelanggan', nomor: x.nomor, tunai: metode === 'tunai' ? -n : 0, transfer: metode === 'transfer' ? -n : 0, bank,
+    keterangan: `Saldo ${ambilPelanggan(pelangganId).nama} dikembalikan` });
+  return x;
 }
 const p0 = (dp: 'kembali' | 'saldo') => (dp === 'kembali' ? ' · DP dikembalikan' : ' · DP jadi saldo pelanggan');
 
@@ -993,7 +1056,7 @@ export function ringkasKasbon(pelangganId: string, s: State = state) {
 export function pelangganDenganKasbon(pelangganId: string, s: State = state) {
   const p = ambilPelanggan(pelangganId, s);
   const r = ringkasKasbon(p.id, s);
-  return { ...p, saldoKasbon: r.saldo, notaKasbon: r.banyakNota, notaTertuaHari: r.tertuaHari, lewatTempo: r.lewatTempo };
+  return { ...p, saldoKasbon: r.saldo, notaKasbon: r.banyakNota, notaTertuaHari: r.tertuaHari, lewatTempo: r.lewatTempo, saldo: saldoPelanggan(p.id, s) };
 }
 export type PelangganKasbon = ReturnType<typeof pelangganDenganKasbon>;
 
@@ -1016,7 +1079,7 @@ export function catatKasbonLama(data: { pelangganId: string; tanggal: string; ju
  * Bagian untuk pesanan dicatat juga sebagai pembayaran pesanan (status pesanan ikut bergerak).
  */
 export function bayarKasbon(data: {
-  pelangganId: string; jumlah: number; metode: 'tunai' | 'transfer' | 'retur'; bank?: string; lewat?: 'kasbon' | 'penjualan' | 'retur';
+  pelangganId: string; jumlah: number; metode: 'tunai' | 'transfer' | 'retur' | 'saldo'; bank?: string; lewat?: 'kasbon' | 'penjualan' | 'retur';
   alokasi?: { notaId: string; jumlah: number }[];
 }): BayarKasbon {
   const tagihan = tagihanPelanggan(data.pelangganId);
@@ -1031,7 +1094,8 @@ export function bayarKasbon(data: {
   // Bagian untuk pesanan ("ps:…") juga dicatat sebagai pembayaran pesanan — itulah sumber sisa tagihan pesanan.
   ubah((s) => ({ ...s, bayarKasbon: [...s.bayarKasbon, b] }));
   // Bayar kasbon lewat menu Kasbon masuk laci. (Lewat penjualan sudah termasuk di uang nota; lewat retur bukan uang.)
-  if (b.lewat === 'kasbon' && b.metode !== 'retur')
+  if (b.metode === 'saldo') pakaiSaldo(b.pelangganId, b.jumlah, `Bayar kasbon ${nomor}`);
+  else if (b.lewat === 'kasbon' && b.metode !== 'retur')
     catatArus({ jenis: 'kasbon', nomor, tunai: b.metode === 'tunai' ? b.jumlah : 0, transfer: b.metode === 'transfer' ? b.jumlah : 0, keterangan: `Bayar kasbon ${ambilPelanggan(b.pelangganId).nama}` });
   for (const a of b.alokasi.filter((x) => x.notaId.startsWith('ps:'))) {
     const pid = a.notaId.slice(3);
@@ -1070,7 +1134,7 @@ export function susunNotaPenjualan(d: {
   nomor: string; waktuIso: string; pelangganId: string; kasir: string;
   baris: { produkId: string; satuanProdukId: string; qty: number; diskonManual?: number; hargaManual?: number }[];
   potongan: number; jenisPotongan?: Nota['jenisPotongan'];
-  tunai: number; transfer: number; kembalian: number; kasbonBaru: number; bayarKasbon: number; sisaKasbon?: number;
+  tunai: number; transfer: number; kembalian: number; kasbonBaru: number; bayarKasbon: number; sisaKasbon?: number; pakaiSaldo?: number;
 }): Omit<NotaPenjualan, 'id'> {
   const plg = ambilPelanggan(d.pelangganId);
   const hitung = d.baris.map((b, i) => {
@@ -1086,7 +1150,7 @@ export function susunNotaPenjualan(d: {
   const w = new Date(d.waktuIso);
   return {
     nomor: d.nomor, waktuIso: d.waktuIso, tanggal: isoHari(w), pelangganId: d.pelangganId, total,
-    tunai: d.tunai, transfer: d.transfer, kasbonBaru: d.kasbonBaru, bayarKasbon: d.bayarKasbon,
+    tunai: d.tunai, transfer: d.transfer, kasbonBaru: d.kasbonBaru, bayarKasbon: d.bayarKasbon, pakaiSaldo: d.pakaiSaldo || undefined,
     baris: hitung.map((x) => ({
       id: id('bj'), produkId: x.b.produkId, satuanProdukId: x.b.satuanProdukId, qty: x.b.qty, jumlahDasar: x.h.jumlahDasar,
       hargaSatuan: x.h.hargaSatuan, netto: x.h.netto, nilai: nilai[x.key],
@@ -1100,7 +1164,7 @@ export function susunNotaPenjualan(d: {
         qty: x.b.qty, hargaSatuan: x.h.hargaSatuan, bruto: x.h.bruto, diskon: x.h.diskon,
       })),
       subtotal, diskonPelanggan: diskon, potongan: d.potongan, jenisPotongan: d.jenisPotongan, total,
-      bayarKasbon: d.bayarKasbon, tunai: d.tunai, transfer: d.transfer, kembalian: d.kembalian, kasbonBaru: d.kasbonBaru, sisaKasbon: d.sisaKasbon,
+      bayarKasbon: d.bayarKasbon, tunai: d.tunai, transfer: d.transfer, kembalian: d.kembalian, kasbonBaru: d.kasbonBaru, sisaKasbon: d.sisaKasbon, pakaiSaldo: d.pakaiSaldo || undefined,
     },
   };
 }
@@ -1287,6 +1351,7 @@ export function mutasiKas(s: State = state): MutasiKas[] {
         case 'kasbon': return [['piutang', 'Bayar kasbon pelanggan']];
         case 'cicilan-karyawan': return [['piutang', 'Cicilan kasbon karyawan']];
         case 'modal': return [['modal', 'Tambahan modal pemilik']];
+        case 'saldo-pelanggan': return [['kembali', 'Saldo pelanggan dikembalikan']];
         case 'retur': return [n > 0 ? ['pendapatan', 'Tambah bayar tukar barang'] : ['kembali', 'Uang kembali retur']];
         case 'pengeluaran': return [['biaya', a.kategori ?? 'Lain-lain']];
         case 'bayar-distributor': return [['belanja', a.faktur?.some((f) => f.id.startsWith('ft:')) ? 'Faktur tunai (tanpa nota)' : 'Bayar faktur distributor']];
@@ -1371,6 +1436,7 @@ export function laporanKasir(sesiId: string, s: State = state) {
     tunai: { n: jual.filter((a) => a.tunai > 0).length, jumlah: jual.reduce((t, a) => t + a.tunai, 0) },
     transfer: { n: jual.filter((a) => a.transfer > 0).length, jumlah: jual.reduce((t, a) => t + a.transfer, 0) },
     kasbon: { n: nota.filter((x) => x.kasbonBaru > 0).length, jumlah: nota.reduce((t, x) => t + x.kasbonBaru, 0) },
+    saldo: { n: nota.filter((x) => (x.pakaiSaldo ?? 0) > 0).length, jumlah: nota.reduce((t, x) => t + (x.pakaiSaldo ?? 0), 0) },
     total: { n: nota.length, jumlah: nota.reduce((t, x) => t + x.total, 0) },
     potongan: nota.reduce((t, x) => t + x.struk.potongan, 0),
   };
@@ -1621,6 +1687,9 @@ export function buatFakturTunai(d: {
     pelangganId: 'antok', cara: 'ambil', tanggalJanji: besok,
     baris: [{ produkId: 'gula-1kg', satuanProdukId: 'gula-1kg-bks', qty: 10 }],
   });
+  // Pesanan Amir yang batal: DP disimpan sebagai saldo pelanggan (bisa dipakai atau dikembalikan).
+  const psBatal = buatPesanan({ pelangganId: 'amir', cara: 'ambil', tanggalJanji: besok, baris: [{ produkId: 'skm', satuanProdukId: 'skm-klg', qty: 12 }], dp: { jumlah: 50000, metode: 'transfer' } });
+  batalkan(psBatal, 'Pelanggan tidak jadi pesan', 'saldo');
   // Kasbon contoh: Antok punya kasbon lama dari buku catatan (sudah lewat tempo 14 hari).
   const lalu = (h: number) => tambahHari(hariIni(), -h);
   catatKasbonLama({ pelangganId: 'antok', tanggal: lalu(40), jumlah: 50000, keterangan: 'Dari buku catatan kasbon' });

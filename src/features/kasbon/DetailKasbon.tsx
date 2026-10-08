@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { hariIni, pelangganDenganKasbon, riwayatBayarKasbon, tagihanPelanggan, useToko, type BayarKasbon } from '../../data/toko';
+import { hariIni, pelangganDenganKasbon, riwayatBayarKasbon, riwayatSaldo, tagihanPelanggan, useToko, type BayarKasbon } from '../../data/toko';
 import { selisihHari } from '../../domain/kasbon';
 import { rupiah } from '../../lib/format';
 import { ChipSumber, tanggalPendek, teksTempo } from './bersama';
-import { DialogBayarKasbon, DialogStrukKasbon } from './DialogKasbon';
+import { DialogBayarKasbon, DialogKembalikanSaldo, DialogStrukKasbon } from './DialogKasbon';
 import '../../styles/pesanan.css';
 import '../../styles/penjualan.css';
 import '../../styles/kasbon.css';
@@ -15,6 +15,7 @@ export function DetailKasbon() {
   const [dialog, setDialog] = useState<null | { jenis: 'bayar'; nota: string[] } | { jenis: 'struk'; bayar: BayarKasbon }>(null);
   const [lihatLunas, setLihatLunas] = useState(true);
   const [pilih, setPilih] = useState<string[]>([]);
+  const [kembali, setKembali] = useState(false);
   const p = toko.pelanggan.find((x) => x.id === id);
 
   if (!p || p.jenis !== 'terdaftar') {
@@ -62,6 +63,31 @@ export function DetailKasbon() {
           </span>
         </div>
       </div>
+
+      {(plg.saldo > 0 || riwayatSaldo(p.id, toko).length > 0) && (
+        <div className="kartu kb-saldo">
+          <div className="kb-saldo__atas">
+            <div>
+              <span className="teks-pudar">Saldo pelanggan</span>
+              <strong>{rupiah(plg.saldo)}</strong>
+              <span className="teks-pudar" style={{ fontSize: 12.5 }}>Uang titipan (mis. DP pesanan batal). Bisa dipakai bayar belanja, kasbon, pesanan — atau dikembalikan.</span>
+            </div>
+            {plg.saldo > 0 && <button type="button" className="tombol" onClick={() => setKembali(true)}>Kembalikan saldo</button>}
+          </div>
+          <table className="ps-tabel ps-tabel--hp">
+            <tbody>
+              {riwayatSaldo(p.id, toko).map((x) => (
+                <tr key={x.id} style={{ cursor: 'default' }}>
+                  <td data-label="Tanggal">{new Date(x.waktuIso).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
+                  <td data-label="No."><strong>{x.nomor}</strong></td>
+                  <td data-label="Keterangan">{x.keterangan}</td>
+                  <td data-label="Jumlah" className={`kanan ${x.jumlah < 0 ? 'teks-bahaya' : ''}`}>{x.jumlah > 0 ? '+' : '−'}{rupiah(Math.abs(x.jumlah))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="baris-tombol">
         <button type="button" className="tombol tombol--utama" disabled={plg.saldoKasbon === 0} onClick={() => setDialog({ jenis: 'bayar', nota: [] })}>Bayar kasbon</button>
@@ -157,6 +183,7 @@ export function DetailKasbon() {
         <DialogBayarKasbon pelanggan={plg} tagihan={tagihan} notaDipilih={dialog.nota} onTutup={() => setDialog(null)} onSelesai={(b) => { setPilih([]); setDialog({ jenis: 'struk', bayar: b }); }} />
       )}
       {dialog?.jenis === 'struk' && <DialogStrukKasbon bayar={dialog.bayar} nama={plg.nama} onTutup={() => setDialog(null)} />}
+      {kembali && <DialogKembalikanSaldo pelangganId={p.id} nama={plg.nama} onTutup={() => setKembali(false)} />}
     </div>
   );
 }

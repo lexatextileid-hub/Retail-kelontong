@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { KartuRingkas, KotakFilter, PilihanChip, Sel, TabelDaftar } from '../../components/Daftar';
-import { hariIni, ringkasKasbon, useToko } from '../../data/toko';
+import { hariIni, ringkasKasbon, saldoPelanggan, useToko } from '../../data/toko';
 import { selisihHari } from '../../domain/kasbon';
 import { rupiah } from '../../lib/format';
 import { tanggalPendek, teksTempo } from './bersama';
 
-type F = 'ada' | 'lewat' | 'semua';
+type F = 'ada' | 'lewat' | 'saldo' | 'semua';
 
 /** Daftar kasbon per pelanggan — format seragam. `dariOffice`: Back Office → Piutang (data sama). */
 export function DaftarKasbon({ dariOffice = false }: { dariOffice?: boolean }) {
@@ -19,9 +19,10 @@ export function DaftarKasbon({ dariOffice = false }: { dariOffice?: boolean }) {
   const semua = toko.pelanggan.filter((p) => p.jenis === 'terdaftar').map((p) => ({ p, r: ringkasKasbon(p.id, toko) }));
   const ada = semua.filter((x) => x.r.saldo > 0);
   const lewat = semua.filter((x) => x.r.lewatTempo > 0);
+  const bersaldo = semua.filter((x) => saldoPelanggan(x.p.id, toko) > 0);
   const jumlah = (xs: typeof semua, fn: (x: (typeof semua)[number]) => number) => xs.reduce((t, x) => t + fn(x), 0);
   const q = cari.trim().toLowerCase();
-  const tampil = (f === 'ada' ? ada : f === 'lewat' ? lewat : semua)
+  const tampil = (f === 'ada' ? ada : f === 'lewat' ? lewat : f === 'saldo' ? bersaldo : semua)
     .filter(({ p }) => !q || p.nama.toLowerCase().includes(q) || (p.hp ?? '').replace(/\D/g, '').includes(q.replace(/\D/g, '') || '§'))
     .sort((a, b) => b.r.lewatTempo - a.r.lewatTempo || b.r.tertuaHari - a.r.tertuaHari || a.p.nama.localeCompare(b.p.nama));
 
@@ -31,10 +32,11 @@ export function DaftarKasbon({ dariOffice = false }: { dariOffice?: boolean }) {
         { judul: dariOffice ? 'Total piutang pelanggan' : 'Total kasbon', nilai: rupiah(jumlah(ada, (x) => x.r.saldo)), catatan: `${ada.length} pelanggan`, aktif: f === 'ada', onKlik: () => setF('ada') },
         { judul: 'Lewat jatuh tempo', nilai: rupiah(jumlah(lewat, (x) => x.r.lewatTempo)), catatan: `${lewat.length} pelanggan`, warna: lewat.length ? 'merah' : undefined, aktif: f === 'lewat', onKlik: () => setF('lewat') },
         { judul: 'Belum lewat tempo', nilai: rupiah(jumlah(ada, (x) => x.r.saldo - x.r.lewatTempo)), catatan: 'masih berjalan' },
+        { judul: 'Saldo pelanggan', nilai: rupiah(jumlah(bersaldo, (x) => saldoPelanggan(x.p.id, toko))), catatan: `${bersaldo.length} pelanggan · titipan`, aktif: f === 'saldo', onKlik: () => setF('saldo') },
       ]} />
-      <KotakFilter cari={{ nilai: cari, onUbah: setCari, placeholder: 'Cari nama atau nomor HP' }} aksi={<Link to="../lama" className="tombol tombol--utama">+ Catat kasbon lama</Link>} ringkas={[{ ada: 'Ada kasbon', lewat: 'Lewat tempo', semua: 'Semua pelanggan' }[f], q && `"${cari}"`].filter(Boolean).join(' · ')}>
+      <KotakFilter cari={{ nilai: cari, onUbah: setCari, placeholder: 'Cari nama atau nomor HP' }} aksi={<Link to="../lama" className="tombol tombol--utama">+ Catat kasbon lama</Link>} ringkas={[{ ada: 'Ada kasbon', lewat: 'Lewat tempo', saldo: 'Punya saldo', semua: 'Semua pelanggan' }[f], q && `"${cari}"`].filter(Boolean).join(' · ')}>
         <PilihanChip label="Status" nilai={f} onUbah={setF} pilihan={[
-          { k: 'ada', judul: 'Ada kasbon', jumlah: ada.length }, { k: 'lewat', judul: 'Lewat tempo', jumlah: lewat.length }, { k: 'semua', judul: 'Semua pelanggan', jumlah: semua.length },
+          { k: 'ada', judul: 'Ada kasbon', jumlah: ada.length }, { k: 'lewat', judul: 'Lewat tempo', jumlah: lewat.length }, { k: 'saldo', judul: 'Punya saldo', jumlah: bersaldo.length }, { k: 'semua', judul: 'Semua pelanggan', jumlah: semua.length },
         ]} />
       </KotakFilter>
       <TabelDaftar
@@ -50,6 +52,7 @@ export function DaftarKasbon({ dariOffice = false }: { dariOffice?: boolean }) {
           { judul: 'Batas', kanan: true, isi: ({ p }) => (p.batasKasbon ? rupiah(p.batasKasbon) : 'belum diatur') },
           { judul: 'Lewat tempo', kanan: true, isi: ({ r }) => (r.lewatTempo ? <span className="teks-bahaya">{rupiah(r.lewatTempo)}</span> : '-'), total: rupiah(jumlah(tampil, (x) => x.r.lewatTempo)) },
           { judul: 'Kasbon', kanan: true, isi: ({ r }) => <strong>{rupiah(r.saldo)}</strong>, total: rupiah(jumlah(tampil, (x) => x.r.saldo)) },
+          { judul: 'Saldo', kanan: true, isi: ({ p }) => { const n = saldoPelanggan(p.id, toko); return n ? <span style={{ color: '#1d6b3c', fontWeight: 600 }}>{rupiah(n)}</span> : '-'; } },
           { judul: 'Status', isi: ({ r }) => (r.lewatTempo > 0 ? <span className="chip-status chip-status--merah">Lewat tempo</span> : r.saldo > 0 ? <span className="chip-status chip-status--biru">Berjalan</span> : <span className="chip-status chip-status--abu">Lunas</span>) },
         ]}
       />

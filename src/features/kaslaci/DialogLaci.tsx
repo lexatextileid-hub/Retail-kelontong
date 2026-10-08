@@ -40,6 +40,7 @@ export const namaJenis: Record<ArusKas['jenis'], string> = {
   penjualan: 'Penjualan', kasbon: 'Bayar kasbon', pesanan: 'Pesanan', retur: 'Retur', 'kas-masuk': 'Kas masuk lain',
   'titipan-brankas': 'Dari pemilik', pengeluaran: 'Pengeluaran', 'bayar-distributor': 'Bayar distributor', 'setor-bank': 'Setor bank',
   'saldo-awal': 'Saldo awal', modal: 'Tambahan modal', prive: 'Prive', pindah: 'Pindah dana', 'kasbon-karyawan': 'Kasbon karyawan', 'cicilan-karyawan': 'Cicilan kasbon karyawan',
+  'saldo-pelanggan': 'Saldo pelanggan dikembalikan',
 };
 
 /* ---------- Buka kasir ---------- */
@@ -390,6 +391,7 @@ export function DialogLaporanHarian({ sesiId, onTutup }: { sesiId: string; onTut
         <BarisN k="  Tunai" jml={n(l.penjualan.tunai.n, 'nota')} v={l.penjualan.tunai.jumlah} />
         <BarisN k="  Transfer" jml={n(l.penjualan.transfer.n, 'nota')} v={l.penjualan.transfer.jumlah} />
         <BarisN k="  Kasbon" jml={n(l.penjualan.kasbon.n, 'nota')} v={l.penjualan.kasbon.jumlah} />
+        {l.penjualan.saldo.jumlah > 0 && <BarisN k="  Saldo pelanggan" jml={n(l.penjualan.saldo.n, 'nota')} v={l.penjualan.saldo.jumlah} />}
         <BarisN k="  Total penjualan" jml={n(l.penjualan.total.n, 'nota')} v={l.penjualan.total.jumlah} tebal />
         {l.retur.n > 0 && <BarisN k="  Retur penjualan" jml={n(l.retur.n, 'retur')} v={l.retur.bersih} minus />}
         <BarisN k="  Penjualan bersih" v={l.penjualan.total.jumlah - l.retur.bersih} tebal />

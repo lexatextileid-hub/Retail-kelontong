@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { InputRupiah } from '../../components/InputRupiah';
 import { bankContoh } from '../../data/contoh';
-import { bayarKasbon, ringkasKasbon, type BayarKasbon, type PelangganKasbon, type TagihanKasbon } from '../../data/toko';
+import { bayarKasbon, kembalikanSaldo, laciTerbuka, ringkasKasbon, ringkasLaci, saldoPelanggan, useToko, type BayarKasbon, type PelangganKasbon, type TagihanKasbon } from '../../data/toko';
 import { alokasiTertua } from '../../domain/kasbon';
 import { rupiah } from '../../lib/format';
 import { uangCepat } from '../penjualan/DialogBayar';
@@ -32,9 +32,10 @@ export function DialogBayarKasbon({
   const [per, setPer] = useState<Record<string, number>>(() =>
     Object.fromEntries(terbuka.filter((t) => notaDipilih.includes(t.id)).map((t) => [t.id, t.sisa])),
   );
-  const [metode, setMetode] = useState<'tunai' | 'transfer'>('tunai');
+  const [metode, setMetode] = useState<'tunai' | 'transfer' | 'saldo'>('tunai');
   const [bank, setBank] = useState('');
   const [diterima, setDiterima] = useState(0);
+  const saldoPlg = saldoPelanggan(pelanggan.id);
 
   const bayar = terbuka.reduce((t, x) => t + (per[x.id] ?? 0), 0);
   const isiTotal = (n: number) =>
@@ -45,7 +46,8 @@ export function DialogBayarKasbon({
 
   const kembalian = metode === 'tunai' ? Math.max(0, diterima - bayar) : 0;
   const kurangUang = metode === 'tunai' && diterima > 0 && diterima < bayar;
-  const siap = bayar > 0 && !kurangUang;
+  const saldoKurang = metode === 'saldo' && bayar > saldoPlg;
+  const siap = bayar > 0 && !kurangUang && !saldoKurang;
 
   const simpan = () => {
     if (!siap) return;
@@ -105,9 +107,14 @@ export function DialogBayarKasbon({
         <div className="saklar" role="group" aria-label="Cara bayar" style={{ alignSelf: 'flex-start' }}>
           <button type="button" aria-pressed={metode === 'tunai'} onClick={() => setMetode('tunai')}>Tunai</button>
           <button type="button" aria-pressed={metode === 'transfer'} onClick={() => setMetode('transfer')}>Transfer</button>
+          {saldoPlg > 0 && <button type="button" aria-pressed={metode === 'saldo'} onClick={() => setMetode('saldo')}>Saldo {rupiah(saldoPlg)}</button>}
         </div>
       </div>
-      {metode === 'tunai' ? (
+      {metode === 'saldo' ? (
+        <p className={saldoKurang ? 'catatan catatan--peringatan' : 'teks-pudar'} style={{ margin: 0, fontSize: 13 }}>
+          {saldoKurang ? `Saldo hanya ${rupiah(saldoPlg)}. Kurangi jumlah bayar.` : `Dibayar dari saldo pelanggan (mis. DP pesanan batal). Sisa saldo ${rupiah(saldoPlg - bayar)}.`}
+        </p>
+      ) : metode === 'tunai' ? (
         <div className="isian">
           Uang diterima (opsional, untuk kembalian)
           <InputRupiah id="kb-diterima" nilai={diterima} onUbah={setDiterima} label="Uang diterima" />
@@ -156,7 +163,7 @@ export function DialogStrukKasbon({ bayar, nama, onTutup }: { bayar: BayarKasbon
         ))}
         <div className="struk__garis" />
         <div className="struk__baris struk__tebal"><span>DIBAYAR</span><span>{rupiah(bayar.jumlah)}</span></div>
-        <div className="struk__baris"><span>{bayar.metode === 'tunai' ? 'Tunai' : `Transfer${bayar.bank ? ` ${bayar.bank}` : ''}`}</span><span>{rupiah(bayar.jumlah)}</span></div>
+        <div className="struk__baris"><span>{bayar.metode === 'tunai' ? 'Tunai' : bayar.metode === 'saldo' ? 'Saldo pelanggan' : `Transfer${bayar.bank ? ` ${bayar.bank}` : ''}`}</span><span>{rupiah(bayar.jumlah)}</span></div>
         <div className="struk__baris struk__tebal"><span>Sisa kasbon</span><span>{rupiah(sisa)}</span></div>
         <div className="struk__garis" />
         <div className="struk__tengah">Terima kasih.</div>
@@ -167,6 +174,39 @@ export function DialogStrukKasbon({ bayar, nama, onTutup }: { bayar: BayarKasbon
       </div>
       {info && <p className="catatan catatan--info">{info}</p>}
       <button type="button" className="tombol tombol--utama tombol--besar" onClick={onTutup} autoFocus>Selesai</button>
+    </Dialog>
+  );
+}
+
+/** Kembalikan saldo pelanggan (mis. DP pesanan batal) — uang keluar dari laci (tunai) atau rekening (transfer). */
+export function DialogKembalikanSaldo({ pelangganId, nama, onTutup }: { pelangganId: string; nama: string; onTutup: () => void }) {
+  const toko = useToko();
+  const saldo = saldoPelanggan(pelangganId, toko);
+  const laci = laciTerbuka(undefined, toko);
+  const uangLaci = laci ? ringkasLaci(laci.id, toko).seharusnya : 0;
+  const [jumlah, setJumlah] = useState(saldo);
+  const [metode, setMetode] = useState<'tunai' | 'transfer'>('tunai');
+  const [bank, setBank] = useState('');
+  const masalah = jumlah <= 0 ? '' : jumlah > saldo ? `Melebihi saldo (${rupiah(saldo)}).`
+    : metode === 'tunai' && !laci ? 'Laci belum dibuka — buka kasir dulu atau kembalikan lewat transfer.'
+    : metode === 'tunai' && jumlah > uangLaci ? `Uang di laci hanya ${rupiah(uangLaci)}.` : '';
+  return (
+    <Dialog judul={`Kembalikan saldo ${nama}`} onTutup={onTutup} lebar={440}
+      kaki={<button type="button" className="tombol tombol--utama tombol--besar" disabled={jumlah <= 0 || !!masalah}
+        onClick={() => { kembalikanSaldo(pelangganId, jumlah, metode, metode === 'transfer' ? bank.trim() || undefined : undefined); onTutup(); }}>
+        Kembalikan {rupiah(jumlah)}
+      </button>}>
+      <div className="ringkas-total"><span>Saldo pelanggan</span><strong>{rupiah(saldo)}</strong></div>
+      <label className="isian">Jumlah dikembalikan<InputRupiah id="sl-jumlah" nilai={jumlah} onUbah={setJumlah} autoFocus /></label>
+      <div className="saklar" role="group" aria-label="Cara" style={{ alignSelf: 'flex-start' }}>
+        <button type="button" aria-pressed={metode === 'tunai'} onClick={() => setMetode('tunai')}>Tunai dari laci</button>
+        <button type="button" aria-pressed={metode === 'transfer'} onClick={() => setMetode('transfer')}>Transfer</button>
+      </div>
+      {metode === 'transfer' && (
+        <label className="isian">Ke rekening (keterangan)<input className="isian__kontrol" value={bank} onChange={(e) => setBank(e.target.value)} placeholder="mis. BCA a.n. pelanggan" /></label>
+      )}
+      {masalah && <p className="catatan catatan--peringatan" style={{ margin: 0 }}>{masalah}</p>}
+      <p className="teks-pudar" style={{ margin: 0, fontSize: 12.5 }}>Tercatat sebagai uang keluar "kembali ke pelanggan" di kas dan laporan.</p>
     </Dialog>
   );
 }

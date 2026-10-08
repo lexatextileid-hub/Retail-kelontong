@@ -484,7 +484,7 @@ Dikunci oleh tes `src/data/hulu-hilir.test.ts` (satu barang dibawa melewati semu
 - **Tutup kasir** → pindah dana ke brankas/rekening → buku brankas/rekening → laporan harian toko (pindah dana selalu seimbang).
 - **Saran pesan (Stok Menipis)** memakai stok bebas dari buku stok, stok minimum/maksimum dari data barang, dan **rata-rata penjualan nyata 30 hari**.
 - **Untung pesanan** memakai harga beli terakhir (sama dengan data barang).
-- Belum tersambung (perlu keputusan): **DP yang "jadi saldo pelanggan"** saat pesanan batal belum bisa dipakai di transaksi berikutnya.
+- **Saldo pelanggan** (uang titipan, mis. DP pesanan batal yang dipilih "jadi saldo"): **bisa dipakai** untuk bayar belanja di kasir (centang "Pakai saldo"), bayar kasbon, dan bayar pesanan — bukan uang masuk baru, jadi tidak menambah laci; dan **bisa dikembalikan** kapan saja (tunai dari laci / transfer) → tercatat sebagai uang keluar F. Kembali ke pelanggan. Pesanan yang dibayar dari saldo lalu batal → bagian itu kembali ke saldo. Saldo tampil di Kasbon (kartu ringkasan, kolom, filter "Punya saldo") dan di detail pelanggan beserta riwayatnya (SL-…). Nota mencetak "Dibayar saldo"; laporan kasir mencatat penjualan yang dibayar saldo.
 
 ## Prinsip data
 

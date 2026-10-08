@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { InputRupiah } from '../../components/InputRupiah';
-import { aturTempo, batalkan, ringkasPesanan, serahkan, terimaBayar, type Pesanan } from '../../data/toko';
+import { aturTempo, batalkan, ringkasPesanan, saldoPelanggan, serahkan, terimaBayar, type Pesanan } from '../../data/toko';
 import { rupiah } from '../../lib/format';
 import { ambilProduk, ambilSatuan, angka, bolehDesimal } from '../penjualan/model';
 import { labelJumlah, namaPelanggan } from './bersama';
@@ -115,9 +115,10 @@ export function DialogBayarPesanan({ p, onTutup }: { p: Pesanan; onTutup: () => 
   const r = ringkasPesanan(p);
   const [mode, setMode] = useState<'bayar' | 'tempo'>('bayar');
   const [jumlah, setJumlah] = useState(r.sisa);
-  const [metode, setMetode] = useState<'tunai' | 'transfer'>('tunai');
+  const [metode, setMetode] = useState<'tunai' | 'transfer' | 'saldo'>('tunai');
+  const saldoPlg = saldoPelanggan(p.pelangganId);
   const [tanggal, setTanggal] = useState(new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10));
-  const valid = mode === 'tempo' ? Boolean(tanggal) : jumlah > 0 && jumlah <= r.sisa;
+  const valid = mode === 'tempo' ? Boolean(tanggal) : jumlah > 0 && jumlah <= r.sisa && (metode !== 'saldo' || jumlah <= saldoPlg);
   const kaki = (
     <button
       type="button"
@@ -148,7 +149,9 @@ export function DialogBayarPesanan({ p, onTutup }: { p: Pesanan; onTutup: () => 
           <div className="saklar" role="group" aria-label="Metode" style={{ alignSelf: 'flex-start' }}>
             <button type="button" aria-pressed={metode === 'tunai'} onClick={() => setMetode('tunai')}>Tunai</button>
             <button type="button" aria-pressed={metode === 'transfer'} onClick={() => setMetode('transfer')}>Transfer</button>
+            {saldoPlg > 0 && <button type="button" aria-pressed={metode === 'saldo'} onClick={() => { setMetode('saldo'); setJumlah(Math.min(r.sisa, saldoPlg)); }}>Saldo {rupiah(saldoPlg)}</button>}
           </div>
+          {metode === 'saldo' && jumlah > saldoPlg && <p className="catatan catatan--peringatan" style={{ margin: 0 }}>Saldo hanya {rupiah(saldoPlg)}.</p>}
         </>
       ) : (
         <label className="isian">

@@ -50,6 +50,7 @@ export interface Nota {
   kembalian: number;
   kasbonBaru: number;
   sisaKasbon?: number;
+  pakaiSaldo?: number;
 }
 
 export const kosong = (): Keranjang => ({ pelangganId: 'umum', baris: [] });

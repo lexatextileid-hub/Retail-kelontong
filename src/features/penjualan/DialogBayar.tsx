@@ -18,6 +18,8 @@ export interface HasilBayar {
   jenisPotongan?: 'Pembulatan' | 'Diskon akhir';
   kasbonBaru: number;
   bayarKasbon: number;
+  /** Dibayar dari saldo pelanggan. */
+  pakaiSaldo: number;
 }
 
 type Metode = 'tunai' | 'transfer' | 'kasbon' | 'campuran';
@@ -54,9 +56,12 @@ export function DialogBayar({
   const [transferInput, setTransfer] = useState<number | null>(null);
   const [pilihanKurang, setPilihanKurang] = useState<'potongan' | 'kasbon'>('potongan');
   const [pin, setPin] = useState('');
+  const [saldoAktif, setSaldoAktif] = useState(false);
 
   const kasbonDibayar = bayarKasbonAktif ? Math.min(bayarKasbon, pelanggan.saldoKasbon) : 0;
-  const tagihan = belanja + kasbonDibayar;
+  // Saldo pelanggan (mis. DP pesanan batal) dipakai untuk belanja ini.
+  const saldoDipakai = saldoAktif ? Math.min(pelanggan.saldo, belanja) : 0;
+  const tagihan = belanja - saldoDipakai + kasbonDibayar;
   const kasbonBisa = terdaftar && !bayarKasbonAktif;
   const m: Metode = metode === 'kasbon' && !kasbonBisa ? 'tunai' : metode;
 
@@ -93,6 +98,7 @@ export function DialogBayar({
       jenisPotongan: adaKurang && modeKurang === 'potongan' ? jenisPotongan : undefined,
       kasbonBaru: adaKurang && modeKurang === 'kasbon' ? kurang : 0,
       bayarKasbon: kasbonDibayar,
+      pakaiSaldo: saldoDipakai,
     });
   };
 
@@ -133,6 +139,16 @@ export function DialogBayar({
                 <button type="button" className="tombol tombol--kecil" onClick={() => setBayarKasbon(pelanggan.saldoKasbon)}>Lunasi</button>
               </div>
             )}
+          </div>
+        )}
+
+        {terdaftar && pelanggan.saldo > 0 && (
+          <div className="kotak">
+            <label className="centang">
+              <input type="checkbox" checked={saldoAktif} onChange={(e) => setSaldoAktif(e.target.checked)} />
+              Pakai saldo {pelanggan.nama}: {rupiah(pelanggan.saldo)}
+            </label>
+            {saldoAktif && <div className="ringkas-total"><span>Saldo dipakai</span><strong>−{rupiah(saldoDipakai)}</strong></div>}
           </div>
         )}
 

@@ -310,3 +310,33 @@ describe('harga beli diubah manual', () => {
     expect(t.infoBarang('kecap').beliAcuan).toBe(22000);
   });
 });
+
+describe('saldo pelanggan', () => {
+  it('DP pesanan batal jadi saldo → dipakai bayar kasbon & pesanan → sisanya dikembalikan (uang keluar tercatat)', async () => {
+    const t = await import('./toko');
+    t.setPeran('kasir');
+    const awal = t.saldoPelanggan('bu-sri');
+    const ps = t.buatPesanan({ pelangganId: 'bu-sri', cara: 'ambil', tanggalJanji: t.hariIni(), baris: [{ produkId: 'kecap', satuanProdukId: 'kecap-btl', qty: 2 }], dp: { jumlah: 30000, metode: 'tunai' } });
+    t.batalkan(ps, 'uji', 'saldo');
+    expect(t.saldoPelanggan('bu-sri')).toBe(awal + 30000);
+    expect(t.pelangganDenganKasbon('bu-sri').saldo).toBe(awal + 30000);
+    // dipakai bayar kasbon 10.000 (tanpa uang masuk laci)
+    const arus0 = t.__state().arus.length;
+    t.bayarKasbon({ pelangganId: 'bu-sri', jumlah: 10000, metode: 'saldo' });
+    expect(t.__state().arus.length).toBe(arus0);
+    expect(t.saldoPelanggan('bu-sri')).toBe(awal + 20000);
+    // dipakai bayar pesanan lain 5.000
+    const ps2 = t.buatPesanan({ pelangganId: 'bu-sri', cara: 'ambil', tanggalJanji: t.hariIni(), baris: [{ produkId: 'kecap', satuanProdukId: 'kecap-btl', qty: 1 }] });
+    t.terimaBayar(ps2, 5000, 'saldo', 'DP');
+    expect(t.saldoPelanggan('bu-sri')).toBe(awal + 15000);
+    expect(t.__state().arus.length).toBe(arus0);
+    // pesanan ps2 batal "kembali" → bagian dari saldo kembali ke saldo, bukan uang keluar
+    t.batalkan(ps2, 'uji', 'kembali');
+    expect(t.saldoPelanggan('bu-sri')).toBe(awal + 20000);
+    // dikembalikan tunai → uang keluar laci, kelompok "kembali ke pelanggan"
+    const x = t.kembalikanSaldo('bu-sri', 20000, 'tunai')!;
+    expect(t.saldoPelanggan('bu-sri')).toBe(awal);
+    expect(t.mutasiTempat('laci').find((m) => m.nomor === x.nomor)).toMatchObject({ kelompok: 'kembali', jumlah: -20000 });
+    t.setPeran('pemilik');
+  });
+});

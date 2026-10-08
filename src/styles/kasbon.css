@@ -205,3 +205,7 @@ a.kb-tagihan__baris:hover { background: var(--permukaan-2); color: var(--teks); 
 }
 
 .kk-qty { width: 90px; height: 38px; text-align: right; margin-left: auto; }
+.kb-saldo { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+.kb-saldo__atas { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.kb-saldo__atas > div { display: flex; flex-direction: column; gap: 2px; }
+.kb-saldo__atas strong { font-size: 20px; }
