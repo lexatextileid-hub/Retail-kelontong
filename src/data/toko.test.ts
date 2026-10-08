@@ -143,3 +143,26 @@ describe('retur', () => {
     expect(sudahDiretur({ notaId }, n.baris[0].id)).toBe(2);
   });
 });
+
+describe('kas laci', () => {
+  it('buka (dari sisa kemarin) → transaksi tunai/transfer → pengeluaran → tutup dengan selisih dan pembagian', async () => {
+    const t = await import('./toko');
+    t.setPeran('admin'); // akun [Admin A], belum punya laci
+    expect(t.laciTerbuka()).toBeUndefined();
+    const s = t.bukaLaci(100000);
+    expect(s.dariKemarin).toBe(0);
+    t.catatArus({ jenis: 'penjualan', nomor: 'PJ-UJI-L1', tunai: 50000, transfer: 20000, keterangan: 'uji' });
+    t.catatArus({ jenis: 'pengeluaran', nomor: 'KK-UJI', tunai: -15000, transfer: 0, kategori: 'Kemasan', penerima: 'Toko plastik', keterangan: 'kantong' });
+    t.catatArus({ jenis: 'pengeluaran', nomor: 'KK-UJI2', sumber: 'brankas', tunai: -99000, transfer: 0, kategori: 'Sewa ruko', penerima: 'x', keterangan: 'dari brankas' });
+    const r = t.ringkasLaci(s.id);
+    expect(r.seharusnya).toBe(100000 + 50000 - 15000); // pengeluaran dari brankas tidak mengurangi laci
+    expect(r.totalTransfer).toBe(20000);
+    t.tutupLaci({ uangFisik: 134000, selisihDitanggung: 'kasir', pembagian: { sisaLaci: 100000, brankas: 34000, bank: 0, prive: 0 } });
+    const tutup = t.laciTerakhirDitutup()!;
+    expect(tutup.selisih).toBe(-1000);
+    expect(tutup.selisihDitanggung).toBe('kasir');
+    // Buka lagi: modal = sisa laci tadi
+    expect(t.bukaLaci(0).dariKemarin).toBe(100000);
+    t.setPeran('pemilik');
+  });
+});

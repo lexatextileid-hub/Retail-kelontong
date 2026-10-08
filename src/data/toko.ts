@@ -223,8 +223,67 @@ export interface BarangRusak {
   asal: string; // mis. "Retur RT-2610-0001"
 }
 
+/* ---------- Kas laci ---------- */
+
+/** Satu kali buka–tutup laci oleh satu akun. Setelah tutup boleh buka lagi di hari yang sama. */
+export interface SesiLaci {
+  id: string;
+  nomor: string; // LC-…
+  akun: string;
+  tanggal: string;
+  dibukaIso: string;
+  dariKemarin: number; // sisa laci sebelumnya
+  tambahBrankas: number; // tambahan modal dari brankas (PIN pemilik)
+  ditutupIso?: string;
+  uangFisik?: number;
+  /** uangFisik − seharusnya */
+  selisih?: number;
+  selisihDitanggung?: 'toko' | 'kasir';
+  pembagian?: { sisaLaci: number; brankas: number; bank: number; bankNama?: string; prive: number };
+}
+
+export type JenisArus =
+  | 'penjualan' | 'kasbon' | 'pesanan' | 'retur' | 'kas-masuk' | 'titipan-brankas'
+  | 'pengeluaran' | 'bayar-distributor' | 'setor-bank';
+
+/** Arus uang yang dicatat kasir. tunai/transfer bertanda: + masuk, − keluar. */
+export interface ArusKas {
+  id: string;
+  nomor: string;
+  waktuIso: string;
+  akun: string;
+  sesiId?: string; // laci yang terbuka saat itu
+  jenis: JenisArus;
+  tunai: number;
+  transfer: number;
+  /** Sumber dana untuk uang keluar (laci bawaan; brankas/bank dengan PIN pemilik). */
+  sumber: 'laci' | 'brankas' | 'bank';
+  keterangan: string;
+  kategori?: string;
+  penerima?: string;
+  bank?: string;
+  faktur?: { id: string; nomor: string; jumlah: number }[];
+}
+
+export const KATEGORI_PENGELUARAN = [
+  'Bongkar muat & angkut', 'Retribusi & keamanan pasar', 'Kemasan', 'Kebutuhan toko harian', 'Listrik, air, internet',
+  'Gaji & uang makan', 'Sewa ruko', 'Perbaikan & perawatan', 'Lain-lain',
+];
+
+/** Hutang lama ke distributor (sebelum memakai aplikasi), tanpa rincian barang. */
+export interface HutangLama {
+  id: string;
+  distributorId: string;
+  nomor: string; // nomor faktur kertas
+  tanggal: string;
+  total: number;
+}
+
 interface State {
   peran: Peran;
+  sesiLaci: SesiLaci[];
+  arus: ArusKas[];
+  hutangLama: HutangLama[];
   penjualan: NotaPenjualan[];
   retur: Retur[];
   barangRusak: BarangRusak[];
@@ -234,12 +293,15 @@ interface State {
   bayarKasbon: BayarKasbon[];
   pesanan: Pesanan[];
   sp: SuratPesanan[];
-  urut: Record<'PS' | 'SP' | 'SJ' | 'PB' | 'KL' | 'BK' | 'PJ' | 'RT', number>;
+  urut: Record<'PS' | 'SP' | 'SJ' | 'PB' | 'KL' | 'BK' | 'PJ' | 'RT' | 'LC' | 'KK' | 'KM' | 'BD' | 'ST', number>;
   stokTambahan: Record<string, number>; // stok umum yang masuk dari SP (pratinjau)
 }
 
 let state: State = {
   peran: 'pemilik',
+  sesiLaci: [],
+  arus: [],
+  hutangLama: [],
   penjualan: [],
   retur: [],
   barangRusak: [],
@@ -249,7 +311,7 @@ let state: State = {
   bayarKasbon: [],
   pesanan: [],
   sp: [],
-  urut: { PS: 1, SP: 1, SJ: 1, PB: 1, KL: 1, BK: 1, PJ: 231, RT: 1 },
+  urut: { PS: 1, SP: 1, SJ: 1, PB: 1, KL: 1, BK: 1, PJ: 231, RT: 1, LC: 1, KK: 1, KM: 1, BD: 1, ST: 1 },
   stokTambahan: {},
 };
 const pendengar = new Set<() => void>();
@@ -414,6 +476,8 @@ export function buatPesanan(data: {
   };
   if (p.pembayaran.length) p.riwayat.push({ waktu, teks: `DP ${p.pembayaran[0].jumlah.toLocaleString('id-ID')} (${p.pembayaran[0].metode})` });
   ubah((s) => ({ ...s, pesanan: [p, ...s.pesanan] }));
+  if (data.dp && data.dp.jumlah > 0)
+    catatArus({ jenis: 'pesanan', nomor, tunai: data.dp.metode === 'tunai' ? data.dp.jumlah : 0, transfer: data.dp.metode === 'transfer' ? data.dp.jumlah : 0, keterangan: `DP pesanan ${nomor}` });
   return pesananId;
 }
 
@@ -516,6 +580,8 @@ export function terimaBayar(pesananId: string, jumlah: number, metode: 'tunai' |
     (p) => ({ ...p, pembayaran: [...p.pembayaran, { waktu: sekarang(), jumlah, metode, jenis, oleh: namaAkun[state.peran] }] }),
     `${jenis} ${jumlah.toLocaleString('id-ID')} (${metode})`,
   );
+  const p = state.pesanan.find((x) => x.id === pesananId)!;
+  catatArus({ jenis: 'pesanan', nomor: p.nomor, tunai: metode === 'tunai' ? jumlah : 0, transfer: metode === 'transfer' ? jumlah : 0, keterangan: `${jenis} pesanan ${p.nomor}` });
 }
 
 export const aturTempo = (pesananId: string, tanggal: string) =>
@@ -736,6 +802,9 @@ export function bayarKasbon(data: {
   };
   // Bagian untuk pesanan ("ps:…") juga dicatat sebagai pembayaran pesanan — itulah sumber sisa tagihan pesanan.
   ubah((s) => ({ ...s, bayarKasbon: [...s.bayarKasbon, b] }));
+  // Bayar kasbon lewat menu Kasbon masuk laci. (Lewat penjualan sudah termasuk di uang nota; lewat retur bukan uang.)
+  if (b.lewat === 'kasbon' && b.metode !== 'retur')
+    catatArus({ jenis: 'kasbon', nomor, tunai: b.metode === 'tunai' ? b.jumlah : 0, transfer: b.metode === 'transfer' ? b.jumlah : 0, keterangan: `Bayar kasbon ${ambilPelanggan(b.pelangganId).nama}` });
   for (const a of b.alokasi.filter((x) => x.notaId.startsWith('ps:'))) {
     const pid = a.notaId.slice(3);
     const t = tagihan.find((x) => x.id === a.notaId)!;
@@ -843,7 +912,10 @@ export function simpanRetur(data: Omit<Retur, 'id' | 'nomor' | 'waktuIso' | 'wak
     for (const t of r.tukar) x = tambahStok(x, t.produkId, -t.jumlahDasar);
     return x;
   });
-  // Selisih uang
+  // Selisih uang tunai/transfer lewat laci (positif = toko mengembalikan → uang keluar)
+  if (r.cara === 'tunai' || r.cara === 'transfer')
+    catatArus({ jenis: 'retur', nomor, tunai: r.cara === 'tunai' ? -r.selisih : 0, transfer: r.cara === 'transfer' ? -r.selisih : 0, keterangan: `Retur ${r.nomorAsal ?? 'tanpa nota'}`, bank: r.bank });
+  // Selisih lewat kasbon / tagihan pesanan
   if (r.cara === 'kasbon' && r.selisih > 0) {
     // Toko berutang ke pelanggan → mengurangi kasbon (nota asal dulu bila masih ada sisa).
     const tagihan = tagihanPelanggan(r.pelangganId);
@@ -869,6 +941,93 @@ export function simpanRetur(data: Omit<Retur, 'id' | 'nomor' | 'waktuIso' | 'wak
     ubahPesanan(r.pesananId, (p) => p, `Retur ${nomor} (${r.nilaiRetur.toLocaleString('id-ID')})`);
   }
   return r;
+}
+
+/* ---------- Kas laci ---------- */
+
+export const akunAktif = (s: State = state) => namaAkun[s.peran];
+export const laciTerbuka = (akun = akunAktif(), s: State = state) => s.sesiLaci.find((x) => x.akun === akun && !x.ditutupIso);
+export const laciTerakhirDitutup = (akun = akunAktif(), s: State = state) =>
+  [...s.sesiLaci].filter((x) => x.akun === akun && x.ditutupIso).sort((a, b) => b.ditutupIso!.localeCompare(a.ditutupIso!))[0];
+
+/** Catat arus uang kasir; otomatis ke laci yang sedang terbuka milik akun ini. */
+export function catatArus(a: Omit<ArusKas, 'id' | 'waktuIso' | 'akun' | 'sesiId' | 'sumber'> & { sumber?: ArusKas['sumber'] }): ArusKas {
+  const akun = akunAktif();
+  const x: ArusKas = { sumber: 'laci', ...a, id: id('ak'), waktuIso: new Date().toISOString(), akun, sesiId: laciTerbuka(akun)?.id };
+  ubah((s) => ({ ...s, arus: [...s.arus, x] }));
+  return x;
+}
+
+export function bukaLaci(tambahBrankas: number): SesiLaci {
+  const akun = akunAktif();
+  const lalu = laciTerakhirDitutup(akun);
+  const x: SesiLaci = {
+    id: id('lc'), nomor: nomorBaru('LC'), akun, tanggal: hariIni(), dibukaIso: new Date().toISOString(),
+    dariKemarin: lalu?.pembagian?.sisaLaci ?? 0, tambahBrankas,
+  };
+  ubah((s) => ({ ...s, sesiLaci: [...s.sesiLaci, x] }));
+  return x;
+}
+
+/** Ringkasan satu laci: modal, masuk/keluar per jenis (tunai & transfer), seharusnya di laci. */
+export function ringkasLaci(sesiId: string, s: State = state) {
+  const sesi = s.sesiLaci.find((x) => x.id === sesiId)!;
+  const arus = s.arus.filter((a) => a.sesiId === sesiId);
+  const per = (j: JenisArus, f: 'tunai' | 'transfer') => arus.filter((a) => a.jenis === j && (f === 'transfer' || a.sumber === 'laci')).reduce((t, a) => t + a[f], 0);
+  const jenisSemua: JenisArus[] = ['penjualan', 'kasbon', 'pesanan', 'retur', 'kas-masuk', 'titipan-brankas', 'pengeluaran', 'bayar-distributor', 'setor-bank'];
+  const tunai = Object.fromEntries(jenisSemua.map((j) => [j, per(j, 'tunai')])) as Record<JenisArus, number>;
+  const transfer = Object.fromEntries(jenisSemua.map((j) => [j, per(j, 'transfer')])) as Record<JenisArus, number>;
+  const modal = sesi.dariKemarin + sesi.tambahBrankas;
+  const masukTunai = jenisSemua.reduce((t, j) => t + Math.max(0, tunai[j]), 0);
+  const keluarTunai = jenisSemua.reduce((t, j) => t + Math.min(0, tunai[j]), 0);
+  const seharusnya = modal + masukTunai + keluarTunai;
+  const totalTransfer = jenisSemua.reduce((t, j) => t + transfer[j], 0);
+  const penjualanNota = s.penjualan.filter((n) => arus.some((a) => a.jenis === 'penjualan' && a.nomor === n.nomor));
+  return {
+    sesi, arus, modal, tunai, transfer, masukTunai, keluarTunai: Math.abs(keluarTunai), seharusnya, totalTransfer,
+    omzet: penjualanNota.reduce((t, n) => t + n.total, 0),
+    banyakNota: penjualanNota.length,
+    kasbonBaru: penjualanNota.reduce((t, n) => t + n.kasbonBaru, 0),
+    potongan: penjualanNota.reduce((t, n) => t + n.struk.potongan, 0),
+  };
+}
+
+export function tutupLaci(data: {
+  uangFisik: number; selisihDitanggung?: 'toko' | 'kasir';
+  pembagian: { sisaLaci: number; brankas: number; bank: number; bankNama?: string; prive: number };
+}) {
+  const sesi = laciTerbuka();
+  if (!sesi) return;
+  const r = ringkasLaci(sesi.id);
+  const selisih = data.uangFisik - r.seharusnya;
+  ubah((s) => ({
+    ...s,
+    sesiLaci: s.sesiLaci.map((x) => (x.id === sesi.id ? {
+      ...x, ditutupIso: new Date().toISOString(), uangFisik: data.uangFisik, selisih,
+      selisihDitanggung: selisih !== 0 ? data.selisihDitanggung ?? 'toko' : undefined, pembagian: data.pembagian,
+    } : x)),
+  }));
+  return sesi.id;
+}
+
+export const nomorArus = (j: 'KK' | 'KM' | 'BD' | 'ST') => nomorBaru(j);
+
+/** Faktur distributor yang belum lunas: faktur tempo dari Surat Pesanan + hutang lama. */
+export function fakturTerbuka(s: State = state) {
+  const bayar = new Map<string, number>();
+  for (const a of s.arus) for (const f of a.faktur ?? []) bayar.set(f.id, (bayar.get(f.id) ?? 0) + f.jumlah);
+  const dariSP = s.sp.flatMap((sp) =>
+    sp.faktur.filter((f) => f.cara === 'tempo').map((f) => ({
+      id: `fk:${f.nomor}`, nomor: f.nomor, nomorDistributor: f.nomorDistributor, distributorId: sp.distributorId,
+      tanggal: f.waktu, total: f.total, lama: false,
+    })),
+  );
+  const lama = s.hutangLama.map((h) => ({
+    id: `hl:${h.id}`, nomor: h.nomor, nomorDistributor: h.nomor, distributorId: h.distributorId, tanggal: h.tanggal, total: h.total, lama: true,
+  }));
+  return [...lama, ...dariSP]
+    .map((f) => ({ ...f, dibayar: bayar.get(f.id) ?? 0, sisa: Math.max(0, f.total - (bayar.get(f.id) ?? 0)) }))
+    .filter((f) => f.sisa > 0);
 }
 
 /* ---------- Contoh awal untuk pratinjau ---------- */
@@ -914,6 +1073,34 @@ export function simpanRetur(data: Omit<Retur, 'id' | 'nomor' | 'waktuIso' | 'wak
   jual('PJ-2610-0226', 'umum', 1, 16, [{ produkId: 'skm', satuanProdukId: 'skm-klg', qty: 3 }, { produkId: 'kecap', satuanProdukId: 'kecap-btl', qty: 1 }], 'tunai', 300);
   jual('PJ-2610-0229', 'amir', 0, 8, [{ produkId: 'gulaku-5', satuanProdukId: 'gulaku-5-bks', qty: 2 }, { produkId: 'taro', satuanProdukId: 'taro-rtg', qty: 1 }], 'transfer');
   jual('PJ-2610-0230', 'umum', 0, 10, [{ produkId: 'sarimi', satuanProdukId: 'sarimi-pcs', qty: 10 }, { produkId: 'air-600', satuanProdukId: 'air-pcs', qty: 2 }], 'tunai', 500);
+
+  // Hutang lama ke distributor (tanpa rincian barang)
+  state = { ...state, hutangLama: [
+    { id: 'hl1', distributorId: 'dist-a', nomor: 'INV-0912', tanggal: lalu(26), total: 1250000 },
+    { id: 'hl2', distributorId: 'dist-b', nomor: 'F-2209', tanggal: lalu(16), total: 2400000 },
+  ] };
+
+  // Laci contoh: kemarin sudah ditutup; hari ini Kasir A sudah buka, Pemilik belum.
+  const jamKe = (h: number, j: number, m = 0) => { const w = new Date(); w.setDate(w.getDate() - h); w.setHours(j, m, 0, 0); return w.toISOString(); };
+  const notaDi = (nomor: string) => state.penjualan.find((n) => n.nomor === nomor)!;
+  const arusContoh = (sesiId: string, akun: string, waktuIso: string, a: Omit<ArusKas, 'id' | 'waktuIso' | 'akun' | 'sesiId' | 'sumber'> & { sumber?: ArusKas['sumber'] }) =>
+    (state = { ...state, arus: [...state.arus, { sumber: 'laci', ...a, id: id('ak'), waktuIso, akun, sesiId }] });
+  const n226 = notaDi('PJ-2610-0226');
+  state = { ...state, sesiLaci: [
+    { id: 'lc-k1', nomor: 'LC-2610-0001', akun: '[Kasir A]', tanggal: lalu(1), dibukaIso: jamKe(1, 7, 30), dariKemarin: 500000, tambahBrankas: 0,
+      ditutupIso: jamKe(1, 17, 5), uangFisik: 500000 + n226.total - 25000 - 700, selisih: -700, selisihDitanggung: 'toko',
+      pembagian: { sisaLaci: 500000, brankas: n226.total - 25000 - 700, bank: 0, prive: 0 } },
+    { id: 'lc-p1', nomor: 'LC-2610-0002', akun: '[Pemilik]', tanggal: lalu(1), dibukaIso: jamKe(1, 7, 0), dariKemarin: 300000, tambahBrankas: 0,
+      ditutupIso: jamKe(1, 17, 30), uangFisik: 300000, selisih: 0, pembagian: { sisaLaci: 300000, brankas: 0, bank: 0, prive: 0 } },
+    { id: 'lc-k2', nomor: 'LC-2610-0003', akun: '[Kasir A]', tanggal: hariIni(), dibukaIso: jamKe(0, 7, 30), dariKemarin: 500000, tambahBrankas: 0 },
+  ], urut: { ...state.urut, LC: 4 } };
+  arusContoh('lc-k1', '[Kasir A]', n226.waktuIso, { jenis: 'penjualan', nomor: n226.nomor, tunai: n226.total, transfer: 0, keterangan: 'Penjualan · Umum' });
+  arusContoh('lc-k1', '[Kasir A]', jamKe(1, 11), { jenis: 'pengeluaran', nomor: 'KK-2610-0001', tunai: -25000, transfer: 0, kategori: 'Bongkar muat & angkut', penerima: 'Pak Udin (kuli)', keterangan: 'Bongkar 2 colt gula' });
+  const n229 = notaDi('PJ-2610-0229');
+  const n230 = notaDi('PJ-2610-0230');
+  arusContoh('lc-k2', '[Kasir A]', n229.waktuIso, { jenis: 'penjualan', nomor: n229.nomor, tunai: 0, transfer: n229.total, keterangan: 'Penjualan · Amir' });
+  arusContoh('lc-k2', '[Kasir A]', n230.waktuIso, { jenis: 'penjualan', nomor: n230.nomor, tunai: n230.total, transfer: 0, keterangan: 'Penjualan · Umum' });
+  state = { ...state, urut: { ...state.urut, KK: 2 } };
 })();
 
 /** Hanya untuk tes: membaca state saat ini. */

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { diskonContoh, produkContoh } from '../../data/contoh';
 import {
-  bayarKasbon, catatKasbonPenjualan, catatPenjualan, nomorNotaBaru, pelangganDenganKasbon, ringkasKasbon, stokBebas, stokTerkunci,
+  akunAktif, bayarKasbon, catatArus, catatKasbonPenjualan, hariIni, laciTerakhirDitutup, laciTerbuka, catatPenjualan, nomorNotaBaru, pelangganDenganKasbon, ringkasKasbon, stokBebas, stokTerkunci,
   susunNotaPenjualan, tambahPelanggan, useToko,
 } from '../../data/toko';
 import { hitungHargaBaris } from '../../domain/harga';
@@ -17,8 +18,9 @@ import {
   type Keranjang, type Nota, type Tertahan,
 } from './model';
 import '../../styles/penjualan.css';
+import '../../styles/pesanan.css';
+import '../../styles/kasbon.css';
 
-const KASIR = '[Kasir A]';
 
 /** Satuan untuk menampilkan stok: satu per jenis satuan (isi terbesar), mis. "4 ktn 3 rtg 7 pcs". */
 function satuanTampil(p: Produk) {
@@ -123,11 +125,12 @@ export function Penjualan() {
     const sisaKasbon = plg.jenis === 'terdaftar' ? ringkasKasbon(plg.id).saldo : undefined;
     // Nota disimpan untuk Riwayat & Retur; stok berkurang.
     const n = susunNotaPenjualan({
-      nomor: no, waktuIso: new Date().toISOString(), pelangganId: plg.id, kasir: KASIR,
+      nomor: no, waktuIso: new Date().toISOString(), pelangganId: plg.id, kasir: akunAktif(),
       baris: aktif.baris, potongan: h.potongan, jenisPotongan: h.jenisPotongan,
       tunai: h.tunai, transfer: h.transfer, kembalian: h.kembalian, kasbonBaru: h.kasbonBaru, bayarKasbon: h.bayarKasbon, sisaKasbon,
     });
     catatPenjualan(n);
+    catatArus({ jenis: 'penjualan', nomor: no, tunai: h.tunai - h.kembalian, transfer: h.transfer, keterangan: `Penjualan · ${plg.nama}` });
     setNota(n.struk);
     setDialog(null);
   };
@@ -138,6 +141,25 @@ export function Penjualan() {
     setDialog(null);
   };
 
+
+  // Wajib buka kasir dulu sebelum berjualan.
+  const laci = laciTerbuka();
+  if (!laci) {
+    const lalu = laciTerakhirDitutup();
+    return (
+      <div className="ps-halaman">
+        <div className="kartu tumpuk lc-tutup-penjualan">
+          <h2>{lalu?.tanggal === hariIni() ? 'Laci sudah ditutup' : 'Buka kasir dulu'}</h2>
+          <p className="teks-pudar" style={{ margin: 0 }}>
+            Penjualan dicatat ke laci kasir. {lalu?.pembagian ? `Sisa laci sebelumnya ${rupiah(lalu.pembagian.sisaLaci)}.` : ''}
+          </p>
+          <Link to="/kasir/kas-laci/laci" className="tombol tombol--utama tombol--besar" style={{ alignSelf: 'flex-start' }}>
+            {lalu?.tanggal === hariIni() ? 'Buka kasir lagi' : 'Buka kasir'}
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={keranjangHp ? 'pj pj--keranjang-buka' : 'pj'}>

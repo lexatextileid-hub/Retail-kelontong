@@ -108,3 +108,18 @@ a.kb-tagihan__baris:hover { background: var(--permukaan-2); color: var(--teks); 
 .rw-grup:first-child .rw-tanggal { border-top: 0; padding-top: 6px; }
 .rw-tanggal + .rw-baris { border-top: 0; }
 .pp .pj__kategori { flex-wrap: wrap; overflow: visible; }
+
+/* ---------- Kas laci ---------- */
+.lc-dua { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.lc-aksi { display: flex; gap: 8px; flex-wrap: wrap; }
+.lc-angka { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.lc-angka > div { display: flex; flex-direction: column; gap: 2px; }
+.lc-angka strong { font-size: 18px; }
+.lc-angka .teks-pudar, .lc-angka .teks-bahaya { font-size: 12.5px; }
+.lc-bagi-lihat { display: flex; gap: 8px 18px; flex-wrap: wrap; font-size: 13px; color: var(--teks-2); padding-top: 10px; border-top: 1px solid var(--garis-halus); }
+.lc-bagi { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.lc-nilai { display: flex; flex-direction: column; align-items: flex-end; flex: none; text-align: right; }
+.lc-nilai .teks-pudar { font-size: 12px; }
+.lc-tutup-penjualan { max-width: 520px; margin: 40px auto; text-align: left; }
+.struk--biasa { font-family: inherit; max-width: none; font-size: 14px; }
+@media (max-width: 520px) { .lc-dua, .lc-bagi { grid-template-columns: 1fr; } }

@@ -14,6 +14,8 @@ import { Aturan } from './features/pengaturan/Aturan';
 import { BuatRetur } from './features/retur/BuatRetur';
 import { DaftarRetur } from './features/retur/DaftarRetur';
 import { Riwayat } from './features/riwayat/Riwayat';
+import { BayarDistributor, LaporanHarian, Pengeluaran } from './features/kaslaci/HalamanKas';
+import { LaciHariIni } from './features/kaslaci/LaciHariIni';
 import { DaftarKasbon } from './features/kasbon/DaftarKasbon';
 import { DetailKasbon } from './features/kasbon/DetailKasbon';
 import { KasbonLama } from './features/kasbon/KasbonLama';
@@ -107,10 +109,10 @@ export const menuKasir: Menu[] = [
       'Laporan harian: cetak thermal atau biasa',
     ],
     anak: [
-      { path: 'buka-tutup', judul: 'Buka / Tutup Kasir' },
-      { path: 'pengeluaran', judul: 'Pengeluaran' },
-      { path: 'bayar-distributor', judul: 'Bayar Distributor' },
-      { path: 'laporan-harian', judul: 'Laporan Harian' },
+      { path: 'laci', judul: 'Laci Hari Ini', halaman: <LaciHariIni /> },
+      { path: 'pengeluaran', judul: 'Pengeluaran', halaman: <Pengeluaran /> },
+      { path: 'bayar-distributor', judul: 'Bayar Distributor', halaman: <BayarDistributor /> },
+      { path: 'laporan-harian', judul: 'Laporan Harian', halaman: <LaporanHarian /> },
     ],
   },
 ];
