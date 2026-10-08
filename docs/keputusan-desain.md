@@ -255,6 +255,15 @@ Setiap barang memilih satu metode:
   5. Barang diserahkan → kasir membuka keranjang tertahan → bayar atau tempo. **Transaksi baru terjadi di sini.**
 - Selama ditahan stok belum berkurang, tapi barangnya ditandai **"sedang dipesan"**; kasir lain diingatkan bila menjual barang yang sama melebihi stok yang tersisa.
 
+## Surat Pesanan (SP) ke distributor
+
+- **SP adalah satu-satunya jalur membeli barang ke distributor.**
+- Saran SP otomatis dari: (1) stok habis / di bawah stok minimum, (2) baris pesanan pelanggan yang barangnya belum ada (ditandai "untuk pesanan PS-xxx"). Dikelompokkan per distributor; distributor bawaan = yang terakhir paling murah, bisa diganti.
+- SP bisa dikirim ke distributor lewat **WhatsApp** (teks siap kirim), disalin, atau dicetak.
+- **Faktur dibuat dari SP**: baris terisi otomatis, penerima mengecek isi kemasan, jumlah, dan harga. Selisih dengan SP (kurang kirim, beda harga, salah barang) terlihat.
+- Barang untuk pesanan langsung terkunci saat faktur dari SP dicatat.
+- Belum diputuskan: siapa yang membuat & mengirim SP (hanya pemilik di Back Office, atau gudang juga dengan PIN).
+
 ## Pesanan grosir (barang belum ada, perlu order ke distributor)
 
 - **Menu tersendiri, terpisah dari POS.** POS untuk pembeli yang datang dan langsung membawa barang; Pesanan untuk pembeli yang memesan dulu.

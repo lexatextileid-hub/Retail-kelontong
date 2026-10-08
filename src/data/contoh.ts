@@ -151,3 +151,52 @@ export const diskonContoh: DiskonPelanggan[] = [
 
 /** PIN pemilik untuk pratinjau saja. */
 export const PIN_PEMILIK_CONTOH = '1234';
+
+/* ---------- Distributor & harga beli (contoh) ---------- */
+
+export interface DistributorContoh {
+  id: string;
+  nama: string;
+  hp: string; // format internasional untuk WhatsApp, mis. 6281200000001
+  terminHari: number; // 0 = cash
+}
+
+export const distributorContoh: DistributorContoh[] = [
+  { id: 'dist-a', nama: 'Distributor A', hp: '6281200000001', terminHari: 14 },
+  { id: 'dist-b', nama: 'Distributor B', hp: '6281200000002', terminHari: 0 },
+  { id: 'dist-c', nama: 'Distributor C', hp: '6281200000003', terminHari: 7 },
+];
+
+export interface HargaBeliTerakhir {
+  distributorId: string;
+  satuanProdukId: string; // satuan beli
+  harga: number; // per satuan beli
+}
+
+/** Harga beli terakhir per barang per distributor (contoh). */
+export const hargaBeliContoh: Record<string, HargaBeliTerakhir[]> = {
+  'gulaku-5': [{ distributorId: 'dist-a', satuanProdukId: 'gulaku-5-ktn', harga: 340000 }],
+  'gula-curah': [{ distributorId: 'dist-b', satuanProdukId: 'gula-curah-krg', harga: 780000 }],
+  'minyak-1l': [{ distributorId: 'dist-a', satuanProdukId: 'minyak-ktn', harga: 204000 }],
+  sarimi: [
+    { distributorId: 'dist-a', satuanProdukId: 'sarimi-ktn50', harga: 150000 },
+    { distributorId: 'dist-c', satuanProdukId: 'sarimi-ktn25', harga: 76000 },
+  ],
+  taro: [{ distributorId: 'dist-c', satuanProdukId: 'taro-ktn', harga: 105000 }],
+  amild: [{ distributorId: 'dist-a', satuanProdukId: 'amild-slp', harga: 312000 }],
+  'rokok-hs': [{ distributorId: 'dist-a', satuanProdukId: 'hs-slp', harga: 195000 }],
+  'air-600': [{ distributorId: 'dist-b', satuanProdukId: 'air-ktn', harga: 64000 }],
+  skm: [{ distributorId: 'dist-c', satuanProdukId: 'skm-ktn', harga: 552000 }],
+  kecap: [{ distributorId: 'dist-c', satuanProdukId: 'kecap-ktn', harga: 246000 }],
+  deterjen: [{ distributorId: 'dist-b', satuanProdukId: 'det-ktn', harga: 228000 }],
+  'bawang-merah': [{ distributorId: 'dist-b', satuanProdukId: 'bwm-kg', harga: 32000 }],
+  'bawang-putih': [{ distributorId: 'dist-b', satuanProdukId: 'bwp-kg', harga: 30000 }],
+  kemiri: [{ distributorId: 'dist-b', satuanProdukId: 'kemiri-kg', harga: 44000 }],
+};
+
+/** Modal rata-rata stok yang ada saat ini, per satuan dasar (contoh). */
+export const modalContoh: Record<string, number> = {
+  'gulaku-5': 85000, 'gula-curah': 15600, 'gula-1kg': 16300, 'minyak-1l': 17000, sarimi: 3000, taro: 2100,
+  amild: 31200, 'rokok-hs': 19500, 'air-600': 2670, skm: 11500, kecap: 20500, deterjen: 19000,
+  'bawang-merah': 32000, 'bawang-putih': 30000, kemiri: 44000,
+};

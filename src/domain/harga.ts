@@ -14,6 +14,15 @@ export interface HasilHarga {
   netto: number;
 }
 
+/** Persen untung dari modal (markup), dibulatkan 1 desimal. Modal 0 → Infinity. */
+export function untungDariModal(hargaJualTotal: number, modalTotal: number): number {
+  if (modalTotal <= 0) return Infinity;
+  return Math.round(((hargaJualTotal - modalTotal) / modalTotal) * 1000) / 10;
+}
+
+/** Target untung bawaan (Pengaturan). */
+export const TARGET_UNTUNG_PERSEN = 5;
+
 /** Tingkat yang berlaku = tingkat dengan mulaiJumlah terbesar yang sudah tercapai. */
 export function cariTingkat(tingkat: TingkatHarga[], jumlahDasar: number): TingkatHarga | undefined {
   return [...tingkat]
