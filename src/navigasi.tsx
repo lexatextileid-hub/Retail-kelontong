@@ -9,6 +9,11 @@ import { BuatPesanan } from './features/pesanan/BuatPesanan';
 import { DaftarPesanan } from './features/pesanan/DaftarPesanan';
 import { DetailPesanan } from './features/pesanan/DetailPesanan';
 import { Penjualan } from './features/penjualan/Penjualan';
+import { BarangRusak } from './features/gudang/BarangRusak';
+import { Aturan } from './features/pengaturan/Aturan';
+import { BuatRetur } from './features/retur/BuatRetur';
+import { DaftarRetur } from './features/retur/DaftarRetur';
+import { Riwayat } from './features/riwayat/Riwayat';
 import { DaftarKasbon } from './features/kasbon/DaftarKasbon';
 import { DetailKasbon } from './features/kasbon/DetailKasbon';
 import { KasbonLama } from './features/kasbon/KasbonLama';
@@ -78,13 +83,18 @@ export const menuKasir: Menu[] = [
   },
   {
     path: 'retur', judul: 'Retur', ikon: 'retur',
-    ringkasan: 'Retur dari pembeli, wajib dengan nota, maksimal 3×24 jam.',
-    rencana: ['Ketik nomor nota, atau cari lewat tanggal / nama pelanggan', 'Uang kembali, tukar barang, atau potong kasbon; barang bagus atau rusak', 'Perlu PIN pemilik'],
+    ringkasan: 'Retur dari pembeli: dari nota, pesanan, atau tanpa nota (pengecualian).',
+    rencana: ['Ketik nomor nota, atau cari lewat nama pelanggan', 'Uang kembali, tukar barang, atau potong kasbon; barang bagus atau rusak', 'Perlu PIN pemilik'],
+    anak: [
+      { path: 'baru', judul: 'Retur Baru', halaman: <BuatRetur /> },
+      { path: 'daftar', judul: 'Daftar Retur', halaman: <DaftarRetur /> },
+    ],
   },
   {
     path: 'riwayat', judul: 'Riwayat', ikon: 'riwayat',
-    ringkasan: 'Semua nota hari ini.',
+    ringkasan: 'Semua transaksi per tanggal: penjualan, bayar kasbon, retur.',
     rencana: ['Cari dan filter nota', 'Cetak ulang, kirim WhatsApp, retur (PIN pemilik)'],
+    halaman: <Riwayat />,
   },
   {
     path: 'kas-laci', judul: 'Kas Laci', ikon: 'kas',
@@ -167,6 +177,7 @@ export const menuGudang: Menu[] = [
     path: 'barang-rusak', judul: 'Barang Rusak', ikon: 'rusak',
     ringkasan: 'Penampung barang rusak.',
     rencana: ['Dari retur pembeli, hitung stok, atau gudang', 'Diretur ke distributor atau dibuang (kerugian)'],
+    halaman: <BarangRusak />,
   },
 ];
 
@@ -247,7 +258,7 @@ export const menuBackOffice: Menu[] = [
     anak: [
       { path: 'toko', judul: 'Toko' },
       { path: 'pengguna', judul: 'Pengguna & Akses' },
-      { path: 'aturan', judul: 'Aturan' },
+      { path: 'aturan', judul: 'Aturan', halaman: <Aturan /> },
       { path: 'data-induk', judul: 'Data Induk' },
     ],
   },

@@ -6,7 +6,8 @@ import { useSyncExternalStore } from 'react';
 import { diskonContoh, hargaBeliContoh, modalContoh, pelangganContoh, stokContoh, type PelangganContoh } from './contoh';
 import { alokasiTertua, isoHari, selisihHari, tambahHari } from '../domain/kasbon';
 import { hitungHargaBaris, TARGET_UNTUNG_PERSEN, untungDariModal } from '../domain/harga';
-import { ambilProduk, ambilSatuan } from '../features/penjualan/model';
+import { ambilProduk, ambilSatuan, bolehDesimal, singkatan, type Nota } from '../features/penjualan/model';
+import { ATURAN_RETUR_BAWAAN, nilaiAkhirBaris, nilaiRetur as hitungNilaiRetur, type AturanRetur } from '../domain/retur';
 
 export type Peran = 'pemilik' | 'admin' | 'kasir';
 
@@ -34,8 +35,8 @@ export interface BarisPesanan {
 export interface Pembayaran {
   waktu: string;
   jumlah: number;
-  metode: 'tunai' | 'transfer';
-  jenis: 'DP' | 'Pelunasan' | 'Cicilan';
+  metode: 'tunai' | 'transfer' | 'retur';
+  jenis: 'DP' | 'Pelunasan' | 'Cicilan' | 'Retur';
   oleh: string;
 }
 
@@ -123,9 +124,9 @@ export interface BayarKasbon {
   tanggal: string;
   waktu: string;
   jumlah: number;
-  metode: 'tunai' | 'transfer';
+  metode: 'tunai' | 'transfer' | 'retur';
   bank?: string; // keterangan saja, mis. BCA
-  lewat: 'kasbon' | 'penjualan';
+  lewat: 'kasbon' | 'penjualan' | 'retur';
   alokasi: { notaId: string; nomor: string; jumlah: number }[];
   oleh: string;
 }
@@ -144,25 +145,111 @@ export interface TagihanKasbon {
   pesananId?: string;
 }
 
+/* ---------- Nota penjualan, retur, barang rusak ---------- */
+
+export interface BarisJual {
+  id: string;
+  produkId: string;
+  satuanProdukId: string;
+  qty: number;
+  jumlahDasar: number;
+  hargaSatuan: number;
+  netto: number; // setelah diskon baris/pelanggan
+  nilai: number; // setelah potongan akhir dibagi sebanding — dasar uang retur
+}
+
+export interface NotaPenjualan {
+  id: string;
+  nomor: string;
+  waktuIso: string;
+  tanggal: string;
+  pelangganId: string;
+  baris: BarisJual[];
+  total: number; // setelah potongan akhir
+  tunai: number;
+  transfer: number;
+  kasbonBaru: number;
+  bayarKasbon: number;
+  struk: Nota;
+}
+
+export interface BarisRetur {
+  produkId: string;
+  satuanProdukId?: string;
+  asalBarisId?: string; // baris nota / baris pesanan asal
+  jumlahDasar: number;
+  nilai: number;
+  kondisi: 'bagus' | 'rusak';
+}
+
+export interface BarisTukar {
+  produkId: string;
+  satuanProdukId: string;
+  qty: number;
+  jumlahDasar: number;
+  netto: number;
+}
+
+export type CaraSelisih = 'pas' | 'tunai' | 'transfer' | 'kasbon' | 'tagihan-pesanan';
+
+export interface Retur {
+  id: string;
+  nomor: string; // RT-…
+  waktuIso: string;
+  waktu: string;
+  sumber: 'nota' | 'pesanan' | 'tanpa-nota';
+  notaId?: string;
+  pesananId?: string;
+  nomorAsal?: string;
+  pelangganId: string;
+  baris: BarisRetur[];
+  tukar: BarisTukar[];
+  nilaiRetur: number;
+  nilaiTukar: number;
+  /** Positif: toko mengembalikan. Negatif: pelanggan menambah. */
+  selisih: number;
+  cara: CaraSelisih;
+  bank?: string;
+  alasan: string;
+  pengecualian?: string; // mis. "lewat batas 3×24 jam, disetujui PIN pemilik"
+  oleh: string;
+}
+
+export interface BarangRusak {
+  id: string;
+  produkId: string;
+  jumlahDasar: number;
+  tanggal: string;
+  asal: string; // mis. "Retur RT-2610-0001"
+}
+
 interface State {
   peran: Peran;
+  penjualan: NotaPenjualan[];
+  retur: Retur[];
+  barangRusak: BarangRusak[];
+  aturanRetur: AturanRetur;
   pelanggan: PelangganContoh[];
   notaKasbon: NotaKasbon[];
   bayarKasbon: BayarKasbon[];
   pesanan: Pesanan[];
   sp: SuratPesanan[];
-  urut: Record<'PS' | 'SP' | 'SJ' | 'PB' | 'KL' | 'BK', number>;
+  urut: Record<'PS' | 'SP' | 'SJ' | 'PB' | 'KL' | 'BK' | 'PJ' | 'RT', number>;
   stokTambahan: Record<string, number>; // stok umum yang masuk dari SP (pratinjau)
 }
 
 let state: State = {
   peran: 'pemilik',
+  penjualan: [],
+  retur: [],
+  barangRusak: [],
+  aturanRetur: ATURAN_RETUR_BAWAAN,
   pelanggan: pelangganContoh,
   notaKasbon: [],
   bayarKasbon: [],
   pesanan: [],
   sp: [],
-  urut: { PS: 1, SP: 1, SJ: 1, PB: 1, KL: 1, BK: 1 },
+  urut: { PS: 1, SP: 1, SJ: 1, PB: 1, KL: 1, BK: 1, PJ: 231, RT: 1 },
   stokTambahan: {},
 };
 const pendengar = new Set<() => void>();
@@ -635,7 +722,7 @@ export function catatKasbonLama(data: { pelangganId: string; tanggal: string; ju
  * Bagian untuk pesanan dicatat juga sebagai pembayaran pesanan (status pesanan ikut bergerak).
  */
 export function bayarKasbon(data: {
-  pelangganId: string; jumlah: number; metode: 'tunai' | 'transfer'; bank?: string; lewat?: 'kasbon' | 'penjualan';
+  pelangganId: string; jumlah: number; metode: 'tunai' | 'transfer' | 'retur'; bank?: string; lewat?: 'kasbon' | 'penjualan' | 'retur';
   alokasi?: { notaId: string; jumlah: number }[];
 }): BayarKasbon {
   const tagihan = tagihanPelanggan(data.pelangganId);
@@ -666,6 +753,124 @@ export function bayarKasbon(data: {
 export const riwayatBayarKasbon = (pelangganId: string, s: State = state) =>
   s.bayarKasbon.filter((b) => b.pelangganId === pelangganId).slice().reverse();
 
+/* ---------- Penjualan (nota kasir) ---------- */
+
+export const nomorNotaBaru = () => nomorBaru('PJ');
+
+const tambahStok = (s: State, produkId: string, n: number): State => ({
+  ...s, stokTambahan: { ...s.stokTambahan, [produkId]: (s.stokTambahan[produkId] ?? 0) + n },
+});
+
+/** Susun nota penjualan dari isi keranjang + hasil bayar (dipakai kasir dan data contoh). */
+export function susunNotaPenjualan(d: {
+  nomor: string; waktuIso: string; pelangganId: string; kasir: string;
+  baris: { produkId: string; satuanProdukId: string; qty: number; diskonManual?: number; hargaManual?: number }[];
+  potongan: number; jenisPotongan?: Nota['jenisPotongan'];
+  tunai: number; transfer: number; kembalian: number; kasbonBaru: number; bayarKasbon: number; sisaKasbon?: number;
+}): Omit<NotaPenjualan, 'id'> {
+  const plg = ambilPelanggan(d.pelangganId);
+  const hitung = d.baris.map((b, i) => {
+    const p = ambilProduk(b.produkId);
+    const s = ambilSatuan(p, b.satuanProdukId);
+    const h = hitungHargaBaris(p, b.satuanProdukId, b.qty, plg, diskonContoh, b.diskonManual, b.hargaManual);
+    return { key: `b${i}`, b, p, s, h };
+  });
+  const subtotal = hitung.reduce((t, x) => t + x.h.bruto, 0);
+  const diskon = hitung.reduce((t, x) => t + x.h.diskon, 0);
+  const total = subtotal - diskon - d.potongan;
+  const nilai = nilaiAkhirBaris(hitung.map((x) => ({ id: x.key, netto: x.h.netto, jumlahDasar: x.h.jumlahDasar })), total);
+  const w = new Date(d.waktuIso);
+  return {
+    nomor: d.nomor, waktuIso: d.waktuIso, tanggal: isoHari(w), pelangganId: d.pelangganId, total,
+    tunai: d.tunai, transfer: d.transfer, kasbonBaru: d.kasbonBaru, bayarKasbon: d.bayarKasbon,
+    baris: hitung.map((x) => ({
+      id: id('bj'), produkId: x.b.produkId, satuanProdukId: x.b.satuanProdukId, qty: x.b.qty, jumlahDasar: x.h.jumlahDasar,
+      hargaSatuan: x.h.hargaSatuan, netto: x.h.netto, nilai: nilai[x.key],
+    })),
+    struk: {
+      nomor: d.nomor,
+      waktu: `${w.toLocaleDateString('id-ID')} ${w.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`,
+      kasir: d.kasir, pelanggan: plg.nama,
+      baris: hitung.map((x) => ({
+        nama: x.p.nama, label: bolehDesimal(x.s.satuanId) ? singkatan(x.s.satuanId) : x.s.label,
+        qty: x.b.qty, hargaSatuan: x.h.hargaSatuan, bruto: x.h.bruto, diskon: x.h.diskon,
+      })),
+      subtotal, diskonPelanggan: diskon, potongan: d.potongan, jenisPotongan: d.jenisPotongan, total,
+      bayarKasbon: d.bayarKasbon, tunai: d.tunai, transfer: d.transfer, kembalian: d.kembalian, kasbonBaru: d.kasbonBaru, sisaKasbon: d.sisaKasbon,
+    },
+  };
+}
+
+/** Simpan nota penjualan (untuk Riwayat & Retur) dan kurangi stok. */
+export function catatPenjualan(n: Omit<NotaPenjualan, 'id'>): string {
+  const nota: NotaPenjualan = { ...n, id: id('pj') };
+  ubah((s) => n.baris.reduce((x, b) => tambahStok(x, b.produkId, -b.jumlahDasar), { ...s, penjualan: [nota, ...s.penjualan] }));
+  return nota.id;
+}
+
+/* ---------- Retur ---------- */
+
+export const aturAturanRetur = (a: AturanRetur) => ubah((s) => ({ ...s, aturanRetur: a }));
+
+/** Jumlah (satuan dasar) yang sudah diretur dari satu baris asal. */
+export function sudahDiretur(asal: { notaId?: string; pesananId?: string }, asalBarisId: string, s: State = state) {
+  return s.retur
+    .filter((r) => (asal.notaId ? r.notaId === asal.notaId : r.pesananId === asal.pesananId))
+    .flatMap((r) => r.baris)
+    .filter((b) => b.asalBarisId === asalBarisId)
+    .reduce((t, b) => t + b.jumlahDasar, 0);
+}
+
+/** Baris pesanan yang bisa diretur: yang sudah diserahkan; nilai = harga setelah diskon per satuan dasar. */
+export function barisReturPesanan(p: Pesanan) {
+  return ringkasPesanan(p).baris
+    .filter((x) => x.b.diserahkan > 0)
+    .map((x) => ({
+      id: x.b.id, produkId: x.b.produkId, satuanProdukId: x.b.satuanProdukId,
+      jumlahDasar: x.b.diserahkan, nilai: hitungNilaiRetur(x.h.netto, x.total, x.b.diserahkan),
+    }));
+}
+
+export function simpanRetur(data: Omit<Retur, 'id' | 'nomor' | 'waktuIso' | 'waktu' | 'oleh'>): Retur {
+  const nomor = nomorBaru('RT');
+  const r: Retur = { ...data, id: id('rt'), nomor, waktuIso: new Date().toISOString(), waktu: sekarang(), oleh: namaAkun[state.peran] };
+  ubah((s) => {
+    let x: State = { ...s, retur: [r, ...s.retur] };
+    for (const b of r.baris) {
+      if (b.kondisi === 'bagus') x = tambahStok(x, b.produkId, b.jumlahDasar);
+      else x = { ...x, barangRusak: [...x.barangRusak, { id: id('br'), produkId: b.produkId, jumlahDasar: b.jumlahDasar, tanggal: hariIni(), asal: `Retur ${nomor}` }] };
+    }
+    for (const t of r.tukar) x = tambahStok(x, t.produkId, -t.jumlahDasar);
+    return x;
+  });
+  // Selisih uang
+  if (r.cara === 'kasbon' && r.selisih > 0) {
+    // Toko berutang ke pelanggan → mengurangi kasbon (nota asal dulu bila masih ada sisa).
+    const tagihan = tagihanPelanggan(r.pelangganId);
+    const asal = tagihan.find((t) => t.nomor === r.nomorAsal && t.sisa > 0);
+    let sisa = r.selisih;
+    const alokasi: { notaId: string; jumlah: number }[] = [];
+    for (const t of [...(asal ? [asal] : []), ...tagihan.filter((t) => t !== asal && t.sisa > 0)]) {
+      if (sisa <= 0) break;
+      const pakai = Math.min(sisa, t.sisa);
+      alokasi.push({ notaId: t.id, jumlah: pakai });
+      sisa -= pakai;
+    }
+    bayarKasbon({ pelangganId: r.pelangganId, jumlah: r.selisih - sisa, metode: 'retur', lewat: 'retur', alokasi });
+  }
+  if (r.cara === 'kasbon' && r.selisih < 0) catatKasbonPenjualan(r.pelangganId, nomor, -r.selisih);
+  if (r.cara === 'tagihan-pesanan' && r.pesananId && r.selisih > 0) {
+    ubahPesanan(
+      r.pesananId,
+      (p) => ({ ...p, pembayaran: [...p.pembayaran, { waktu: sekarang(), jumlah: r.selisih, metode: 'retur', jenis: 'Retur', oleh: r.oleh }] }),
+      `Retur ${nomor}: tagihan dipotong ${r.selisih.toLocaleString('id-ID')}`,
+    );
+  } else if (r.pesananId) {
+    ubahPesanan(r.pesananId, (p) => p, `Retur ${nomor} (${r.nilaiRetur.toLocaleString('id-ID')})`);
+  }
+  return r;
+}
+
 /* ---------- Contoh awal untuk pratinjau ---------- */
 (function isiContoh() {
   const besok = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
@@ -688,9 +893,27 @@ export const riwayatBayarKasbon = (pelangganId: string, s: State = state) =>
   const nota = (pelangganId: string, nomor: string, h: number, jumlah: number) =>
     (state = { ...state, notaKasbon: [...state.notaKasbon, { id: id('nk'), nomor, pelangganId, tanggal: lalu(h), jumlah, sumber: 'penjualan', oleh: '[Kasir A]' }] });
   nota('antok', 'PJ-2609-0201', 12, 60000);
-  nota('antok', 'PJ-2610-0219', 3, 35000);
   nota('bu-sri', 'PJ-2610-0184', 6, 300000);
-  nota('bu-sri', 'PJ-2610-0221', 2, 120000);
+
+  // Nota penjualan contoh (Riwayat & Retur). Yang kasbon sekaligus jadi nota kasbon.
+  const jual = (nomor: string, pelangganId: string, hariLalu: number, jam: number, baris: { produkId: string; satuanProdukId: string; qty: number }[],
+    bayar: 'tunai' | 'transfer' | 'kasbon', potongan = 0) => {
+    const w = new Date(); w.setDate(w.getDate() - hariLalu); w.setHours(jam, 15, 0, 0);
+    const n = susunNotaPenjualan({ nomor, waktuIso: w.toISOString(), pelangganId, kasir: '[Kasir A]', baris, potongan,
+      jenisPotongan: potongan ? (potongan <= 500 ? 'Pembulatan' : 'Diskon akhir') : undefined,
+      tunai: 0, transfer: 0, kembalian: 0, kasbonBaru: 0, bayarKasbon: 0 });
+    const total = n.total;
+    const final = { ...n, tunai: bayar === 'tunai' ? total : 0, transfer: bayar === 'transfer' ? total : 0, kasbonBaru: bayar === 'kasbon' ? total : 0,
+      struk: { ...n.struk, tunai: bayar === 'tunai' ? total : 0, transfer: bayar === 'transfer' ? total : 0, kasbonBaru: bayar === 'kasbon' ? total : 0 } };
+    state = { ...state, penjualan: [{ ...final, id: id('pj') }, ...state.penjualan] };
+    if (bayar === 'kasbon')
+      state = { ...state, notaKasbon: [...state.notaKasbon, { id: id('nk'), nomor, pelangganId, tanggal: n.tanggal, jumlah: total, sumber: 'penjualan', oleh: '[Kasir A]' }] };
+  };
+  jual('PJ-2610-0219', 'antok', 3, 9, [{ produkId: 'gula-1kg', satuanProdukId: 'gula-1kg-bks', qty: 2 }], 'kasbon');
+  jual('PJ-2610-0221', 'bu-sri', 2, 14, [{ produkId: 'sarimi', satuanProdukId: 'sarimi-ktn25', qty: 1 }, { produkId: 'minyak-1l', satuanProdukId: 'minyak-pcs', qty: 2 }], 'kasbon');
+  jual('PJ-2610-0226', 'umum', 1, 16, [{ produkId: 'skm', satuanProdukId: 'skm-klg', qty: 3 }, { produkId: 'kecap', satuanProdukId: 'kecap-btl', qty: 1 }], 'tunai', 300);
+  jual('PJ-2610-0229', 'amir', 0, 8, [{ produkId: 'gulaku-5', satuanProdukId: 'gulaku-5-bks', qty: 2 }, { produkId: 'taro', satuanProdukId: 'taro-rtg', qty: 1 }], 'transfer');
+  jual('PJ-2610-0230', 'umum', 0, 10, [{ produkId: 'sarimi', satuanProdukId: 'sarimi-pcs', qty: 10 }, { produkId: 'air-600', satuanProdukId: 'air-pcs', qty: 2 }], 'tunai', 500);
 })();
 
 /** Hanya untuk tes: membaca state saat ini. */

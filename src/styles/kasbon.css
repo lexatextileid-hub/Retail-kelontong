@@ -63,3 +63,31 @@ a.kb-tagihan__baris:hover { background: var(--permukaan-2); color: var(--teks); 
   box-shadow: 0 8px 24px rgba(23, 32, 51, 0.12);
 }
 @media (max-width: 860px) { .kb-bilah-pilih { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
+
+/* ---------- Riwayat & Retur ---------- */
+.rw-daftar { display: flex; flex-direction: column; padding: 4px 16px; }
+.rw-baris {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 8px; margin: 0 -8px;
+  border: 0; border-top: 1px solid var(--garis-halus); background: none; text-align: left; cursor: pointer; border-radius: var(--radius); color: var(--teks); font: inherit;
+}
+.rw-baris:first-child { border-top: 0; }
+.rw-baris:hover { background: var(--permukaan-2); }
+.rw-baris__kiri { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.rw-baris__kiri .teks-pudar { font-size: 12.5px; }
+.rw-baris__nomor { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.rw-baris__nilai { flex: none; }
+
+.rt-baris { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 8px; margin: 0 -8px; border-top: 1px solid var(--garis-halus); border-radius: var(--radius); }
+.rt-baris--pilih { background: var(--biru-muda); }
+.rt-baris__info { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 220px; }
+.rt-baris__info .teks-pudar { font-size: 12.5px; }
+.rt-baris__isian { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.rt-baris__nilai { min-width: 90px; text-align: right; }
+.rt-qty { display: flex; align-items: center; gap: 6px; }
+.rt-qty input { width: 64px; height: 36px; text-align: center; }
+.rt-qty .teks-pudar { font-size: 12.5px; }
+.saklar--kecil { height: 34px; }
+.saklar--kecil button { padding: 0 10px; font-size: 13px; }
+.rt-cara { display: flex; flex-direction: column; gap: 8px; }
+.rt-cara .teks-pudar { font-size: 12.5px; }
+.rt-cara--mati { opacity: 0.5; cursor: not-allowed; }

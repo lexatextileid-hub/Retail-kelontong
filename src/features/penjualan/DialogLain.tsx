@@ -12,7 +12,25 @@ export function DialogStruk({ nota, onSelesai }: { nota: Nota; onSelesai: () => 
   const [info, setInfo] = useState('');
   return (
     <Dialog judul={`Transaksi ${nota.nomor} selesai`} onTutup={onSelesai} lebar={420}>
+      <IsiStruk nota={nota} />
+      <div className="baris-tombol">
+        <button type="button" className="tombol" onClick={() => setInfo('Di versi jadi, struk masuk antrian stasiun printer.')}>Cetak</button>
+        <button type="button" className="tombol" onClick={() => setInfo('Di versi jadi, struk diunduh sebagai gambar/PDF.')}>Unduh</button>
+        <button type="button" className="tombol" onClick={() => setInfo('Di versi jadi, struk dikirim ke WhatsApp pelanggan.')}>WhatsApp</button>
+      </div>
+      {info && <p className="catatan catatan--info">{info}</p>}
+      <button type="button" className="tombol tombol--utama tombol--besar" onClick={onSelesai} autoFocus>
+        Transaksi baru
+      </button>
+    </Dialog>
+  );
+}
+
+/** Isi struk penjualan (dipakai saat transaksi selesai dan cetak ulang dari Riwayat). */
+export function IsiStruk({ nota, salinan }: { nota: Nota; salinan?: boolean }) {
+  return (
       <div className="struk" aria-label="Pratinjau struk">
+        {salinan && <div className="struk__tengah struk__tebal">*** SALINAN ***</div>}
         <div className="struk__tengah">
           <strong>[Nama Toko]</strong>
           <div>[Alamat toko] · [No. HP]</div>
@@ -49,16 +67,6 @@ export function DialogStruk({ nota, onSelesai }: { nota: Nota; onSelesai: () => 
         <div className="struk__garis" />
         <div className="struk__tengah">{CATATAN_STRUK}</div>
       </div>
-      <div className="baris-tombol">
-        <button type="button" className="tombol" onClick={() => setInfo('Di versi jadi, struk masuk antrian stasiun printer.')}>Cetak</button>
-        <button type="button" className="tombol" onClick={() => setInfo('Di versi jadi, struk diunduh sebagai gambar/PDF.')}>Unduh</button>
-        <button type="button" className="tombol" onClick={() => setInfo('Di versi jadi, struk dikirim ke WhatsApp pelanggan.')}>WhatsApp</button>
-      </div>
-      {info && <p className="catatan catatan--info">{info}</p>}
-      <button type="button" className="tombol tombol--utama tombol--besar" onClick={onSelesai} autoFocus>
-        Transaksi baru
-      </button>
-    </Dialog>
   );
 }
 

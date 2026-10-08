@@ -115,3 +115,31 @@ describe('kasbon', () => {
     expect(ringkasPesanan(__state().pesanan.find((x) => x.id === ps)!).status).toBe('Lunas');
   });
 });
+
+describe('retur', () => {
+  it('retur sebagian dari nota kasbon: potong kasbon, barang bagus kembali ke stok, rusak ke barang rusak', async () => {
+    const { catatPenjualan, simpanRetur, sudahDiretur, susunNotaPenjualan, stokBebas } = await import('./toko');
+    const plg = tambahPelanggan('Bu Retur');
+    const n = susunNotaPenjualan({
+      nomor: 'PJ-UJI-R1', waktuIso: new Date().toISOString(), pelangganId: plg, kasir: 'uji',
+      baris: [{ produkId: 'kecap', satuanProdukId: 'kecap-btl', qty: 4 }], potongan: 0,
+      tunai: 0, transfer: 0, kembalian: 0, kasbonBaru: 0, bayarKasbon: 0,
+    });
+    const notaId = catatPenjualan({ ...n, kasbonBaru: n.total });
+    catatKasbonPenjualan(plg, 'PJ-UJI-R1', n.total);
+    const stokSebelum = stokBebas('kecap');
+    const per = n.baris[0].nilai / 4;
+    simpanRetur({
+      sumber: 'nota', notaId, nomorAsal: 'PJ-UJI-R1', pelangganId: plg,
+      baris: [
+        { produkId: 'kecap', asalBarisId: n.baris[0].id, jumlahDasar: 1, nilai: per, kondisi: 'bagus' },
+        { produkId: 'kecap', asalBarisId: n.baris[0].id, jumlahDasar: 1, nilai: per, kondisi: 'rusak' },
+      ],
+      tukar: [], nilaiRetur: per * 2, nilaiTukar: 0, selisih: per * 2, cara: 'kasbon', alasan: 'Rusak / cacat',
+    });
+    expect(ringkasKasbon(plg).saldo).toBe(n.total - per * 2);
+    expect(stokBebas('kecap')).toBe(stokSebelum + 1);
+    expect(__state().barangRusak.some((b) => b.asal.startsWith('Retur') && b.produkId === 'kecap')).toBe(true);
+    expect(sudahDiretur({ notaId }, n.baris[0].id)).toBe(2);
+  });
+});

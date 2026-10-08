@@ -153,6 +153,15 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - **Retur ke distributor → Mode Gudang → Retur ke Distributor.** Pilih distributor & faktur asal → potong hutang / uang kembali / diganti barang. Fitur aktif untuk semua; di data distributor ada tanda **"menerima retur: ya/tidak"** sebagai panduan.
 - **Barang Rusak (Mode Gudang):** penampung barang rusak dari retur pembeli, hitung stok, atau gudang; diputuskan dikembalikan ke distributor atau dibuang (dicatat sebagai kerugian).
 
+- **Aturan retur bisa diatur pemilik** (Back Office → Pengaturan → Aturan): batas waktu (bawaan 3×24 jam, dihitung dari jam di nota), boleh **lewat batas dengan PIN pemilik**, boleh **tanpa nota dengan PIN pemilik** (harga jual sekarang). Untuk pelanggan tertentu yang dekat dengan pemilik / ngeyel. Pengecualian tercatat di bukti retur.
+- **Nilai uang retur = harga setelah diskon** (diskon baris, diskon pelanggan, dan potongan akhir nota dibagi sebanding ke setiap barang), bukan harga barang sekarang.
+- **Uang kembali bisa dipilih**: tunai atau transfer (nama bank sebagai keterangan), atau potong kasbon (pelanggan terdaftar).
+- **Tukar barang boleh barang lain.** Selisih: toko mengembalikan uang / potong kasbon, atau pelanggan menambah bayar (tunai, transfer, atau kasbon untuk pelanggan terdaftar).
+- **Pesanan pelanggan juga bisa diretur** (barang yang sudah diserahkan, batas dihitung dari tanggal serah); selisih bisa memotong sisa tagihan pesanan.
+- Jumlah yang sudah diretur dicatat per baris nota, jadi tidak bisa diretur dua kali.
+- Barang rusak dari retur masuk **Gudang → Barang Rusak** (tidak dihitung stok jual).
+- **Riwayat** (Mode Kasir): semua transaksi per tanggal (penjualan, bayar kasbon, retur), cari nomor/pelanggan, cetak ulang struk (bertanda SALINAN), lanjut retur dari nota.
+
 ## Periode laporan
 
 - Laporan **harian** (per kasir) dan **bulanan**. Periode bulanan mengikuti kalender: tanggal 1 sampai akhir bulan (28/29/30/31 menyesuaikan).

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { diskonContoh, produkContoh } from '../../data/contoh';
 import {
-  bayarKasbon, catatKasbonPenjualan, pelangganDenganKasbon, ringkasKasbon, stokBebas, stokTerkunci, tambahPelanggan, useToko,
+  bayarKasbon, catatKasbonPenjualan, catatPenjualan, nomorNotaBaru, pelangganDenganKasbon, ringkasKasbon, stokBebas, stokTerkunci,
+  susunNotaPenjualan, tambahPelanggan, useToko,
 } from '../../data/toko';
 import { hitungHargaBaris } from '../../domain/harga';
 import { kategoriBawaan } from '../../domain/kategoriBawaan';
@@ -35,7 +36,6 @@ export function Penjualan() {
   const [dialog, setDialog] = useState<null | 'bayar' | 'tahan' | 'pelanggan'>(null);
   const [nota, setNota] = useState<Nota | null>(null);
   const [siapkan, setSiapkan] = useState<Tertahan | null>(null);
-  const [nomor, setNomor] = useState(231);
   const [keranjangHp, setKeranjangHp] = useState(false);
 
   const { pelanggan } = useToko();
@@ -117,39 +117,18 @@ export function Penjualan() {
   };
 
   const selesai = (h: HasilBayar) => {
-    const no = `PJ-2610-${String(nomor).padStart(4, '0')}`;
+    const no = nomorNotaBaru();
     if (h.kasbonBaru > 0) catatKasbonPenjualan(plg.id, no, h.kasbonBaru);
     if (h.bayarKasbon > 0) bayarKasbon({ pelangganId: plg.id, jumlah: h.bayarKasbon, metode: h.tunai > 0 || h.transfer === 0 ? 'tunai' : 'transfer', lewat: 'penjualan' });
     const sisaKasbon = plg.jenis === 'terdaftar' ? ringkasKasbon(plg.id).saldo : undefined;
-    setNota({
-      nomor: no,
-      waktu: `${new Date().toLocaleDateString('id-ID')} ${jam()}`,
-      kasir: KASIR,
-      pelanggan: plg.nama,
-      baris: hasilBaris.map(({ baris, produk, hasil }) => {
-        const s = ambilSatuan(produk, baris.satuanProdukId);
-        return {
-          nama: produk.nama,
-          label: bolehDesimal(s.satuanId) ? singkatan(s.satuanId) : s.label,
-          qty: baris.qty,
-          hargaSatuan: hasil.hargaSatuan,
-          bruto: hasil.bruto,
-          diskon: hasil.diskon,
-        };
-      }),
-      subtotal,
-      diskonPelanggan,
-      potongan: h.potongan,
-      jenisPotongan: h.jenisPotongan,
-      total: total - h.potongan,
-      bayarKasbon: h.bayarKasbon,
-      tunai: h.tunai,
-      transfer: h.transfer,
-      kembalian: h.kembalian,
-      kasbonBaru: h.kasbonBaru,
-      sisaKasbon,
+    // Nota disimpan untuk Riwayat & Retur; stok berkurang.
+    const n = susunNotaPenjualan({
+      nomor: no, waktuIso: new Date().toISOString(), pelangganId: plg.id, kasir: KASIR,
+      baris: aktif.baris, potongan: h.potongan, jenisPotongan: h.jenisPotongan,
+      tunai: h.tunai, transfer: h.transfer, kembalian: h.kembalian, kasbonBaru: h.kasbonBaru, bayarKasbon: h.bayarKasbon, sisaKasbon,
     });
-    setNomor((n) => n + 1);
+    catatPenjualan(n);
+    setNota(n.struk);
     setDialog(null);
   };
 

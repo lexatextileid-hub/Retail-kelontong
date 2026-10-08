@@ -212,3 +212,30 @@ describe('harga diubah kasir (barang timbang)', () => {
   });
 });
 
+
+import { cekBatasRetur, nilaiAkhirBaris, nilaiRetur, selisihTukar } from './retur';
+
+describe('retur', () => {
+  it('nilai retur memakai harga setelah diskon, termasuk potongan akhir dibagi sebanding', () => {
+    // Nota 756.250 dibayar 750.000 (potongan 6.250)
+    const baris = [
+      { id: 'a', netto: 500000, jumlahDasar: 50 },
+      { id: 'b', netto: 256250, jumlahDasar: 25 },
+    ];
+    const n = nilaiAkhirBaris(baris, 750000);
+    expect(n.a + n.b).toBe(750000);
+    expect(n.a).toBe(495868); // 500.000 × 750.000 / 756.250
+    // Retur 10 dari 50 → sebanding
+    expect(nilaiRetur(n.a, 50, 10)).toBe(99174);
+    // Retur penuh = persis nilai baris
+    expect(nilaiRetur(n.b, 25, 25)).toBe(n.b);
+  });
+  it('batas 3×24 jam', () => {
+    expect(cekBatasRetur('2026-10-05T10:00:00', '2026-10-08T09:59:00', 3).dalamBatas).toBe(true);
+    expect(cekBatasRetur('2026-10-05T10:00:00', '2026-10-08T10:01:00', 3).dalamBatas).toBe(false);
+  });
+  it('tukar barang lain: bisa kembali uang atau tambah bayar', () => {
+    expect(selisihTukar(35000, 20000)).toBe(15000); // toko mengembalikan
+    expect(selisihTukar(35000, 50000)).toBe(-15000); // pelanggan menambah
+  });
+});

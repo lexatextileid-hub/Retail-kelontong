@@ -160,3 +160,4 @@ h2 { font-size: 17px; font-weight: 700; }
 }
 .tombol--merah { background: var(--bahaya); border-color: var(--bahaya); color: #fff; }
 .tombol--merah:hover { background: #a3271c; border-color: #a3271c; color: #fff; }
+.tautan.teks-bahaya { color: var(--bahaya); }
