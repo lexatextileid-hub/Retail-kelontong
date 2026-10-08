@@ -345,6 +345,60 @@ export function ubahBarisPesanan(pesananId: string, barisId: string, patch: Part
   ubahPesanan(pesananId, (p) => ({ ...p, baris: p.baris.map((b) => (b.id === barisId ? { ...b, ...patch } : b)) }), teks);
 }
 
+/** Baris sudah berjalan (ada di Surat Pesanan, barang sudah datang, atau sudah diserahkan): jumlahnya tidak bisa diubah/dihapus. */
+export function barisSudahBerjalan(p: Pesanan, b: BarisPesanan) {
+  return b.diserahkan > 0 || b.diterimaOrder > 0 || hitungBaris(p, b).diOrderDiSP > 0;
+}
+
+/** Kunci stok untuk satu baris: stok cukup → dikunci; tidak cukup → seluruh baris diorder. */
+function aturKunci(produkId: string, totalDasar: number, kunciLama = 0) {
+  const bebas = Math.max(0, stokBebas(produkId) + kunciLama);
+  const dariStok = totalDasar <= bebas ? totalDasar : 0;
+  return { dariStok, perluOrder: totalDasar - dariStok };
+}
+
+/** Ubah barang/jumlah/harga satu baris. Mengembalikan pesan bila tidak boleh. */
+export function ubahBarisPesananPenuh(pesananId: string, barisId: string, data: BarisBaru): string | null {
+  const p = state.pesanan.find((x) => x.id === pesananId)!;
+  const b = p.baris.find((x) => x.id === barisId)!;
+  const nama = ambilProduk(b.produkId).nama;
+  const jumlahBerubah = jumlahDasar(data) !== jumlahDasar(b);
+  if (jumlahBerubah && barisSudahBerjalan(p, b))
+    return `Jumlah ${nama} tidak bisa diubah karena sudah dipesan ke distributor / sudah datang / sudah diserahkan. Harga dan diskon tetap bisa diubah.`;
+  const kunci = jumlahBerubah ? aturKunci(b.produkId, jumlahDasar(data), b.dariStok) : { dariStok: b.dariStok, perluOrder: b.perluOrder };
+  ubahBarisPesanan(pesananId, barisId, { ...data, ...kunci, disetujui: false }, `${nama} diubah`);
+  return null;
+}
+
+export function tambahBarisPesanan(pesananId: string, data: BarisBaru) {
+  const kunci = aturKunci(data.produkId, jumlahDasar(data));
+  const baru: BarisPesanan = { id: id('bp'), ...data, ...kunci, diterimaOrder: 0, diserahkan: 0 };
+  ubahPesanan(pesananId, (p) => ({ ...p, baris: [...p.baris, baru] }), `${ambilProduk(data.produkId).nama} ditambahkan`);
+}
+
+export function hapusBarisPesanan(pesananId: string, barisId: string): string | null {
+  const p = state.pesanan.find((x) => x.id === pesananId)!;
+  const b = p.baris.find((x) => x.id === barisId)!;
+  const nama = ambilProduk(b.produkId).nama;
+  if (barisSudahBerjalan(p, b)) return `${nama} tidak bisa dihapus karena sudah dipesan ke distributor / sudah datang / sudah diserahkan.`;
+  if (p.baris.length === 1) return 'Ini barang terakhir. Untuk membatalkan seluruh pesanan, pakai Batalkan pesanan.';
+  ubahPesanan(pesananId, (x) => ({ ...x, baris: x.baris.filter((y) => y.id !== barisId) }), `${nama} dihapus dari pesanan`);
+  return null;
+}
+
+export function ubahDataPesanan(pesananId: string, data: { tanggalJanji: string; cara: 'ambil' | 'antar'; alamat?: string; catatan?: string }) {
+  ubahPesanan(pesananId, (p) => ({ ...p, ...data, alamat: data.cara === 'antar' ? data.alamat : undefined }), 'Data pesanan diubah');
+}
+
+/** Hapus total hanya untuk salah catat: belum ada pembayaran, Surat Pesanan, atau serah terima. Selain itu pakai Batalkan. */
+export function bisaHapusPesanan(p: Pesanan) {
+  const adaSP = state.sp.some((x) => x.baris.some((b) => b.untukPesanan.some((u) => u.pesananId === p.id)));
+  return p.pembayaran.length === 0 && p.serah.length === 0 && !adaSP && p.baris.every((b) => b.diterimaOrder === 0);
+}
+export function hapusPesanan(pesananId: string) {
+  ubah((s) => ({ ...s, pesanan: s.pesanan.filter((p) => p.id !== pesananId) }));
+}
+
 export const setujuiHarga = (pesananId: string, barisId: string, nama: string) =>
   ubahBarisPesanan(pesananId, barisId, { disetujui: true }, `Harga ${nama} disetujui walau di bawah target untung`);
 

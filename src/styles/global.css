@@ -158,3 +158,5 @@ h2 { font-size: 17px; font-weight: 700; }
   .dialog { max-width: none !important; border-radius: 16px 16px 0 0; max-height: calc(100% - 24px); }
   .dialog__kaki { padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
 }
+.tombol--merah { background: var(--bahaya); border-color: var(--bahaya); color: #fff; }
+.tombol--merah:hover { background: #a3271c; border-color: #a3271c; color: #fff; }

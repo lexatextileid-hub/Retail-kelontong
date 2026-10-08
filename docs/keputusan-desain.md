@@ -243,6 +243,7 @@ Setiap barang memilih satu metode:
 - **Tidak ada tagih lewat WhatsApp.**
 - Bayar transfer: nama bank (BCA, BRI, dsb.) dicatat **sebagai keterangan saja**.
 - Pembayaran kasbon yang mengenai pesanan dicatat juga di pesanan itu (status pesanan ikut jadi Lunas).
+- **Layar bayar kasbon** (pola seperti QuickBooks/Accurate "terima pembayaran"): daftar nota belum lunas dengan **centang** dan **kolom bayar per nota**. Ketik jumlah total → otomatis menutup nota tertua dulu; centang nota → dibayar penuh; jumlah per nota bisa diubah. Satu transaksi bisa satu nota atau beberapa nota. Di detail pelanggan setiap nota punya status di kanan: Belum lunas / Dibayar sebagian / Lewat tempo / Lunas; nota bisa dicentang lalu "Bayar n nota".
 - **Kasbon lama** (sebelum memakai aplikasi): dicatat tanpa rincian barang, nota boleh sudah hilang. Isi: pelanggan, tanggal (perkiraan bila lupa), jumlah, keterangan, no. nota lama bila ada; bisa beberapa baris. Ditandai "Kasbon lama". Hanya **pemilik**, atau akun lain dengan **PIN pemilik**.
 - **Back Office → Hutang & Piutang → Piutang Pelanggan** membaca data yang sama dengan Kasir → Kasbon. Hutang lama ke distributor dicatat dengan cara yang sama (tanpa rincian barang) saat modul Hutang dikerjakan.
 
@@ -314,6 +315,7 @@ Setiap barang memilih satu metode:
 - **Uang muka (DP):** opsional; mengurangi tagihan saat serah terima. Bila pesanan batal, DP dikembalikan atau disimpan sebagai saldo pelanggan.
 - **Pengantaran:** diambil pembeli atau diantar toko. Ongkos antar **tidak ditagihkan**, dicatat sebagai pengeluaran biasa. Bila diantar, nota otomatis disertai **surat jalan** (kolom tanda tangan penerima).
 - **Serah terima sebagian ke pembeli: boleh.**
+- **Aksi di detail pesanan:** cetak nota pesanan (thermal/unduh/WhatsApp, tanpa modal/untung), ubah data (tanggal, cara serah, alamat, catatan; pelanggan tidak bisa diganti), tambah barang, ubah barang (harga/diskon selalu bisa; jumlah hanya bila belum masuk Surat Pesanan/datang/diserahkan), hapus barang (syarat sama, minimal tersisa satu barang). **Hapus pesanan** hanya untuk salah catat (belum ada pembayaran, Surat Pesanan, atau serah terima); selain itu pakai **Batalkan**.
 - **Barang yang diterima dari distributor harus sesuai faktur.** Bila distributor mengirim kurang/beda, toko meminta **faktur pengganti**; faktur yang diinput selalu mengikuti barang yang benar-benar diterima. Selisih ditandai di Barang Masuk sampai faktur pengganti diterima.
 - **Pembayaran pesanan: lunas saat terima atau tempo** (keduanya). Tempo tercatat sebagai piutang pelanggan dengan jatuh tempo.
 - **Urutan: pembeli pesan dulu → baru order ke distributor.** Pesanan yang belum ada stoknya muncul di daftar "perlu diorder".

@@ -116,3 +116,20 @@
   .sp-saran__jumlah { grid-column: 3; grid-row: 1; }
   .sp-saran__cara { grid-column: 2 / 4; }
 }
+/* Tabel barang jadi kartu di HP (tanpa geser ke samping) */
+@media (max-width: 720px) {
+  .ps-tabel--hp { min-width: 0; }
+  .ps-tabel--hp thead { display: none; }
+  .ps-tabel--hp tr { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-bottom: 1px solid var(--garis-halus); }
+  .ps-tabel--hp td { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 0; border: 0; text-align: right; }
+  .ps-tabel--hp td::before { content: attr(data-label); color: var(--teks-3); font-size: 12.5px; text-align: left; flex: none; }
+  .ps-tabel--hp td[data-label='Barang'] { display: block; text-align: left; }
+  .ps-tabel--hp td[data-label='Barang']::before { content: none; }
+  .ps-tabel--hp td[data-label='Status'] { flex-wrap: wrap; }
+  .ps-tabel--hp td[data-label='Status'] .ps-aksi-baris { width: 100%; justify-content: flex-end; }
+}
+@media (max-width: 720px) {
+  .ps-tabel--hp td { flex-wrap: wrap; }
+  .ps-tabel--hp td > div { flex-basis: 100%; text-align: right; margin-top: -4px; }
+  .ps-tabel--hp td[data-label='Barang'] > div { text-align: left; margin-top: 0; }
+}

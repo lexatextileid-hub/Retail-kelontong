@@ -9,7 +9,7 @@
 .kb-judul { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .kb-tagihan { display: flex; flex-direction: column; }
 .kb-tagihan__baris {
-  display: flex; justify-content: space-between; gap: 12px; padding: 12px 8px; margin: 0 -8px;
+  display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 12px 8px; margin: 0 -8px;
   border-top: 1px solid var(--garis-halus); color: var(--teks); text-decoration: none; border-radius: var(--radius);
 }
 .kb-tagihan__baris:first-child { border-top: 0; }
@@ -34,16 +34,32 @@ a.kb-tagihan__baris:hover { background: var(--permukaan-2); color: var(--teks); 
 .kb-cepat { display: flex; gap: 6px; flex-wrap: wrap; }
 .kb-cepat .tombol[aria-pressed='true'] { background: var(--biru); border-color: var(--biru); color: #fff; }
 .kb-alokasi { display: flex; flex-direction: column; border: 1px solid var(--garis); border-radius: var(--radius); }
-.kb-alokasi__baris { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; flex-wrap: wrap; }
-.kb-alokasi__baris + .kb-alokasi__baris { border-top: 1px solid var(--garis-halus); }
+.kb-alokasi__kepala { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--permukaan-2); font-size: 13.5px; font-weight: 600; border-radius: var(--radius) var(--radius) 0 0; }
+.kb-alokasi__kepala .teks-pudar { margin-left: auto; font-weight: 500; }
+.kb-alokasi__baris { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 12px; border-top: 1px solid var(--garis-halus); }
+.kb-alokasi__baris--pilih { background: var(--biru-muda); }
 .kb-alokasi__info { display: flex; flex-direction: column; gap: 2px; font-size: 13.5px; min-width: 0; }
 .kb-alokasi__info .teks-pudar { font-size: 12.5px; }
 .kb-alokasi__nilai { font-weight: 700; color: var(--biru-tua); }
 .kb-alokasi__isi { display: flex; align-items: center; gap: 8px; }
-.kb-alokasi__isi .input-rp { width: 150px; }
+.kb-alokasi__isi .input-rp { width: 140px; height: 38px; }
+.kb-alokasi__isi .chip-status { min-width: 66px; justify-content: center; }
+.kb-centang { width: 18px; height: 18px; accent-color: var(--biru); flex: none; margin: 0; }
+@media (max-width: 520px) {
+  .kb-alokasi__baris { grid-template-columns: 22px minmax(0, 1fr); }
+  .kb-alokasi__isi { grid-column: 2; }
+}
 
 /* Kasbon lama */
 .kb-lama { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--garis-halus); }
 .kb-lama:first-of-type { border-top: 0; padding-top: 0; }
 .kb-lama__atas { display: flex; justify-content: space-between; gap: 8px; }
 .kb-lama__isian { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.kb-tagihan__baris .kb-centang { margin-top: 2px; }
+.kb-tagihan__baris--pilih { background: var(--biru-muda); }
+.kb-bilah-pilih {
+  position: sticky; bottom: 12px; z-index: 5; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 16px; border-radius: var(--radius-besar); background: var(--permukaan); border: 1px solid var(--biru-garis);
+  box-shadow: 0 8px 24px rgba(23, 32, 51, 0.12);
+}
+@media (max-width: 860px) { .kb-bilah-pilih { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }

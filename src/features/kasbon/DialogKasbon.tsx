@@ -8,48 +8,54 @@ import { rupiah } from '../../lib/format';
 import { uangCepat } from '../penjualan/DialogBayar';
 import { ChipSumber, tanggalPendek } from './bersama';
 
-/** Terima pembayaran kasbon: sebagian/penuh, tunai/transfer; menutup tagihan tertua dulu (bisa dipilih manual). */
+/**
+ * Terima pembayaran kasbon (pola "terima pembayaran" seperti QuickBooks/Accurate):
+ * daftar nota belum lunas dengan centang + kolom bayar. Ketik jumlah total → diisi dari nota tertua.
+ * Centang nota → dibayar penuh. Kolom bayar per nota bisa diubah. Satu transaksi bisa 1 nota atau beberapa.
+ */
 export function DialogBayarKasbon({
   pelanggan,
   tagihan,
-  notaAwal,
+  notaDipilih = [],
   onTutup,
   onSelesai,
 }: {
   pelanggan: PelangganKasbon;
   tagihan: TagihanKasbon[];
-  /** Dibuka dari satu baris tagihan: langsung mode "Pilih nota" dengan nota itu dilunasi. */
-  notaAwal?: string;
+  /** Nota yang dicentang dari layar detail: langsung terisi penuh. */
+  notaDipilih?: string[];
   onTutup: () => void;
   onSelesai: (b: BayarKasbon) => void;
 }) {
   const terbuka = tagihan.filter((t) => t.sisa > 0);
   const saldo = terbuka.reduce((t, x) => t + x.sisa, 0);
-  const [jumlah, setJumlah] = useState(0);
+  const [per, setPer] = useState<Record<string, number>>(() =>
+    Object.fromEntries(terbuka.filter((t) => notaDipilih.includes(t.id)).map((t) => [t.id, t.sisa])),
+  );
   const [metode, setMetode] = useState<'tunai' | 'transfer'>('tunai');
   const [bank, setBank] = useState('');
   const [diterima, setDiterima] = useState(0);
-  const awal = notaAwal ? terbuka.find((t) => t.id === notaAwal) : undefined;
-  const [manual, setManual] = useState(!!awal);
-  const [pilih, setPilih] = useState<Record<string, number>>(awal ? { [awal.id]: awal.sisa } : {});
 
-  const totalManual = Object.values(pilih).reduce((t, x) => t + x, 0);
-  const bayar = manual ? totalManual : jumlah;
-  const alokasi = manual
-    ? terbuka.filter((t) => (pilih[t.id] ?? 0) > 0).map((t) => ({ notaId: t.id, jumlah: Math.min(pilih[t.id], t.sisa) }))
-    : alokasiTertua(terbuka, jumlah);
+  const bayar = terbuka.reduce((t, x) => t + (per[x.id] ?? 0), 0);
+  const isiTotal = (n: number) =>
+    setPer(Object.fromEntries(alokasiTertua(terbuka, Math.min(n, saldo)).map((a) => [a.notaId, a.jumlah])));
+  const centang = (t: TagihanKasbon, ya: boolean) => setPer((m) => ({ ...m, [t.id]: ya ? t.sisa : 0 }));
+  const semuaDicentang = terbuka.length > 0 && terbuka.every((t) => (per[t.id] ?? 0) >= t.sisa);
+  const banyakNota = terbuka.filter((t) => (per[t.id] ?? 0) > 0).length;
+
   const kembalian = metode === 'tunai' ? Math.max(0, diterima - bayar) : 0;
   const kurangUang = metode === 'tunai' && diterima > 0 && diterima < bayar;
-  const siap = bayar > 0 && bayar <= saldo && !kurangUang;
+  const siap = bayar > 0 && !kurangUang;
 
   const simpan = () => {
     if (!siap) return;
+    const alokasi = terbuka.filter((t) => (per[t.id] ?? 0) > 0).map((t) => ({ notaId: t.id, jumlah: per[t.id] }));
     onSelesai(bayarKasbon({ pelangganId: pelanggan.id, jumlah: bayar, metode, bank: bank.trim() || undefined, alokasi }));
   };
 
   const kaki = (
-    <div className="tumpuk" style={{ gap: 10 }}>
-      <div className="ringkas-total"><span>Sisa kasbon setelah ini</span><strong>{rupiah(Math.max(0, saldo - bayar))}</strong></div>
+    <div className="tumpuk" style={{ gap: 8 }}>
+      <div className="ringkas-total"><span>{banyakNota} nota dibayar · sisa kasbon setelah ini</span><strong>{rupiah(saldo - bayar)}</strong></div>
       {kembalian > 0 && <div className="ringkas-total ringkas-total--besar"><span>Kembalian</span><strong>{rupiah(kembalian)}</strong></div>}
       <button type="button" className="tombol tombol--utama tombol--besar" disabled={!siap} onClick={simpan}>
         Terima {rupiah(bayar)}
@@ -58,45 +64,37 @@ export function DialogBayarKasbon({
   );
 
   return (
-    <Dialog judul={`Bayar kasbon · ${pelanggan.nama}`} onTutup={onTutup} lebar={560} kaki={kaki}>
-      <div className="ringkas-total"><span>Kasbon sekarang</span><strong>{rupiah(saldo)}</strong></div>
-
-      <div className="saklar" role="group" aria-label="Cara bagi pembayaran" style={{ alignSelf: 'flex-start' }}>
-        <button type="button" aria-pressed={!manual} onClick={() => setManual(false)}>Tertua dulu</button>
-        <button type="button" aria-pressed={manual} onClick={() => setManual(true)}>Pilih nota</button>
+    <Dialog judul={`Bayar kasbon · ${pelanggan.nama}`} onTutup={onTutup} lebar={600} kaki={kaki}>
+      <div className="isian">
+        Jumlah bayar
+        <div className="kb-jumlah">
+          <InputRupiah id="kb-jumlah" nilai={bayar} onUbah={isiTotal} autoFocus={!notaDipilih.length} label="Jumlah bayar" />
+          <button type="button" className="tombol" onClick={() => isiTotal(saldo)}>Lunasi semua</button>
+        </div>
+        <span className="isian__bantuan">Ketik jumlah → otomatis menutup nota tertua dulu. Atau centang nota yang mau dibayar.</span>
       </div>
 
-      {!manual ? (
-        <div className="isian">
-          Jumlah bayar
-          <div className="kb-jumlah">
-            <InputRupiah id="kb-jumlah" nilai={jumlah} onUbah={setJumlah} autoFocus label="Jumlah bayar" />
-            <button type="button" className="tombol" onClick={() => setJumlah(saldo)}>Lunasi</button>
-          </div>
-          {jumlah > saldo && <span className="teks-bahaya" style={{ fontSize: 12.5 }}>Melebihi kasbon {rupiah(saldo)}.</span>}
-        </div>
-      ) : null}
-
       <div className="kb-alokasi">
+        <label className="kb-alokasi__kepala centang">
+          <input type="checkbox" checked={semuaDicentang} onChange={(e) => isiTotal(e.target.checked ? saldo : 0)} />
+          <span>Nota belum lunas ({terbuka.length})</span>
+          <span className="teks-pudar">Kasbon {rupiah(saldo)}</span>
+        </label>
         {terbuka.map((t) => {
-          const a = alokasi.find((x) => x.notaId === t.id)?.jumlah ?? 0;
+          const a = per[t.id] ?? 0;
           return (
-            <div key={t.id} className="kb-alokasi__baris">
+            <div key={t.id} className={`kb-alokasi__baris ${a > 0 ? 'kb-alokasi__baris--pilih' : ''}`}>
+              <input type="checkbox" className="kb-centang" aria-label={`Centang ${t.nomor}`} checked={a > 0} onChange={(e) => centang(t, e.target.checked)} />
               <div className="kb-alokasi__info">
                 <span><strong>{t.nomor}</strong> <ChipSumber sumber={t.sumber} /></span>
                 <span className="teks-pudar">{tanggalPendek(t.tanggal)} · sisa {rupiah(t.sisa)}</span>
               </div>
-              {manual ? (
-                <div className="kb-alokasi__isi">
-                  <InputRupiah id={`kb-${t.id}`} nilai={pilih[t.id] ?? 0} label={`Bayar ${t.nomor}`}
-                    onUbah={(n) => setPilih((m) => ({ ...m, [t.id]: Math.min(n, t.sisa) }))} />
-                  <button type="button" className="tautan" onClick={() => setPilih((m) => ({ ...m, [t.id]: t.sisa }))}>Lunas</button>
-                </div>
-              ) : (
-                <span className={a > 0 ? 'kb-alokasi__nilai' : 'teks-pudar'}>
-                  {a > 0 ? (a >= t.sisa ? `lunas ${rupiah(a)}` : rupiah(a)) : '-'}
+              <div className="kb-alokasi__isi">
+                <InputRupiah id={`kb-${t.id}`} nilai={a} label={`Bayar ${t.nomor}`} onUbah={(n) => setPer((m) => ({ ...m, [t.id]: Math.min(n, t.sisa) }))} />
+                <span className={`chip-status chip-status--${a === 0 ? 'abu' : a >= t.sisa ? 'hijau' : 'kuning'}`}>
+                  {a === 0 ? 'Belum' : a >= t.sisa ? 'Lunas' : 'Sebagian'}
                 </span>
-              )}
+              </div>
             </div>
           );
         })}
