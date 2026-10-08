@@ -19,6 +19,22 @@ Dokumen ini mencatat aturan bisnis yang sudah disepakati. Kode di `src/domain/` 
 
 Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung stok, pemilik memeriksa dan menyetujui di Back Office.
 
+## Peran akun
+
+- **Tiga peran saja: Pemilik, Admin, Kasir.** Jumlah akun per peran bebas (mis. 2 kasir, 2 admin); setiap akun punya PIN sendiri dan semua pekerjaan tercatat atas nama akunnya.
+- Admin dan kasir bisa bergantian menjaga kasir (admin punya akses Mode Kasir).
+
+| Pekerjaan | Pemilik | Admin | Kasir |
+| --- | --- | --- | --- |
+| Mode Kasir: penjualan, kasbon, retur, kas laci | ✓ | ✓ | ✓ |
+| Mencatat pesanan pelanggan | ✓ | ✓ | ✓ |
+| Mode Gudang: barang masuk, faktur dari SP, repack, hitung stok | ✓ | ✓ | — |
+| Membuat & mengirim SP | ✓ | ✓ | — |
+| Melihat harga beli & modal | ✓ | ✓ | — |
+| Tambah produk, ubah harga jual, data pelanggan/distributor | ✓ | PIN pemilik | — |
+| Batas kasbon, setujui selisih kas & opname, harga di bawah target | ✓ | — | — |
+| Brankas, prive, laporan laba, pengaturan | ✓ | — | — |
+
 ## Mode kerja & hak akses
 
 - Operasional dibagi per **mode**:
