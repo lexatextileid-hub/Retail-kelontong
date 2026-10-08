@@ -43,6 +43,10 @@ export interface Produk {
   kategoriId: string;
   satuanDasarId: string;
   stokMinimum: number; // dalam satuan dasar
+  /** Stok maksimum (satuan dasar): dipakai saran Pesanan Toko "sampai maks". */
+  stokMaksimum?: number;
+  /** Harga beli perkiraan per satuan dasar, dipakai sampai ada faktur pertama. */
+  hargaBeliAcuan?: number;
   metodeHarga: MetodeHarga;
   satuan: SatuanProduk[]; // termasuk baris satuan dasar (isi = 1)
   tingkatHarga: TingkatHarga[]; // dipakai jika metode = bertingkat

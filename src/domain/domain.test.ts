@@ -7,7 +7,7 @@ import { formatStok } from '../lib/format';
 import { ringkasTempat, saldoBerjalan, type MutasiKas } from './kas';
 import { hitungLapisan, modalRata, statusGerak, stokBertingkat, umurStok, type MutasiStok } from './stok';
 import { ambilFifo, modalBarisFaktur } from './fifo';
-import { hitungHargaBaris } from './harga';
+import { bulatkanHarga, hargaDariPersen, hargaDariUntungRp, hitungHargaBaris, untungDariModal } from './harga';
 import { alokasiTertua, cekKasbon, selisihHari, tambahHari } from './kasbon';
 import { kunciNama, satuanBawaan } from './satuanBawaan';
 import { buatSku, kategoriBawaan, kelompokBawaan } from './kategoriBawaan';
@@ -311,5 +311,17 @@ describe('buku stok, FIFO, umur, status gerak', () => {
     expect(stokBertingkat(0, taro)).toBe('0');
     expect(stokBertingkat(-12, taro)).toBe('−1 rtg 2 pcs');
     expect(stokBertingkat(18.5, [{ isi: 1, singkatan: 'kg' }])).toBe('18,5 kg');
+  });
+});
+
+describe('form harga: isi harga jual, untung %, atau untung Rp', () => {
+  it('untung % dari harga beli (markup) → harga jual, dibulatkan ke atas Rp 100', () => {
+    expect(hargaDariPersen(75000, 8)).toBe(81000);
+    expect(hargaDariPersen(3000, 16)).toBe(3500); // 3.480 → 3.500
+    expect(hargaDariUntungRp(75000, 6000)).toBe(81000);
+    expect(hargaDariUntungRp(2950, 500)).toBe(3500); // 3.450 → 3.500
+    expect(bulatkanHarga(3401)).toBe(3500);
+    // % ditampilkan dari harga setelah dibulatkan
+    expect(untungDariModal(hargaDariPersen(3000, 16), 3000)).toBe(16.7);
   });
 });

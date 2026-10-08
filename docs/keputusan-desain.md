@@ -108,7 +108,9 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
   - **Per kedatangan (FIFO)**: tanggal masuk, no. sumber, jumlah masuk, sisa, modal, nilai, umur.
   - **Harga beli per distributor**: beli terakhir, harga per satuan beli, terendah, jumlah faktur.
 - **Status gerak barang (analisis FSN)**, otomatis tiap hari dari **jumlah minggu terjual dalam 13 minggu terakhir** (frekuensi, bukan jumlah — supaya satu pembelian grosir tidak membuat barang tampak laku): **Laku** ≥ 7 minggu · **Lambat** 2–6 · **Berhenti** 0–1 · **Baru** = barang pertama masuk < 90 hari · **Musiman** = barang bertanda musiman yang sedang tidak laku (tidak dicap Berhenti). Penjualan dan serah pesanan dihitung.
-- Ditunda: kelas **Andalan** (penyumbang omzet terbesar, analisis ABC) dan pilihan letak per ruko.
+- Data barang juga punya **stok minimum** (masuk Stok Menipis) dan **stok maksimum** (saran pesan "sampai maks").
+- Form satuan menampilkan kalimat penjelas "1 Karton = 25 Pcs" dan memperingatkan bila satuan besar tampak terbalik (mis. satuan dasar Galon, satuan besar Liter).
+- Ditunda: kelas **Andalan** (penyumbang omzet terbesar, analisis ABC), pilihan letak per ruko, **tanggal kedaluwarsa & nomor batch** (penting untuk retur barang, tapi terlalu rumit untuk sekarang), barcode, distributor utama, foto barang.
 - Di kasir, jika barang tidak ditemukan: tombol "Tambah barang baru" (pemilik/PIN pemilik) membuka form yang sama, nama terisi dari kata yang dicari; setelah disimpan barang langsung masuk keranjang.
 - **Tidak ada "Barang lain-lain"**: barang belum terdaftar tidak bisa dijual sebelum didaftarkan.
 - Di masa awal pemilik memegang kasir sambil merapikan data barang.
@@ -116,7 +118,8 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 ## Persen untung
 
 - **Patokan utama: untung dari modal (markup).** Modal Rp 10.000 + 10% = Rp 11.000.
-- Di form harga bisa diisi harga jual atau % untung; yang lain terhitung otomatis. Persen diatur per level satuan (grosir biasanya lebih kecil).
+- Di form barang, tiap satuan (dan tiap tingkat harga grosir) punya **harga beli, harga jual, untung %, untung Rp — isi salah satu dari harga jual / untung % / untung Rp**, yang lain terhitung otomatis. Persen diatur per level satuan (grosir biasanya lebih kecil). Untung di bawah target ditandai merah.
+- **Dasar hitung untung di form dan daftar barang = harga beli terakhir** (dari faktur terakhir; barang baru tanpa faktur memakai harga beli perkiraan yang diisi di form, cukup di satu satuan — satuan lain dihitung dari isinya). Laporan laba tetap memakai modal FIFO.
 - **Pembulatan** harga hasil hitung ke kelipatan yang diatur di Pengaturan (mis. ke atas ke Rp 100); % ditampilkan dari harga setelah dibulatkan.
 - Laporan memakai **untung dari penjualan (margin)**. Label selalu ditulis jelas ("dari modal" / "dari penjualan").
 - Harga beli naik → sistem bisa mengusulkan harga jual baru dengan % untung yang sama.

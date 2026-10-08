@@ -20,6 +20,18 @@ export function untungDariModal(hargaJualTotal: number, modalTotal: number): num
   return Math.round(((hargaJualTotal - modalTotal) / modalTotal) * 1000) / 10;
 }
 
+/** Pembulatan harga jual hasil hitung: ke atas ke kelipatan ini (Pengaturan). */
+export const PEMBULATAN_HARGA = 100;
+
+export const bulatkanHarga = (n: number, kelipatan = PEMBULATAN_HARGA) => Math.ceil(Math.round(n) / kelipatan) * kelipatan;
+
+/**
+ * Form harga: isi salah satu dari harga jual, untung % (dari modal), atau untung Rp; dua lainnya terhitung.
+ * Harga hasil hitung dibulatkan ke atas; % ditampilkan dari harga setelah dibulatkan.
+ */
+export const hargaDariPersen = (modalTotal: number, persen: number) => bulatkanHarga(modalTotal * (1 + persen / 100));
+export const hargaDariUntungRp = (modalTotal: number, untung: number) => bulatkanHarga(modalTotal + untung);
+
 /** Target untung bawaan (Pengaturan). */
 export const TARGET_UNTUNG_PERSEN = 5;
 

@@ -222,3 +222,6 @@ export const aturStokContoh: Record<string, { maks: number; orderTetap: number; 
   'bawang-putih': { maks: 30, orderTetap: 15, rataHarian: 1.5 },
   kemiri: { maks: 8, orderTetap: 5, rataHarian: 0.3 },
 };
+
+// Stok maksimum contoh diisi ke data barang (bisa diubah di Gudang → Stok Barang).
+for (const p of produkContoh) if (aturStokContoh[p.id]) p.stokMaksimum = aturStokContoh[p.id].maks;

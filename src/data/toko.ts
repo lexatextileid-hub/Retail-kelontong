@@ -502,6 +502,8 @@ export interface InfoBarang {
   status: StatusGerak; mingguTerjual: number;
   terjual30: number; rataHarian: number; cukupHari?: number; terakhirTerjual?: string; masukPertama?: string;
   beliTerakhir?: { tanggal: string; nomor: string; modal: number; distributorId?: string };
+  /** Dasar hitung untung di harga jual: harga beli terakhir (per satuan dasar); belum ada faktur → harga beli perkiraan. */
+  beliAcuan?: number;
 }
 
 /** Angka gerak dan nilai satu barang (stok, FIFO, umur, status gerak, terjual, cukup untuk berapa hari). */
@@ -532,6 +534,7 @@ export function infoBarang(produkId: string, s: State = state): InfoBarang {
     terjual30, rataHarian, cukupHari: rataHarian > 0 ? Math.floor(Math.max(0, stok) / rataHarian) : undefined,
     terakhirTerjual: keluarJual[keluarJual.length - 1]?.tanggal, masukPertama: mut[0]?.tanggal,
     beliTerakhir: beli ? { tanggal: beli.tanggal, nomor: beli.nomor, modal: beli.modal ?? 0, distributorId: beli.distributorId } : undefined,
+    beliAcuan: beli?.modal ?? p.hargaBeliAcuan ?? modal,
   };
   peta.set(produkId, info);
   return info;

@@ -122,8 +122,8 @@ export function DaftarBarang() {
             </div>
           ) },
           {
-            judul: 'Harga jual · untung', isi: ({ p, i }) => {
-              const h = hargaJualTingkat(p, i.modal);
+            judul: 'Harga jual · untung*', isi: ({ p, i }) => {
+              const h = hargaJualTingkat(p, i.beliAcuan);
               return (
                 <div className="sb-harga">
                   {h.slice(0, 3).map((x) => (
@@ -146,6 +146,7 @@ export function DaftarBarang() {
           },
         ]}
       />
+      <p className="teks-pudar" style={{ margin: 0, fontSize: 12.5 }}>* Untung dihitung dari harga beli terakhir. Laporan laba memakai modal FIFO.</p>
     </div>
   );
 }

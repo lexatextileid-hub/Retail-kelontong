@@ -27,3 +27,19 @@
 }
 .sb-gerak { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 @media (max-width: 720px) { .sb-gerak { align-items: flex-end; } }
+.sb-persen { display: inline-flex; align-items: center; gap: 4px; justify-content: flex-end; }
+.sb-persen input { width: 76px; height: 38px; text-align: right; }
+.sb-persen--merah input { color: var(--bahaya); border-color: var(--bahaya); }
+.sb-label { margin-top: 6px; height: 34px; font-size: 13px; }
+.sb-form-harga .input-rp { width: 130px; }
+@media (max-width: 720px) {
+  .sb-form-harga td[data-label='Satuan'] { flex-direction: column; align-items: stretch; text-align: left; }
+  .sb-form-harga td[data-label='Satuan']::before { margin-bottom: 4px; }
+}
+.sb-form-harga { min-width: 0 !important; table-layout: auto; }
+.sb-form-harga td[data-label='Satuan'] { width: 230px; }
+.sb-form-harga td[data-label='Satuan'] > select, .sb-form-harga .sb-label { display: block; width: 100%; }
+.sb-form-harga .kk-qty { width: 72px; }
+.sb-form-harga .input-rp { width: 120px; }
+.sb-form-harga .sb-persen input { width: 64px; }
+.sb-form-harga th, .sb-form-harga td { padding-left: 6px; padding-right: 6px; }

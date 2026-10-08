@@ -62,11 +62,13 @@ export function SaranSP({ sumber }: { sumber: 'pesanan' | 'stok' }) {
     if (stok >= pr.stokMinimum) continue;
     const a = aturStokContoh[pr.id];
     const usulan: Saran['usulan'] = {};
+    const maks = pr.stokMaksimum ?? a?.maks;
+    if (maks) usulan.maks = Math.max(1, Math.ceil((maks - stok) / s.isi));
     if (a) {
-      usulan.maks = Math.max(1, Math.ceil((a.maks - stok) / s.isi));
       if (a.orderTetap > 0) usulan.tetap = a.orderTetap;
       usulan.rata = Math.max(1, Math.ceil((a.rataHarian * HARI_RATA - stok) / s.isi));
-    } else usulan.maks = 1;
+    }
+    if (!usulan.maks && !usulan.tetap) usulan.maks = 1;
     saran.push({
       key: `st-${pr.id}`, produkId: pr.id, sumber: 'stok',
       keterangan: `stok ${labelDasar(pr.id, Math.max(0, stok))} · minimum ${labelDasar(pr.id, pr.stokMinimum)}`,
