@@ -4,12 +4,13 @@ import { InputRupiah } from '../../components/InputRupiah';
 import { PilihPeriode, periodeDari, teksPeriode, type Periode } from '../../components/PilihPeriode';
 import { Dialog } from '../../components/Dialog';
 import { distributorContoh } from '../../data/contoh';
-import { akunAktif, catatArus, daftarFaktur, hariIni, laciTerbuka, nomorArus, ringkasLaci, useToko, type ArusKas, type FakturHutang } from '../../data/toko';
+import { KATEGORI_PENGELUARAN, akunAktif, catatArus, daftarFaktur, hariIni, laciTerbuka, nomorArus, ringkasLaci, useToko, type ArusKas, type FakturHutang } from '../../data/toko';
 import { isoHari, selisihHari, tambahHari } from '../../domain/kasbon';
 import { rupiah } from '../../lib/format';
 import { tanggalPendek } from '../kasbon/bersama';
 import { ambilDistributor } from '../pesanan/bersama';
-import { DialogBuktiKasKeluar, DialogLaporanHarian, DialogPengeluaran } from './DialogLaci';
+import { DialogBuktiKasKeluar, DialogLaporanHarian } from './DialogLaci';
+import { KepalaKas } from './KepalaKas';
 import '../../styles/pesanan.css';
 import '../../styles/penjualan.css';
 import '../../styles/kasbon.css';
@@ -18,46 +19,177 @@ const uangLaci = (toko: ReturnType<typeof useToko>) => { const l = laciTerbuka(u
 const waktu = (iso: string) => new Date(iso).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 const diPeriode = (iso: string, p: Periode) => { const t = isoHari(new Date(iso)); return t >= p.dari && t <= p.sampai; };
 
-/** Pengeluaran yang dicatat akun ini (pemilik melihat semua). */
+/**
+ * Pengeluaran (mode akuntansi, seperti "Pembayaran / Kas Keluar" di Accurate):
+ * daftar bukti kas keluar + formulir dengan beberapa baris rincian (kategori, keterangan, jumlah).
+ * Kasir melihat pengeluarannya sendiri; pemilik melihat semua.
+ */
 export function Pengeluaran() {
   const toko = useToko();
-  const [periode, setPeriode] = useState<Periode>({ dari: hariIni(), sampai: hariIni() });
-  const [d, setD] = useState<null | 'baru' | ArusKas>(null);
+  const [params, setParams] = useSearchParams();
+  const [form, setForm] = useState(!!params.get('baru'));
+  const [periode, setPeriode] = useState<Periode>(() => periodeDari('7-hari', '', { dari: '', sampai: '' }));
+  const [fKat, setFKat] = useState('');
+  const [cari, setCari] = useState('');
+  const [d, setD] = useState<ArusKas | null>(null);
   const semua = toko.peran === 'pemilik';
+  const adaLaci = !!laciTerbuka(undefined, toko);
+
+  if (form) {
+    return <FormPengeluaran onBatal={() => { setForm(false); setParams({}); }} onSelesai={(a) => { setForm(false); setParams({}); setD(a); }} />;
+  }
+
+  const q = cari.trim().toLowerCase();
+  const katDari = (a: ArusKas) => (a.rincian ?? [{ kategori: a.kategori ?? '-', keterangan: a.keterangan, jumlah: Math.abs(a.tunai + a.transfer) }]);
   const daftar = toko.arus
     .filter((a) => a.jenis === 'pengeluaran' && a.sumber === 'laci' && (semua || a.akun === akunAktif(toko)) && diPeriode(a.waktuIso, periode))
+    .filter((a) => !fKat || katDari(a).some((x) => x.kategori === fKat))
+    .filter((a) => !q || a.nomor.toLowerCase().includes(q) || (a.penerima ?? '').toLowerCase().includes(q) || katDari(a).some((x) => x.keterangan.toLowerCase().includes(q)))
     .sort((a, b) => b.waktuIso.localeCompare(a.waktuIso));
   const total = daftar.reduce((t, a) => t - a.tunai - a.transfer, 0);
+  const perKat = new Map<string, number>();
+  daftar.forEach((a) => katDari(a).forEach((x) => perKat.set(x.kategori, (perKat.get(x.kategori) ?? 0) + x.jumlah)));
+
+  return (
+    <div className="ps-halaman">
+      <KepalaKas />
+      <div className="ps-atas">
+        <div className="kartu kb-angka" style={{ minWidth: 240 }}>
+          <span className="teks-pudar">Pengeluaran laci · {teksPeriode(periode)}</span>
+          <strong>{rupiah(total)}</strong>
+          <span className="teks-pudar">{daftar.length} bukti{semua ? ' · semua akun' : ''}</span>
+        </div>
+        <button type="button" className="tombol tombol--utama" disabled={!adaLaci} title={adaLaci ? undefined : 'Buka kasir dulu'} onClick={() => setForm(true)}>+ Pengeluaran baru</button>
+      </div>
+
+      <div className="kartu tumpuk">
+        <PilihPeriode awal="7-hari" onUbah={setPeriode} />
+        <div className="rt-filter">
+          <label className="isian">
+            Kategori
+            <select className="isian__kontrol" value={fKat} onChange={(e) => setFKat(e.target.value)}>
+              <option value="">Semua kategori</option>
+              {KATEGORI_PENGELUARAN.map((k) => <option key={k} value={k}>{k}</option>)}
+            </select>
+          </label>
+          <label className="isian">
+            Cari
+            <input className="isian__kontrol" value={cari} onChange={(e) => setCari(e.target.value)} placeholder="no. bukti, penerima, keterangan" />
+          </label>
+        </div>
+        {perKat.size > 0 && (
+          <div className="lc-bagi-lihat" style={{ borderTop: 0, paddingTop: 0 }}>
+            {[...perKat].sort((a, b) => b[1] - a[1]).map(([k, v]) => <span key={k}>{k} <strong>{rupiah(v)}</strong></span>)}
+          </div>
+        )}
+      </div>
+
+      {daftar.length === 0 ? (
+        <div className="kartu ps-kosong-besar"><h2>Tidak ada pengeluaran</h2><p className="teks-pudar">Tidak ada bukti kas keluar untuk filter ini.</p></div>
+      ) : (
+        <div className="kartu bd-tabel-kartu">
+          <table className="ps-tabel ps-tabel--hp bd-tabel">
+            <thead>
+              <tr><th>No. bukti</th><th>Tanggal</th><th>Kategori</th><th>Keterangan</th><th>Penerima</th><th className="kanan">Nilai</th><th>Oleh</th></tr>
+            </thead>
+            <tbody>
+              {daftar.map((a) => {
+                const r = katDari(a);
+                return (
+                  <tr key={a.id} onClick={() => setD(a)}>
+                    <td data-label="No. bukti"><strong>{a.nomor}</strong></td>
+                    <td data-label="Tanggal">{waktu(a.waktuIso)}</td>
+                    <td data-label="Kategori">{[...new Set(r.map((x) => x.kategori))].join(', ')}</td>
+                    <td data-label="Keterangan">{r.map((x) => x.keterangan).join('; ')}</td>
+                    <td data-label="Penerima">{a.penerima}</td>
+                    <td data-label="Nilai" className="kanan"><strong>{rupiah(Math.abs(a.tunai + a.transfer))}</strong></td>
+                    <td data-label="Oleh">{a.akun}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot><tr><td colSpan={5} className="kanan"><strong>Total</strong></td><td className="kanan"><strong>{rupiah(total)}</strong></td><td /></tr></tfoot>
+          </table>
+        </div>
+      )}
+      {d && <DialogBuktiKasKeluar a={d} onTutup={() => setD(null)} />}
+    </div>
+  );
+}
+
+/** Formulir bukti kas keluar: kepala (tanggal, no. bukti, dibayar dari, penerima) + baris rincian. */
+function FormPengeluaran({ onBatal, onSelesai }: { onBatal: () => void; onSelesai: (a: ArusKas) => void }) {
+  const toko = useToko();
+  const laci = laciTerbuka(undefined, toko);
+  const uang = uangLaci(toko);
+  const kosong = () => ({ id: Math.random().toString(36).slice(2), kategori: '', keterangan: '', jumlah: 0 });
+  const [baris, setBaris] = useState([kosong()]);
+  const [penerima, setPenerima] = useState('');
+  const ubah = (id: string, patch: Partial<ReturnType<typeof kosong>>) => setBaris((xs) => xs.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+  const isi = baris.filter((x) => x.jumlah > 0);
+  const total = isi.reduce((t, x) => t + x.jumlah, 0);
+  const lengkap = isi.length > 0 && isi.every((x) => x.kategori && x.keterangan.trim());
+  const lebih = total > uang;
+  const siap = !!laci && lengkap && !!penerima.trim() && !lebih;
+  const simpan = () => {
+    if (!siap) return;
+    const rincian = isi.map((x) => ({ kategori: x.kategori, keterangan: x.keterangan.trim(), jumlah: x.jumlah }));
+    onSelesai(catatArus({
+      jenis: 'pengeluaran', nomor: nomorArus('KK'), tunai: -total, transfer: 0, penerima: penerima.trim(),
+      kategori: rincian.length === 1 ? rincian[0].kategori : 'Beberapa kategori', keterangan: rincian.map((x) => x.keterangan).join('; '), rincian,
+    }));
+  };
   return (
     <div className="ps-halaman">
       <div className="ps-atas">
-        <div className="kartu kb-angka" style={{ minWidth: 220 }}>
-          <span className="teks-pudar">Pengeluaran · {teksPeriode(periode)}</span>
-          <strong>{rupiah(total)}</strong>
-          <span className="teks-pudar">{daftar.length} catatan{semua ? ' · semua akun' : ''}</span>
-        </div>
-        <button type="button" className="tombol tombol--utama" disabled={!laciTerbuka(undefined, toko)} title={laciTerbuka(undefined, toko) ? undefined : 'Buka kasir dulu'} onClick={() => setD('baru')}>+ Catat pengeluaran</button>
+        <h2 style={{ margin: 0 }}>Bukti kas keluar</h2>
+        <button type="button" className="tautan" onClick={onBatal}>← Kembali ke daftar</button>
       </div>
-      {!laciTerbuka(undefined, toko) && <p className="catatan catatan--peringatan" style={{ margin: 0 }}>Laci belum dibuka. Pengeluaran dari laci dicatat setelah buka kasir.</p>}
-      <PilihPeriode onUbah={setPeriode} />
-      {daftar.length === 0 ? (
-        <div className="kartu ps-kosong-besar"><h2>Belum ada pengeluaran</h2><p className="teks-pudar">Pengeluaran dari laci untuk periode ini. Pengeluaran dari kas pemilik/bank dicatat di Back Office.</p></div>
-      ) : (
-        <div className="kartu rw-daftar">
-          {daftar.map((a) => (
-            <button key={a.id} type="button" className="rw-baris" onClick={() => setD(a)}>
-              <span className="rw-baris__kiri">
-                <span className="rw-baris__nomor"><strong>{a.nomor}</strong><span className="chip-status chip-status--abu">{a.kategori}</span>
-</span>
-                <span className="teks-pudar">{waktu(a.waktuIso)} · {a.keterangan} · penerima {a.penerima}{semua ? ` · ${a.akun}` : ''}</span>
-              </span>
-              <strong className="rw-baris__nilai teks-bahaya">−{rupiah(Math.abs(a.tunai + a.transfer))}</strong>
-            </button>
-          ))}
+      <div className="kartu bd-kepala">
+        <label className="isian">Tanggal<input className="isian__kontrol" value={tanggalPendek(hariIni())} readOnly /></label>
+        <label className="isian">No. bukti<input className="isian__kontrol" value="KK-… (otomatis)" readOnly /></label>
+        <label className="isian">Dibayar dari<input className="isian__kontrol" value={laci ? `Laci ${laci.akun} · ${rupiah(uang)}` : 'Laci belum dibuka'} readOnly /></label>
+        <label className="isian">
+          Nama penerima (wajib)
+          <input className="isian__kontrol" value={penerima} onChange={(e) => setPenerima(e.target.value)} placeholder="mis. Pak Udin (kuli)" />
+        </label>
+      </div>
+      <div className="kartu bd-tabel-kartu">
+        <table className="ps-tabel ps-tabel--hp bd-tabel bd-form">
+          <thead><tr><th style={{ width: 40 }}>#</th><th>Kategori</th><th>Keterangan (wajib)</th><th className="kanan">Jumlah</th><th aria-label="Hapus" /></tr></thead>
+          <tbody>
+            {baris.map((x, i) => (
+              <tr key={x.id}>
+                <td data-label="#">{i + 1}</td>
+                <td data-label="Kategori">
+                  <select className="isian__kontrol" aria-label={`Kategori baris ${i + 1}`} value={x.kategori} onChange={(e) => ubah(x.id, { kategori: e.target.value })} style={!x.kategori ? { color: 'var(--teks-3)' } : undefined}>
+                    <option value="" disabled>Pilih kategori…</option>
+                    {KATEGORI_PENGELUARAN.map((k) => <option key={k} value={k}>{k}</option>)}
+                  </select>
+                </td>
+                <td data-label="Keterangan">
+                  <input className="isian__kontrol" aria-label={`Keterangan baris ${i + 1}`} value={x.keterangan} onChange={(e) => ubah(x.id, { keterangan: e.target.value })} placeholder="mis. bongkar 2 colt gula" />
+                </td>
+                <td data-label="Jumlah" className="kanan"><InputRupiah id={`kk-${x.id}`} nilai={x.jumlah} label={`Jumlah baris ${i + 1}`} onUbah={(n) => ubah(x.id, { jumlah: n })} /></td>
+                <td data-label="">{baris.length > 1 && <button type="button" className="tautan teks-bahaya" onClick={() => setBaris((xs) => xs.filter((y) => y.id !== x.id))}>Hapus</button>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <button type="button" className="tombol tombol--putus" style={{ marginTop: 10 }} onClick={() => setBaris((xs) => [...xs, kosong()])}>+ Tambah baris</button>
+      </div>
+      <div className="kartu bd-kaki">
+        <div className="bd-kaki__angka">
+          <div className="ringkas-total"><span>Baris</span><strong>{isi.length}</strong></div>
+          <div className="ringkas-total ringkas-total--besar"><span>Total kas keluar (dari laci)</span><strong>{rupiah(total)}</strong></div>
+          {lebih && <p className="catatan catatan--peringatan" style={{ margin: 0 }}>Melebihi uang di laci ({rupiah(uang)}).</p>}
+          <p className="teks-pudar" style={{ margin: 0, fontSize: 12.5 }}>Foto nota (opsional) bisa ditambahkan di versi jadi. Bukti dicetak untuk ditandatangani penerima.</p>
         </div>
-      )}
-      {d === 'baru' && <DialogPengeluaran adaLaci={!!laciTerbuka(undefined, toko)} maksLaci={uangLaci(toko)} onSelesai={(a) => setD(a)} onTutup={() => setD(null)} />}
-      {d && d !== 'baru' && <DialogBuktiKasKeluar a={d} onTutup={() => setD(null)} />}
+        <div className="baris-tombol" style={{ justifyContent: 'flex-end' }}>
+          <button type="button" className="tombol" onClick={onBatal}>Batal</button>
+          <button type="button" className="tombol tombol--utama" disabled={!siap} onClick={simpan}>Simpan & cetak bukti</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -130,6 +262,7 @@ export function BayarDistributor() {
 
   return (
     <div className="ps-halaman">
+      <KepalaKas />
       <div className="ps-atas">
         <div className="saklar" role="group" aria-label="Tampilan">
           <button type="button" aria-pressed={tab === 'faktur'} onClick={() => setTab('faktur')}>Faktur hutang</button>
@@ -236,7 +369,12 @@ export function BayarDistributor() {
                       <td data-label="No. bukti"><strong>{a.nomor}</strong></td>
                       <td data-label="Tanggal">{waktu(a.waktuIso)}</td>
                       <td data-label="Distributor">{a.penerima}</td>
-                      <td data-label="Faktur dibayar">{a.faktur?.map((f) => f.nomor).join(', ')}</td>
+                      <td data-label="Faktur dibayar" onClick={(e) => e.stopPropagation()}>
+                        {a.faktur?.map((f, i) => {
+                          const fk = semua.find((x) => x.id === f.id);
+                          return <span key={f.id}>{i > 0 && ', '}{fk ? <button type="button" className="tautan" onClick={() => setD({ detail: fk })}>{f.nomor}</button> : f.nomor}</span>;
+                        })}
+                      </td>
                       <td data-label="Dibayar dari">{a.sumber === 'laci' ? 'Laci kasir' : 'Kas pemilik'}</td>
                       <td data-label="Diskon" className="kanan">{dis ? rupiah(dis) : '-'}</td>
                       <td data-label="Nilai bayar" className="kanan"><strong>{rupiah(nilai)}</strong></td>
@@ -263,7 +401,6 @@ export function BayarDistributor() {
           </div>
         </div>
       )}
-      {!adaLaci && <p className="teks-pudar" style={{ margin: 0, fontSize: 12.5 }}>Pembayaran dari laci bisa dibuat setelah buka kasir.</p>}
 
       {d && 'detail' in d && <DialogDetailFaktur f={d.detail} onTutup={() => setD(null)} />}
       {d && 'jenis' in d && <DialogBuktiKasKeluar a={d} onTutup={() => setD(null)} />}
@@ -278,6 +415,7 @@ function FormPembayaran({ awal, onBatal, onSelesai }: { awal: { distributorId: s
   const [per, setPer] = useState<Record<string, { bayar: number; diskon: number }>>(() =>
     Object.fromEntries(daftarFaktur(toko).filter((f) => awal.faktur.includes(f.id)).map((f) => [f.id, { bayar: f.sisa, diskon: 0 }])));
   const [ket, setKet] = useState('');
+  const [detail, setDetail] = useState<FakturHutang | null>(null);
   const laci = laciTerbuka(undefined, toko);
   const uang = uangLaci(toko);
   const faktur = daftarFaktur(toko).filter((f) => f.sisa > 0 && f.distributorId === dist);
@@ -349,7 +487,7 @@ function FormPembayaran({ awal, onBatal, onSelesai }: { awal: { distributorId: s
                       <input type="checkbox" className="kb-centang" aria-label={`Bayar ${f.nomorDistributor}`} checked={aktif}
                         onChange={(e) => ubah(f, e.target.checked ? { bayar: f.sisa, diskon: 0 } : { bayar: 0, diskon: 0 })} />
                     </td>
-                    <td data-label="No. faktur"><strong>{f.nomorDistributor}</strong><div className="teks-pudar" style={{ fontSize: 12 }}>{f.lama ? 'hutang lama' : f.nomor}</div></td>
+                    <td data-label="No. faktur"><button type="button" className="tautan" onClick={() => setDetail(f)}><strong>{f.nomorDistributor}</strong></button><div className="teks-pudar" style={{ fontSize: 12 }}>{f.lama ? 'hutang lama' : f.nomor}</div></td>
                     <td data-label="Tanggal">{tanggalPendek(f.tanggal)}</td>
                     <td data-label="Jatuh tempo" className={f.jatuhTempo < hariIni() ? 'teks-bahaya' : ''}>{tanggalPendek(f.jatuhTempo)}</td>
                     <td data-label="Total" className="kanan">{rupiah(f.total)}</td>
@@ -377,30 +515,68 @@ function FormPembayaran({ awal, onBatal, onSelesai }: { awal: { distributorId: s
           <button type="button" className="tombol tombol--utama" disabled={!siap} onClick={simpan}>Simpan & cetak bukti</button>
         </div>
       </div>
+      {detail && <DialogDetailFaktur f={detail} onTutup={() => setDetail(null)} />}
     </div>
   );
 }
 
-function DialogDetailFaktur({ f, onTutup }: { f: FakturHutang; onTutup: () => void }) {
+/** Detail faktur asli: kepala faktur, rincian barang (dari barang masuk), pembayaran. */
+export function DialogDetailFaktur({ f, onTutup }: { f: FakturHutang; onTutup: () => void }) {
+  const [info, setInfo] = useState('');
+  const a = f.asli;
   return (
-    <Dialog judul={`Faktur ${f.nomorDistributor}`} onTutup={onTutup} lebar={480}>
-      <div className="ringkas-total"><span>Distributor</span><strong>{ambilDistributor(f.distributorId).nama}</strong></div>
-      <div className="ringkas-total"><span>{f.lama ? 'Hutang lama (tanpa rincian barang)' : `Barang masuk ${f.nomor}`}</span><span /></div>
-      <div className="ringkas-total"><span>Tanggal faktur</span><span>{tanggalPendek(f.tanggal)}</span></div>
-      <div className="ringkas-total"><span>Jatuh tempo</span><span>{tanggalPendek(f.jatuhTempo)}</span></div>
-      <div className="ringkas-total"><span>Total</span><strong>{rupiah(f.total)}</strong></div>
-      <div className="ringkas-total"><span>Dibayar</span><span>{rupiah(f.dibayar)}</span></div>
-      <div className="ringkas-total ringkas-total--besar"><span>Sisa</span><strong>{rupiah(f.sisa)}</strong></div>
-      <h3 style={{ margin: '6px 0 0' }}>Pembayaran</h3>
+    <Dialog judul={`Faktur ${f.nomorDistributor}`} onTutup={onTutup} lebar={640}
+      kaki={<>
+        <div className="baris-tombol">
+          <button type="button" className="tombol" onClick={() => setInfo('Di versi jadi, faktur dicetak / diunduh PDF; foto kertas faktur ikut tersimpan.')}>Cetak / unduh</button>
+        </div>
+        {info && <p className="catatan catatan--info" style={{ margin: 0 }}>{info}</p>}
+      </>}>
+      <div className="fk-kepala">
+        <div><span className="teks-pudar">Distributor</span><strong>{ambilDistributor(f.distributorId).nama}</strong></div>
+        <div><span className="teks-pudar">No. faktur (kertas)</span><strong>{f.nomorDistributor}</strong></div>
+        <div><span className="teks-pudar">Tanggal faktur</span><strong>{tanggalPendek(f.tanggal)}</strong></div>
+        <div><span className="teks-pudar">Jatuh tempo</span><strong className={f.sisa > 0 && f.jatuhTempo < hariIni() ? 'teks-bahaya' : ''}>{tanggalPendek(f.jatuhTempo)}</strong></div>
+        {a ? (
+          <>
+            <div><span className="teks-pudar">Barang masuk</span><strong>{a.nomor}</strong></div>
+            <div><span className="teks-pudar">Dari Surat Pesanan</span><strong>{a.spNomor}</strong></div>
+            <div><span className="teks-pudar">Pembayaran</span><strong>{a.cara === 'tempo' ? 'Tempo' : 'Cash'}</strong></div>
+            <div><span className="teks-pudar">Dicatat</span><strong>{a.oleh} · {a.waktu}</strong></div>
+          </>
+        ) : (
+          <div style={{ gridColumn: '1 / -1' }}><span className="chip-status chip-status--kuning">Hutang lama</span> <span className="teks-pudar">dicatat tanpa rincian barang (sebelum memakai aplikasi)</span></div>
+        )}
+      </div>
+
+      {a?.baris && a.baris.length > 0 && (
+        <table className="ps-tabel fk-tabel">
+          <thead><tr><th>Barang</th><th className="kanan">Jumlah</th><th className="kanan">Harga</th><th className="kanan">Subtotal</th></tr></thead>
+          <tbody>
+            {a.baris.map((b, i) => (
+              <tr key={i}><td>{b.nama}</td><td className="kanan">{b.qty} {b.satuan}</td><td className="kanan">{rupiah(b.harga)}</td><td className="kanan">{rupiah(b.qty * b.harga)}</td></tr>
+            ))}
+          </tbody>
+          <tfoot><tr><td colSpan={3} className="kanan"><strong>Total faktur</strong></td><td className="kanan"><strong>{rupiah(f.total)}</strong></td></tr></tfoot>
+        </table>
+      )}
+
+      <div className="fk-ringkas">
+        <div className="ringkas-total"><span>Total</span><strong>{rupiah(f.total)}</strong></div>
+        <div className="ringkas-total"><span>Dibayar + diskon</span><span>{rupiah(f.dibayar)}</span></div>
+        <div className="ringkas-total ringkas-total--besar"><span>Terutang</span><strong>{rupiah(f.sisa)}</strong></div>
+      </div>
+      <h3 style={{ margin: '4px 0 0' }}>Pembayaran</h3>
       {f.pembayaran.length === 0 ? <p className="teks-pudar" style={{ margin: 0 }}>Belum ada pembayaran.</p> : (
-        <ul className="kb-riwayat">
-          {f.pembayaran.map((p) => (
-            <li key={p.nomor}>
-              <div className="kb-riwayat__atas"><span><strong>{p.nomor}</strong> · {waktu(p.waktuIso)}</span><strong>{rupiah(p.jumlah)}{p.diskon ? ` + diskon ${rupiah(p.diskon)}` : ''}</strong></div>
-              <span className="teks-pudar">{p.sumber === 'laci' ? `laci ${p.akun}` : 'kas pemilik'}</span>
-            </li>
-          ))}
-        </ul>
+        <table className="ps-tabel fk-tabel">
+          <thead><tr><th>No. bukti</th><th>Tanggal</th><th>Dari</th><th className="kanan">Diskon</th><th className="kanan">Bayar</th></tr></thead>
+          <tbody>
+            {f.pembayaran.map((p) => (
+              <tr key={p.nomor}><td>{p.nomor}</td><td>{waktu(p.waktuIso)}</td><td>{p.sumber === 'laci' ? `Laci ${p.akun}` : 'Kas pemilik'}</td>
+                <td className="kanan">{p.diskon ? rupiah(p.diskon) : '-'}</td><td className="kanan">{rupiah(p.jumlah)}</td></tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </Dialog>
   );
@@ -409,35 +585,73 @@ function DialogDetailFaktur({ f, onTutup }: { f: FakturHutang; onTutup: () => vo
 /** Laporan harian per buka–tutup laci. Kasir melihat lacinya sendiri; pemilik semua. */
 export function LaporanHarian() {
   const toko = useToko();
-  const [periode, setPeriode] = useState<Periode>(() => ({ dari: isoHari(new Date(Date.now() - 6 * 864e5)), sampai: hariIni() }));
+  const [periode, setPeriode] = useState<Periode>(() => periodeDari('7-hari', '', { dari: '', sampai: '' }));
+  const [fAkun, setFAkun] = useState('');
   const [buka, setBuka] = useState<string | null>(null);
   const semua = toko.peran === 'pemilik';
+  const akunAda = [...new Set(toko.sesiLaci.map((x) => x.akun))];
   const daftar = toko.sesiLaci
-    .filter((x) => (semua || x.akun === akunAktif(toko)) && x.tanggal >= periode.dari && x.tanggal <= periode.sampai)
-    .sort((a, b) => b.dibukaIso.localeCompare(a.dibukaIso));
+    .filter((x) => (semua ? !fAkun || x.akun === fAkun : x.akun === akunAktif(toko)) && x.tanggal >= periode.dari && x.tanggal <= periode.sampai)
+    .sort((a, b) => b.dibukaIso.localeCompare(a.dibukaIso))
+    .map((x) => ({ x, r: ringkasLaci(x.id, toko) }));
+  const jumlah = (f: (v: (typeof daftar)[number]) => number) => daftar.reduce((t, v) => t + f(v), 0);
+  const jam = (iso?: string) => (iso ? new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-');
   return (
     <div className="ps-halaman">
-      <PilihPeriode awal="7-hari" onUbah={setPeriode} />
+      <KepalaKas />
+      <div className="kartu tumpuk">
+        <PilihPeriode awal="7-hari" onUbah={setPeriode} />
+        {semua && (
+          <div className="rt-filter">
+            <label className="isian">
+              Akun kasir
+              <select className="isian__kontrol" value={fAkun} onChange={(e) => setFAkun(e.target.value)}>
+                <option value="">Semua akun</option>
+                {akunAda.map((k) => <option key={k} value={k}>{k}</option>)}
+              </select>
+            </label>
+          </div>
+        )}
+      </div>
       {daftar.length === 0 ? (
-        <div className="kartu ps-kosong-besar"><h2>Tidak ada laporan</h2><p className="teks-pudar">Laporan dibuat setiap tutup kasir.</p></div>
+        <div className="kartu ps-kosong-besar"><h2>Tidak ada laporan</h2><p className="teks-pudar">Laporan dibuat setiap buka–tutup kasir.</p></div>
       ) : (
-        <div className="kartu rw-daftar">
-          {daftar.map((x) => {
-            const r = ringkasLaci(x.id, toko);
-            return (
-              <button key={x.id} type="button" className="rw-baris" onClick={() => setBuka(x.id)}>
-                <span className="rw-baris__kiri">
-                  <span className="rw-baris__nomor">
-                    <strong>{x.nomor}</strong>
-                    <span className={`chip-status chip-status--${x.ditutupIso ? 'abu' : 'biru'}`}>{x.ditutupIso ? 'Ditutup' : 'Masih buka'}</span>
-                    {!!x.selisih && <span className="chip-status chip-status--merah">Selisih {rupiah(x.selisih)}</span>}
-                  </span>
-                  <span className="teks-pudar">{tanggalPendek(x.tanggal)} · {x.akun} · {r.banyakNota} nota · seharusnya {rupiah(r.seharusnya)}{x.uangFisik !== undefined ? ` · fisik ${rupiah(x.uangFisik)}` : ''}</span>
-                </span>
-                <strong className="rw-baris__nilai">{rupiah(r.omzet)}</strong>
-              </button>
-            );
-          })}
+        <div className="kartu bd-tabel-kartu">
+          <table className="ps-tabel ps-tabel--hp bd-tabel">
+            <thead>
+              <tr>
+                <th>No. / akun</th><th>Tanggal</th><th className="kanan">Modal</th><th className="kanan">Masuk tunai</th>
+                <th className="kanan">Keluar tunai</th><th className="kanan">Seharusnya</th><th className="kanan">Fisik</th><th className="kanan">Selisih</th><th className="kanan">Transfer</th><th className="kanan">Penjualan</th>
+              </tr>
+            </thead>
+            <tbody>
+              {daftar.map(({ x, r }) => (
+                <tr key={x.id} onClick={() => setBuka(x.id)}>
+                  <td data-label="No. / akun"><strong>{x.nomor}</strong><div className="teks-pudar" style={{ fontSize: 12 }}>{x.akun}</div></td>
+                  <td data-label="Tanggal">{tanggalPendek(x.tanggal)}<div className="teks-pudar" style={{ fontSize: 12 }}>{jam(x.dibukaIso)}–{x.ditutupIso ? jam(x.ditutupIso) : <span className="chip-status chip-status--biru">masih buka</span>}</div></td>
+                  <td data-label="Modal" className="kanan">{rupiah(r.modal)}</td>
+                  <td data-label="Masuk tunai" className="kanan">{rupiah(r.masukTunai)}</td>
+                  <td data-label="Keluar tunai" className="kanan">{rupiah(r.keluarTunai)}</td>
+                  <td data-label="Seharusnya" className="kanan"><strong>{rupiah(r.seharusnya)}</strong></td>
+                  <td data-label="Fisik" className="kanan">{x.uangFisik !== undefined ? rupiah(x.uangFisik) : '-'}</td>
+                  <td data-label="Selisih" className={`kanan ${x.selisih ? 'teks-bahaya' : ''}`}>{x.selisih === undefined ? '-' : x.selisih === 0 ? '0' : `${x.selisih > 0 ? '+' : '−'}${rupiah(Math.abs(x.selisih))}`}</td>
+                  <td data-label="Transfer" className="kanan">{rupiah(r.totalTransfer)}</td>
+                  <td data-label="Penjualan" className="kanan"><strong>{rupiah(r.omzet)}</strong><div className="teks-pudar" style={{ fontSize: 12 }}>{r.banyakNota} nota</div></td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={3} className="kanan"><strong>Total · {teksPeriode(periode)}</strong></td>
+                <td className="kanan"><strong>{rupiah(jumlah((v) => v.r.masukTunai))}</strong></td>
+                <td className="kanan"><strong>{rupiah(jumlah((v) => v.r.keluarTunai))}</strong></td>
+                <td /><td />
+                <td className={`kanan ${jumlah((v) => v.x.selisih ?? 0) ? 'teks-bahaya' : ''}`}><strong>{(() => { const n = jumlah((v) => v.x.selisih ?? 0); return n === 0 ? '0' : `${n > 0 ? '+' : '−'}${rupiah(Math.abs(n))}`; })()}</strong></td>
+                <td className="kanan"><strong>{rupiah(jumlah((v) => v.r.totalTransfer))}</strong></td>
+                <td className="kanan"><strong>{rupiah(jumlah((v) => v.r.omzet))}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       )}
       {buka && <DialogLaporanHarian sesiId={buka} onTutup={() => setBuka(null)} />}

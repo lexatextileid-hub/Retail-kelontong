@@ -89,6 +89,18 @@ export type StatusSP = 'draf' | 'dikirim' | 'sebagian' | 'selesai' | 'ditutup';
 export type SumberSP = 'pesanan' | 'stok' | 'baru';
 export const namaSumberSP: Record<SumberSP, string> = { pesanan: 'Dari pesanan pelanggan', stok: 'Stok menipis', baru: 'Pesanan baru' };
 
+/** Faktur distributor yang dicatat saat barang datang dari Surat Pesanan (salinan isi kertas faktur). */
+export interface FakturSP {
+  nomor: string; // PB-… (nomor internal barang masuk)
+  nomorDistributor: string; // nomor di kertas faktur
+  waktu: string;
+  tanggal?: string;
+  cara: 'cash' | 'tempo';
+  total: number;
+  oleh: string;
+  baris?: { nama: string; satuan: string; qty: number; harga: number }[];
+}
+
 export interface SuratPesanan {
   id: string;
   sumber: SumberSP;
@@ -99,7 +111,7 @@ export interface SuratPesanan {
   baris: BarisSP[];
   status: StatusSP;
   catatan?: string;
-  faktur: { nomor: string; nomorDistributor: string; waktu: string; tanggal?: string; cara: 'cash' | 'tempo'; total: number; oleh: string }[];
+  faktur: FakturSP[];
 }
 
 /* ---------- Kasbon (piutang pelanggan) ---------- */
@@ -260,6 +272,8 @@ export interface ArusKas {
   sumber: 'laci' | 'brankas' | 'bank';
   keterangan: string;
   kategori?: string;
+  /** Rincian bukti kas keluar (bisa beberapa baris kategori). */
+  rincian?: { kategori: string; keterangan: string; jumlah: number }[];
   penerima?: string;
   bank?: string;
   /** jumlah = uang dibayar; diskon = potongan dari distributor (mengurangi hutang tanpa uang). */
@@ -663,6 +677,13 @@ export function terimaDariSP(
   });
   const semuaDiterima = barisBaru.every((b) => b.diterima);
   const total = data.baris.reduce((t, x) => t + x.qty * x.harga, 0);
+  const barisFaktur = data.baris.filter((x) => x.qty > 0).map((x) => {
+    const b = sp.baris.find((y) => y.id === x.barisId)!;
+    const pid = x.produkId ?? b.produkId;
+    const p = pid ? ambilProduk(pid) : undefined;
+    const sid = x.satuanProdukId ?? b.satuanProdukId;
+    return { nama: p?.nama ?? b.permintaan ?? '-', satuan: p && sid ? ambilSatuan(p, sid).label : b.labelSatuan, qty: x.qty, harga: x.harga };
+  });
   const status: StatusSP = semuaDiterima ? 'selesai' : data.tutupSisa ? 'ditutup' : 'sebagian';
 
   ubah((s) => ({
@@ -674,7 +695,7 @@ export function terimaDariSP(
             ...x,
             baris: barisBaru,
             status,
-            faktur: [...x.faktur, { nomor, nomorDistributor: data.nomorDistributor, waktu: sekarang(), tanggal: hariIni(), cara: data.cara, total, oleh: namaAkun[s.peran] }],
+            faktur: [...x.faktur, { nomor, nomorDistributor: data.nomorDistributor, waktu: sekarang(), tanggal: hariIni(), cara: data.cara, total, oleh: namaAkun[s.peran], baris: barisFaktur }],
           }
         : x,
     ),
@@ -1028,6 +1049,8 @@ export interface FakturHutang {
   sisa: number;
   status: StatusFaktur;
   lama: boolean;
+  /** Faktur asli (dari barang masuk), bila bukan hutang lama. */
+  asli?: FakturSP & { spNomor: string };
   pembayaran: { nomor: string; waktuIso: string; jumlah: number; diskon: number; sumber: ArusKas['sumber']; akun: string }[];
 }
 
@@ -1046,7 +1069,7 @@ export function daftarFaktur(s: State = state): FakturHutang[] {
         const tgl = f.tanggal ?? hariIni();
         return {
           id: `fk:${f.nomor}`, nomor: f.nomor, nomorDistributor: f.nomorDistributor, distributorId: sp.distributorId, tanggal: tgl,
-          jatuhTempo: tambahHari(tgl, termin(sp.distributorId)), total: f.total, lama: false,
+          jatuhTempo: tambahHari(tgl, termin(sp.distributorId)), total: f.total, lama: false, asli: { ...f, spNomor: sp.nomor },
         };
       }),
     ),
@@ -1120,6 +1143,15 @@ export const fakturTerbuka = (s: State = state) => daftarFaktur(s).filter((f) =>
     (state = { ...state, arus: [...state.arus, { id: id('ak'), nomor, waktuIso: (() => { const w = new Date(); w.setDate(w.getDate() - h); w.setHours(15, 0, 0, 0); return w.toISOString(); })(),
       akun: '[Pemilik]', jenis: 'bayar-distributor', sumber: 'brankas', tunai: -jumlah, transfer: 0, penerima: dist, keterangan: `Bayar ${dist}`,
       faktur: [{ id: fid, nomor: nomorF, jumlah }] }] });
+  // Faktur tempo asli dari Surat Pesanan (ada rincian barangnya)
+  const spId = buatSP({ distributorId: 'dist-a', sumber: 'stok', baris: [
+    { produkId: 'minyak-1l', satuanProdukId: 'minyak-ktn', labelSatuan: 'Karton isi 12', qty: 5, hargaPerkiraan: 205000, untukPesanan: [] },
+    { produkId: 'kecap', satuanProdukId: 'kecap-ktn', labelSatuan: 'Karton isi 12', qty: 3, hargaPerkiraan: 252000, untukPesanan: [] },
+  ] });
+  tandaiSPDikirim(spId);
+  const spX = state.sp.find((x) => x.id === spId)!;
+  terimaDariSP(spId, { nomorDistributor: 'SJ-A-7781', cara: 'tempo', baris: spX.baris.map((b) => ({ barisId: b.id, qty: b.qty, harga: b.hargaPerkiraan ?? 0 })), tutupSisa: true });
+  state = { ...state, sp: state.sp.map((x) => (x.id === spId ? { ...x, faktur: x.faktur.map((f) => ({ ...f, tanggal: lalu(4) })) } : x)) };
   bayarLama('BD-2610-0001', 6, 'hl:hl4', 'F-2150', 600000, 'Distributor B');
   bayarLama('BD-2610-0002', 3, 'hl:hl1', 'INV-0912', 250000, 'Distributor A');
   state = { ...state, urut: { ...state.urut, BD: 3 } };

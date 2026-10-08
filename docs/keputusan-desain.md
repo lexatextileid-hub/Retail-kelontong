@@ -144,6 +144,11 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - **Kas masuk lain** di kasir: pendapatan lain-lain (jual kardus bekas, barang rusak/kedaluwarsa) atau uang dari brankas (pindah dana, PIN pemilik).
 - Pengeluaran / bayar distributor dari laci tidak boleh melebihi uang di laci.
 - Bayar distributor: pilih faktur tempo (dari Surat Pesanan) atau **hutang lama** (tanpa rincian barang); satu pembayaran satu distributor, bisa beberapa faktur, bisa sebagian.
+- **Kas Laci satu kesatuan (mode akuntansi):** semua sub-menu memakai susunan yang sama — bilah status laci di atas (nomor laci, akun, jam buka, tunai di laci, transfer), tombol aksi, kartu ringkasan, filter (periode / kategori / distributor), lalu tabel dengan baris total.
+  - **Laci Hari Ini:** buku kas laci (jam, no. bukti, jenis, keterangan, masuk, keluar, **saldo laci berjalan**, transfer), mulai dari baris modal awal; filter semua/masuk/keluar/transfer.
+  - **Pengeluaran:** daftar bukti kas keluar (no. bukti, tanggal, kategori, keterangan, penerima, nilai, oleh) + total per kategori; formulir bukti kas keluar bisa **beberapa baris** (kategori, keterangan, jumlah) dengan satu penerima.
+  - **Laporan Harian:** tabel per buka–tutup laci (modal, masuk, keluar, seharusnya, fisik, selisih, transfer, penjualan) dengan total periode.
+  - **Klik nomor faktur → detail faktur asli**: kepala faktur (distributor, no. faktur kertas, tanggal, jatuh tempo, barang masuk PB-…, Surat Pesanan asal, cash/tempo, dicatat oleh), rincian barang (jumlah, harga, subtotal), total, dan riwayat pembayaran. Hutang lama ditandai tanpa rincian barang.
 - **Bayar Distributor (mode akuntansi, mengikuti "Pembayaran Pembelian" Accurate):**
   - **Faktur hutang**: tabel no. faktur, distributor, tanggal, jatuh tempo (tanggal + termin distributor), total, dibayar, terutang, status (belum dibayar / sebagian / lewat X hari / lunas). Ringkasan: total hutang, lewat jatuh tempo, jatuh tempo 7 hari. Filter distributor, status, no. faktur. Centang faktur → bayar.
   - **Bukti pembayaran**: no. bukti (BD-…), tanggal, distributor, faktur dibayar, dibayar dari, diskon, nilai bayar, oleh; filter periode, distributor, nomor; total periode.

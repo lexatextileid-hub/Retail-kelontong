@@ -4,14 +4,15 @@ import { bukaLaci, hariIni, laciTerakhirDitutup, laciTerbuka, ringkasLaci, useTo
 import { rupiah } from '../../lib/format';
 import { tanggalPendek } from '../kasbon/bersama';
 import {
-  DialogBukaKasir, DialogBuktiKasKeluar, DialogKasMasuk, DialogLaporanHarian, DialogPengeluaran,
+  DialogBukaKasir, DialogBuktiKasKeluar, DialogKasMasuk, DialogLaporanHarian,
   DialogSetorBank, DialogTutupKasir, namaJenis,
 } from './DialogLaci';
+import { KepalaKas } from './KepalaKas';
 import '../../styles/pesanan.css';
 import '../../styles/penjualan.css';
 import '../../styles/kasbon.css';
 
-type D = null | 'buka' | 'masuk' | 'keluar' | 'setor' | 'distributor' | 'tutup' | { bukti: ArusKas } | { laporan: string };
+type D = null | 'buka' | 'masuk' | 'setor' | 'tutup' | { bukti: ArusKas } | { laporan: string };
 
 const jam = (iso: string) => new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
@@ -19,6 +20,7 @@ const jam = (iso: string) => new Date(iso).toLocaleTimeString('id-ID', { hour: '
 export function LaciHariIni() {
   const toko = useToko();
   const [d, setD] = useState<D>(null);
+  const [fJenis, setFJenis] = useState<'semua' | 'masuk' | 'keluar' | 'transfer'>('semua');
   const sesi = laciTerbuka(undefined, toko);
   const lalu = laciTerakhirDitutup(undefined, toko);
 
@@ -73,90 +75,91 @@ export function LaciHariIni() {
 
   const r = ringkasLaci(sesi.id, toko);
   const t = r.tunai;
-  const daftar = [...r.arus].sort((a, b) => b.waktuIso.localeCompare(a.waktuIso));
-  const baris = (label: string, v: number) => (v === 0 ? null : (
-    <div className="ringkas-total"><span>{label}</span><span className={v < 0 ? 'teks-bahaya' : ''}>{v < 0 ? '−' : '+'}{rupiah(Math.abs(v))}</span></div>
-  ));
+  // Buku kas laci: urut waktu, saldo tunai berjalan dari modal awal.
+  let saldo = r.modal;
+  const buku = [...r.arus].sort((a, b) => a.waktuIso.localeCompare(b.waktuIso)).map((a) => {
+    if (a.sumber === 'laci') saldo += a.tunai;
+    return { a, saldo };
+  });
+  const tampil = buku.filter(({ a }) =>
+    fJenis === 'semua' ? true : fJenis === 'masuk' ? a.tunai > 0 : fJenis === 'keluar' ? a.tunai < 0 : a.transfer !== 0);
+  const bisaBukti = (a: ArusKas) => a.jenis === 'pengeluaran' || a.jenis === 'bayar-distributor' || a.jenis === 'setor-bank';
 
   return (
     <div className="ps-halaman">
+      <KepalaKas />
       <div className="ps-atas">
-        <p className="teks-pudar" style={{ margin: 0 }}>
-          <strong style={{ color: 'var(--teks)' }}>{sesi.nomor}</strong> · {sesi.akun} · buka sejak {jam(sesi.dibukaIso)}
-        </p>
+        <div className="lc-aksi">
+          <button type="button" className="tombol" onClick={() => setD('masuk')}>+ Kas masuk</button>
+          <Link to="../pengeluaran?baru=1" className="tombol">− Pengeluaran</Link>
+          <Link to="../bayar-distributor?baru=1" className="tombol">Bayar distributor</Link>
+          <button type="button" className="tombol" onClick={() => setD('setor')}>Setor bank</button>
+          <button type="button" className="tombol" onClick={() => setD({ laporan: sesi.id })}>Laporan sementara</button>
+        </div>
         <button type="button" className="tombol tombol--utama" onClick={() => setD('tutup')}>Tutup kasir</button>
       </div>
 
-      <div className="lc-dua">
-        <div className="kartu kb-angka">
-          <span className="teks-pudar">Seharusnya tunai di laci</span>
-          <strong>{rupiah(r.seharusnya)}</strong>
-          <span className="teks-pudar">modal {rupiah(r.modal)} · masuk {rupiah(r.masukTunai)} · keluar {rupiah(r.keluarTunai)}</span>
-        </div>
-        <div className="kartu kb-angka">
-          <span className="teks-pudar">Masuk lewat transfer</span>
-          <strong>{rupiah(r.totalTransfer)}</strong>
-          <span className="teks-pudar">penjualan {rupiah(r.omzet)} · {r.banyakNota} nota</span>
-        </div>
+      <div className="kk-ringkas">
+        <div className="kartu kb-angka"><span className="teks-pudar">Modal awal</span><strong>{rupiah(r.modal)}</strong>
+          <span className="teks-pudar">{sesi.tambahBrankas ? `termasuk ${rupiah(sesi.tambahBrankas)} dari pemilik` : 'sisa laci sebelumnya'}</span></div>
+        <div className="kartu kb-angka"><span className="teks-pudar">Masuk tunai</span><strong>+{rupiah(r.masukTunai)}</strong>
+          <span className="teks-pudar">penjualan {rupiah(t.penjualan)}</span></div>
+        <div className="kartu kb-angka"><span className="teks-pudar">Keluar tunai</span><strong className={r.keluarTunai ? 'teks-bahaya' : ''}>−{rupiah(r.keluarTunai)}</strong>
+          <span className="teks-pudar">pengeluaran, distributor, setor</span></div>
+        <div className="kartu kb-angka kk-utama"><span className="teks-pudar">Seharusnya di laci</span><strong>{rupiah(r.seharusnya)}</strong>
+          <span className="teks-pudar">transfer masuk {rupiah(r.totalTransfer)}</span></div>
       </div>
 
-      <div className="lc-aksi">
-        <button type="button" className="tombol" onClick={() => setD('masuk')}>+ Kas masuk</button>
-        <button type="button" className="tombol" onClick={() => setD('keluar')}>− Pengeluaran</button>
-        <Link to="../bayar-distributor?baru=1" className="tombol">Bayar distributor</Link>
-        <button type="button" className="tombol" onClick={() => setD('setor')}>Setor bank</button>
-        <button type="button" className="tombol" onClick={() => setD({ laporan: sesi.id })}>Laporan sementara</button>
-      </div>
-
-      <div className="ps-buat">
-        <section className="ps-kolom">
-          <div className="kartu tumpuk">
-            <h2>Arus uang laci</h2>
-            {daftar.length === 0 ? (
-              <p className="ps-kosong">Belum ada transaksi sejak laci dibuka.</p>
-            ) : (
-              <div className="rw-daftar" style={{ padding: 0 }}>
-                {daftar.map((a) => {
-                  const keluar = a.tunai + a.transfer < 0;
-                  const bisaBukti = a.jenis === 'pengeluaran' || a.jenis === 'bayar-distributor' || a.jenis === 'setor-bank';
-                  return (
-                    <button key={a.id} type="button" className="rw-baris" onClick={() => bisaBukti && setD({ bukti: a })} style={bisaBukti ? undefined : { cursor: 'default' }}>
-                      <span className="rw-baris__kiri">
-                        <span className="rw-baris__nomor">
-                          <strong>{a.nomor}</strong>
-                          <span className={`chip-status chip-status--${keluar ? 'merah' : 'abu'}`}>{namaJenis[a.jenis]}</span>
-                        </span>
-                        <span className="teks-pudar">{jam(a.waktuIso)} · {a.keterangan}{a.penerima ? ` · ${a.penerima}` : ''}</span>
-                      </span>
-                      <span className="lc-nilai">
-                        {a.tunai !== 0 && <strong className={a.tunai < 0 ? 'teks-bahaya' : ''}>{a.tunai < 0 ? '−' : '+'}{rupiah(Math.abs(a.tunai))}</strong>}
-                        {a.transfer !== 0 && <span className="teks-pudar">{a.transfer < 0 ? '−' : '+'}{rupiah(Math.abs(a.transfer))} transfer</span>}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+      <div className="kartu tumpuk">
+        <div className="kb-judul">
+          <h2>Buku kas laci</h2>
+          <div className="pj__kategori" role="group" aria-label="Filter">
+            {([['semua', 'Semua'], ['masuk', 'Masuk'], ['keluar', 'Keluar'], ['transfer', 'Transfer']] as const).map(([k, tx]) => (
+              <button key={k} type="button" aria-pressed={fJenis === k} onClick={() => setFJenis(k)}>{tx}</button>
+            ))}
           </div>
-        </section>
-        <aside className="ps-ringkas kartu tumpuk">
-          <h2>Uang tunai di laci</h2>
-          <div className="ringkas-total"><span>Modal awal</span><strong>{rupiah(r.modal)}</strong></div>
-          {baris('Penjualan', t.penjualan)}
-          {baris('Bayar kasbon', t.kasbon)}
-          {baris('Pesanan', t.pesanan)}
-          {baris('Kas masuk lain', t['kas-masuk'])}
-          {baris('Dari pemilik', t['titipan-brankas'])}
-          {baris('Retur', t.retur)}
-          {baris('Pengeluaran', t.pengeluaran)}
-          {baris('Bayar distributor', t['bayar-distributor'])}
-          {baris('Setor bank', t['setor-bank'])}
-          <div className="ringkas-total ringkas-total--besar"><span>Seharusnya</span><strong>{rupiah(r.seharusnya)}</strong></div>
-        </aside>
+        </div>
+        <div className="bd-tabel-kartu" style={{ padding: 0 }}>
+          <table className="ps-tabel ps-tabel--hp bd-tabel">
+            <thead>
+              <tr><th>Jam</th><th>No. bukti</th><th>Jenis</th><th>Keterangan</th><th className="kanan">Masuk</th><th className="kanan">Keluar</th><th className="kanan">Saldo laci</th><th className="kanan">Transfer</th></tr>
+            </thead>
+            <tbody>
+              {fJenis === 'semua' && (
+                <tr className="kk-baris-modal">
+                  <td data-label="Jam">{jam(sesi.dibukaIso)}</td><td data-label="No. bukti">{sesi.nomor}</td><td data-label="Jenis">Modal awal</td>
+                  <td data-label="Keterangan">Buka kasir</td><td data-label="Masuk" className="kanan">{rupiah(r.modal)}</td><td data-label="Keluar" className="kanan">-</td>
+                  <td data-label="Saldo laci" className="kanan"><strong>{rupiah(r.modal)}</strong></td><td data-label="Transfer" className="kanan">-</td>
+                </tr>
+              )}
+              {tampil.map(({ a, saldo: sl }) => (
+                <tr key={a.id} onClick={() => bisaBukti(a) && setD({ bukti: a })} style={bisaBukti(a) ? undefined : { cursor: 'default' }}>
+                  <td data-label="Jam">{jam(a.waktuIso)}</td>
+                  <td data-label="No. bukti"><strong>{a.nomor}</strong></td>
+                  <td data-label="Jenis"><span className={`chip-status chip-status--${a.tunai < 0 ? 'merah' : 'abu'}`}>{namaJenis[a.jenis]}</span></td>
+                  <td data-label="Keterangan">{a.keterangan}{a.penerima ? ` · ${a.penerima}` : ''}</td>
+                  <td data-label="Masuk" className="kanan">{a.tunai > 0 ? rupiah(a.tunai) : '-'}</td>
+                  <td data-label="Keluar" className={`kanan ${a.tunai < 0 ? 'teks-bahaya' : ''}`}>{a.tunai < 0 ? rupiah(-a.tunai) : '-'}</td>
+                  <td data-label="Saldo laci" className="kanan"><strong>{rupiah(sl)}</strong></td>
+                  <td data-label="Transfer" className="kanan">{a.transfer ? `${a.transfer < 0 ? '−' : ''}${rupiah(Math.abs(a.transfer))}` : '-'}</td>
+                </tr>
+              ))}
+              {tampil.length === 0 && fJenis !== 'semua' && <tr><td colSpan={8} className="ps-kosong">Tidak ada transaksi untuk filter ini.</td></tr>}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={4} className="kanan"><strong>Total</strong></td>
+                <td className="kanan"><strong>{rupiah(r.modal + r.masukTunai)}</strong></td>
+                <td className="kanan"><strong>{rupiah(r.keluarTunai)}</strong></td>
+                <td className="kanan"><strong>{rupiah(r.seharusnya)}</strong></td>
+                <td className="kanan"><strong>{rupiah(r.totalTransfer)}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
 
       {d === 'masuk' && <DialogKasMasuk onSelesai={() => setD(null)} onTutup={() => setD(null)} />}
-      {d === 'keluar' && <DialogPengeluaran adaLaci maksLaci={r.seharusnya} onSelesai={(a) => setD({ bukti: a })} onTutup={() => setD(null)} />}
       {d === 'setor' && <DialogSetorBank maks={r.seharusnya} onSelesai={(a) => setD({ bukti: a })} onTutup={() => setD(null)} />}
       {d === 'tutup' && <DialogTutupKasir sesi={sesi} onSelesai={(id) => setD({ laporan: id })} onTutup={() => setD(null)} />}
       {d && typeof d === 'object' && 'bukti' in d && <DialogBuktiKasKeluar a={d.bukti} onTutup={() => setD(null)} />}

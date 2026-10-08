@@ -152,3 +152,25 @@ a.kb-tagihan__baris:hover { background: var(--permukaan-2); color: var(--teks); 
 }
 .bd-kepala > * { min-width: 0; }
 @media (max-width: 520px) { .bd-kepala { grid-template-columns: 1fr; } }
+/* Kas laci: satu bahasa visual */
+.kk-bilah {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap;
+  padding: 10px 14px; border-radius: var(--radius-besar); background: var(--biru-muda); border: 1px solid var(--biru-garis); font-size: 13.5px;
+}
+.kk-bilah--tutup { background: var(--peringatan-latar); border-color: #f0d9a8; }
+.kk-bilah__info { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kk-bilah__angka { display: flex; gap: 16px; flex-wrap: wrap; }
+.kk-ringkas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.kk-utama { border-color: var(--biru); box-shadow: 0 0 0 1px var(--biru); }
+.kk-baris-modal td { background: var(--permukaan-2); }
+@media (max-width: 860px) { .kk-ringkas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.fk-kepala { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 14px; padding: 12px; border-radius: var(--radius); background: var(--permukaan-2); }
+.fk-kepala > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13.5px; }
+.fk-kepala .teks-pudar { font-size: 12px; }
+.fk-tabel { min-width: 0; font-size: 13px; }
+.fk-ringkas { display: flex; flex-direction: column; gap: 4px; margin-left: auto; width: min(100%, 320px); }
+@media (max-width: 600px) { .fk-kepala { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 721px) {
+  .bd-tabel th, .bd-tabel td { white-space: nowrap; }
+  .bd-tabel td[data-label='Keterangan'], .bd-tabel td[data-label='Faktur dibayar'] { white-space: normal; min-width: 180px; }
+}
