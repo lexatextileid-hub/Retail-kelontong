@@ -24,7 +24,7 @@ interface Baris {
 export function BuatSPManual() {
   useToko();
   const navigasi = useNavigate();
-  const [distributorId, setDistributorId] = useState(distributorContoh[0].id);
+  const [distributorId, setDistributorId] = useState('');
   const [baris, setBaris] = useState<Baris[]>([]);
   const [catatan, setCatatan] = useState('');
   const [cari, setCari] = useState('');
@@ -36,14 +36,14 @@ export function BuatSPManual() {
 
   const tambahProduk = (produkId: string) => {
     const s = satuanBeliUrut(produkId)[0];
-    setBaris((xs) => [...xs, { id: idBaru(), produkId, satuanProdukId: s.id, labelSatuan: s.label, qty: 1, harga: hargaTerakhir(produkId, distributorId, s.id) ?? 0 }]);
+    setBaris((xs) => [...xs, { id: idBaru(), produkId, satuanProdukId: s.id, labelSatuan: s.label, qty: 1, harga: (distributorId && hargaTerakhir(produkId, distributorId, s.id)) || 0 }]);
     setCari('');
   };
   const tambahPermintaan = () =>
     setBaris((xs) => [...xs, { id: idBaru(), permintaan: q ? cari.trim() : '', labelSatuan: 'Karton', qty: 1, harga: 0 }]);
 
   const total = baris.reduce((t, b) => t + b.qty * b.harga, 0);
-  const siap = baris.length > 0 && baris.every((b) => b.qty > 0 && (b.produkId || (b.permintaan ?? '').trim()) && b.labelSatuan.trim());
+  const siap = !!distributorId && baris.length > 0 && baris.every((b) => b.qty > 0 && (b.produkId || (b.permintaan ?? '').trim()) && b.labelSatuan.trim());
 
   const simpan = () => {
     if (!siap) return;
@@ -66,7 +66,13 @@ export function BuatSPManual() {
             <div className="dua-kolom">
               <label className="isian">
                 Distributor
-                <select className="isian__kontrol" value={distributorId} onChange={(e) => setDistributorId(e.target.value)}>
+                <select className="isian__kontrol" value={distributorId} onChange={(e) => {
+                  const dId = e.target.value;
+                  setDistributorId(dId);
+                  // Harga perkiraan ikut harga beli terakhir dari distributor yang dipilih.
+                  setBaris((xs) => xs.map((x) => (x.produkId && x.satuanProdukId ? { ...x, harga: hargaTerakhir(x.produkId, dId, x.satuanProdukId) ?? x.harga } : x)));
+                }} style={!distributorId ? { color: 'var(--teks-3)' } : undefined}>
+                  <option value="" disabled>Pilih distributor…</option>
                   {distributorContoh.map((d) => <option key={d.id} value={d.id}>{d.nama}</option>)}
                 </select>
               </label>
@@ -168,6 +174,7 @@ export function BuatSPManual() {
           <p className="teks-pudar" style={{ margin: 0, fontSize: 12.5 }}>
             Barang permintaan tidak didaftarkan sekarang. Produknya dipilih atau didaftarkan saat barang datang, sesuai nama asli di kemasan.
           </p>
+          {!distributorId && <p className="teks-pudar" style={{ margin: 0, fontSize: 12.5 }}>Pilih distributor dulu.</p>}
           <button type="button" className="tombol tombol--utama tombol--besar" disabled={!siap} onClick={simpan}>Simpan & kirim SP</button>
         </aside>
       </div>

@@ -17,7 +17,7 @@ export function BuatPesanan() {
   useToko();
   const navigasi = useNavigate();
   const terdaftar = pelangganContoh.filter((p) => p.jenis === 'terdaftar');
-  const [pelangganId, setPelangganId] = useState(terdaftar[0].id);
+  const [pelangganId, setPelangganId] = useState('');
   const [cara, setCara] = useState<'ambil' | 'antar'>('ambil');
   const [alamat, setAlamat] = useState('');
   const [tanggal, setTanggal] = useState(besok());
@@ -28,7 +28,9 @@ export function BuatPesanan() {
   const [cari, setCari] = useState('');
   const [atur, setAtur] = useState<{ produk: Produk; barisId?: string } | null>(null);
 
-  const plg = terdaftar.find((p) => p.id === pelangganId)!;
+  const plg = terdaftar.find((p) => p.id === pelangganId);
+  // Sebelum pelanggan dipilih, harga memakai harga normal (pelanggan umum).
+  const plgHarga = plg ?? pelangganContoh.find((p) => p.jenis !== 'terdaftar')!;
   const q = cari.trim().toLowerCase();
   const hasilCari = q
     ? produkContoh.filter((p) => p.nama.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || (p.kode ?? '').toLowerCase().includes(q)).slice(0, 8)
@@ -38,7 +40,7 @@ export function BuatPesanan() {
   const terpakai: Record<string, number> = {};
   const rinci = baris.map((b) => {
     const p = ambilProduk(b.produkId);
-    const h = hitungHargaBaris(p, b.satuanProdukId, b.qty, plg, diskonContoh, b.diskonManual, b.hargaManual);
+    const h = hitungHargaBaris(p, b.satuanProdukId, b.qty, plgHarga, diskonContoh, b.diskonManual, b.hargaManual);
     const total = jumlahDasar(b);
     const bebas = Math.max(0, stokBebas(b.produkId) - (terpakai[b.produkId] ?? 0));
     const dariStok = total <= bebas ? total : 0;
@@ -47,10 +49,10 @@ export function BuatPesanan() {
   });
   const total = rinci.reduce((t, x) => t + x.h.netto, 0);
   const adaOrder = rinci.some((x) => x.perluOrder > 0);
-  const siap = baris.length > 0 && (cara === 'ambil' || alamat.trim()) && dp <= total;
+  const siap = !!plg && baris.length > 0 && (cara === 'ambil' || alamat.trim()) && dp <= total;
 
   const simpan = () => {
-    if (!siap) return;
+    if (!siap || !plg) return;
     const id = buatPesanan({
       pelangganId, cara, alamat: cara === 'antar' ? alamat.trim() : undefined, tanggalJanji: tanggal,
       catatan: catatan.trim() || undefined,
@@ -69,7 +71,8 @@ export function BuatPesanan() {
             <div className="dua-kolom">
               <label className="isian">
                 Pelanggan terdaftar
-                <select id="ps-pelanggan" className="isian__kontrol" value={pelangganId} onChange={(e) => setPelangganId(e.target.value)}>
+                <select id="ps-pelanggan" className="isian__kontrol" value={pelangganId} onChange={(e) => setPelangganId(e.target.value)} style={!plg ? { color: 'var(--teks-3)' } : undefined}>
+                  <option value="" disabled>Pilih pelanggan…</option>
                   {terdaftar.map((p) => <option key={p.id} value={p.id}>{p.nama}</option>)}
                 </select>
                 <span className="isian__bantuan">Pesanan hanya untuk pelanggan terdaftar (bisa tempo).</span>
@@ -152,7 +155,7 @@ export function BuatPesanan() {
 
         <aside className="ps-ringkas kartu tumpuk">
           <h2>Ringkasan</h2>
-          <div className="ringkas-total"><span>{baris.length} barang · {plg.nama}</span></div>
+          <div className="ringkas-total"><span>{baris.length} barang · {plg ? plg.nama : 'pelanggan belum dipilih'}</span></div>
           <div className="ringkas-total ringkas-total--besar"><span>Total pesanan</span><strong>{rupiah(total)}</strong></div>
           {adaOrder && (
             <p className="catatan catatan--peringatan">
@@ -172,6 +175,7 @@ export function BuatPesanan() {
           {dp > total && <p className="catatan catatan--bahaya">DP melebihi total pesanan.</p>}
           <div className="ringkas-total"><span>Sisa tagihan</span><strong>{rupiah(Math.max(0, total - dp))}</strong></div>
           <button type="button" className="tombol tombol--utama tombol--besar" disabled={!siap} onClick={simpan}>Simpan pesanan</button>
+          {!plg && <p className="teks-pudar" style={{ margin: 0, fontSize: 12.5 }}>Pilih pelanggan dulu.</p>}
           {cara === 'antar' && !alamat.trim() && baris.length > 0 && <p className="teks-pudar" style={{ margin: 0, fontSize: 12.5 }}>Isi alamat antar dulu.</p>}
         </aside>
       </div>
@@ -180,7 +184,7 @@ export function BuatPesanan() {
         <DialogAturBarang
           key={atur.barisId ?? atur.produk.id}
           produk={atur.produk}
-          pelanggan={plg}
+          pelanggan={plgHarga}
           daftarDiskon={diskonContoh}
           bolehUbahHarga
           teksTombol={atur.barisId ? 'Simpan perubahan' : 'Tambah ke pesanan'}
