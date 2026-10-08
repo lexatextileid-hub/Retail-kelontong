@@ -77,7 +77,7 @@ export const produkContoh: Produk[] = [
     id: 'dunhill-blue', sku: 'RKK-00003', kode: 'DHB', nama: 'Dunhill Blue 16', kategoriId: 'RKK', satuanDasarId: 'bks',
     letak: 'Etalase kasir', stokMinimum: 20, stokMaksimum: 150, metodeHarga: 'per_satuan', tingkatHarga: [], aktif: true,
     satuan: [
-      { id: 'dh-bks', satuanId: 'bks', label: 'Bungkus', isi: 1, dibeli: false, dijual: true, hargaJual: 34000 },
+      { id: 'dh-bks', satuanId: 'bks', label: 'Bungkus', isi: 1, dibeli: true, dijual: true, hargaJual: 34000, hargaBeli: 31500 },
       { id: 'dh-slp', satuanId: 'slp', label: 'Slop isi 10 Bungkus', isi: 10, dibeli: true, dijual: true, hargaJual: 328000, hargaBeli: 310000 },
       { id: 'dh-ktn', satuanId: 'ktn', label: 'Karton isi 10 Slop', isi: 100, dibeli: true, dijual: false, hargaBeli: 3050000 },
     ],
