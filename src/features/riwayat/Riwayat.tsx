@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { BilahAtas, KartuRingkas, KotakFilter, PilihanChip, Sel, TabelDaftar } from '../../components/Daftar';
 import { Dialog } from '../../components/Dialog';
 import { PilihPeriode, teksPeriode, type Periode } from '../../components/PilihPeriode';
 import { hariIni, useToko, type BayarKasbon, type NotaPenjualan, type Retur } from '../../data/toko';
@@ -52,79 +54,53 @@ export function Riwayat() {
   const jual = hariItu.filter((x): x is Extract<Baris, { jenis: 'jual' }> => x.jenis === 'jual');
   const omzet = jual.reduce((t, x) => t + x.data.total, 0);
   const returPeriode = hariItu.reduce((t, x) => t + (x.jenis === 'retur' ? x.data.nilaiRetur : 0), 0);
-  const banyakHari = periode.dari !== periode.sampai;
   const banyak = (j: Jenis) => (j === 'semua' ? hariItu.length : hariItu.filter((x) => x.jenis === j).length);
   const adaRetur = (notaId: string) => toko.retur.some((r) => r.notaId === notaId);
 
+  const nilai = (x: Baris) => (x.jenis === 'jual' ? x.data.total : x.jenis === 'kasbon' ? x.data.jumlah : -x.data.nilaiRetur);
+  const kasbonMasuk = hariItu.reduce((t, x) => t + (x.jenis === 'kasbon' ? x.data.jumlah : 0), 0);
+
   return (
     <div className="ps-halaman">
-      <PilihPeriode onUbah={setPeriode} />
-      <div className="kb-ringkas">
-        <div className="kartu kb-angka">
-          <span className="teks-pudar">Penjualan · {teksPeriode(periode)}</span>
-          <strong>{rupiah(omzet)}</strong>
-          <span className="teks-pudar">{jual.length} nota{jual.length ? ` · rata-rata ${rupiah(Math.round(omzet / jual.length))}` : ''}</span>
+      <BilahAtas kanan={<Link to="/kasir/penjualan" className="tombol tombol--utama">+ Penjualan baru</Link>} />
+      <KartuRingkas item={[
+        { judul: `Penjualan · ${teksPeriode(periode)}`, nilai: rupiah(omzet), catatan: `${jual.length} nota${jual.length ? ` · rata-rata ${rupiah(Math.round(omzet / jual.length))}` : ''}` },
+        { judul: 'Bayar kasbon', nilai: rupiah(kasbonMasuk), catatan: `${banyak('kasbon')} pembayaran` },
+        { judul: 'Retur', nilai: rupiah(returPeriode), catatan: `${banyak('retur')} retur`, warna: returPeriode ? 'merah' : undefined },
+      ]} />
+      <KotakFilter>
+        <PilihPeriode onUbah={setPeriode} />
+        <div className="rt-filter">
+          <label className="isian">
+            Cari
+            <input className="isian__kontrol" value={cari} onChange={(e) => setCari(e.target.value)} placeholder="nomor nota atau pelanggan" />
+          </label>
         </div>
-        <div className="kartu kb-angka">
-          <span className="teks-pudar">Retur</span>
-          <strong>{rupiah(returPeriode)}</strong>
-          <span className="teks-pudar">{hariItu.filter((x) => x.jenis === 'retur').length} retur</span>
-        </div>
-      </div>
-
-      <div className="ps-atas">
-        <div className="pj__kategori" role="group" aria-label="Jenis transaksi">
-          {([['semua', 'Semua'], ['jual', 'Penjualan'], ['kasbon', 'Bayar kasbon'], ['retur', 'Retur']] as [Jenis, string][]).map(([k, t]) => (
-            <button key={k} type="button" aria-pressed={jenis === k} onClick={() => setJenis(k)}>{t}<span className="ps-hitung">{banyak(k)}</span></button>
-          ))}
-        </div>
-      </div>
-      <label className="pj__cari-kotak" style={{ maxWidth: 480 }}>
-        <span className="sr">Cari</span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" />
-        </svg>
-        <input value={cari} onChange={(e) => setCari(e.target.value)} placeholder="Cari nomor nota atau pelanggan" autoComplete="off" />
-      </label>
-
-      {tampil.length === 0 ? (
-        <div className="kartu ps-kosong-besar">
-          <h2>Tidak ada transaksi</h2>
-          <p className="teks-pudar">Tidak ada transaksi {jenis !== 'semua' ? 'jenis ini ' : ''}pada periode ini. Pilih periode lain.</p>
-        </div>
-      ) : (
-        <div className="kartu rw-daftar">
-          {tampil.map((x, i) => (
-            <div key={`${x.jenis}-${x.data.id}`} className="rw-grup">
-            {banyakHari && (i === 0 || tglBaris(tampil[i - 1]) !== tglBaris(x)) && (
-              <div className="rw-tanggal">
-                <span>{new Date(`${tglBaris(x)}T00:00:00`).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                <span>{rupiah(tampil.filter((y) => y.jenis === 'jual' && tglBaris(y) === tglBaris(x)).reduce((t, y) => t + (y.jenis === 'jual' ? y.data.total : 0), 0))}</span>
-              </div>
-            )}
-            <button type="button" className="rw-baris" onClick={() => setBuka(x)}>
-              <span className="rw-baris__kiri">
-                <span className="rw-baris__nomor">
-                  <strong>{x.data.nomor}</strong>
-                  {x.jenis === 'jual' && <span className="chip-status chip-status--abu">{caraBayar(x.data)}</span>}
-                  {x.jenis === 'jual' && adaRetur(x.data.id) && <span className="chip-status chip-status--kuning">Ada retur</span>}
-                  {x.jenis === 'kasbon' && <span className="chip-status chip-status--biru">Bayar kasbon</span>}
-                  {x.jenis === 'retur' && <span className="chip-status chip-status--merah">Retur</span>}
-                </span>
-                <span className="teks-pudar">
-                  {x.jenis === 'kasbon' ? x.data.waktu : jam(x.waktuIso)} · {namaPelanggan(x.data.pelangganId)}
-                  {x.jenis === 'jual' && ` · ${x.data.baris.length} barang`}
-                  {x.jenis === 'retur' && x.data.nomorAsal && ` · dari ${x.data.nomorAsal}`}
-                </span>
-              </span>
-              <strong className="rw-baris__nilai">
-                {x.jenis === 'jual' ? rupiah(x.data.total) : x.jenis === 'kasbon' ? rupiah(x.data.jumlah) : `−${rupiah(x.data.nilaiRetur)}`}
-              </strong>
-            </button>
-            </div>
-          ))}
-        </div>
-      )}
+        <PilihanChip label="Jenis transaksi" nilai={jenis} onUbah={setJenis} pilihan={[
+          { k: 'semua', judul: 'Semua', jumlah: banyak('semua') }, { k: 'jual', judul: 'Penjualan', jumlah: banyak('jual') },
+          { k: 'kasbon', judul: 'Bayar kasbon', jumlah: banyak('kasbon') }, { k: 'retur', judul: 'Retur', jumlah: banyak('retur') },
+        ]} />
+      </KotakFilter>
+      <TabelDaftar
+        data={tampil}
+        kunci={(x) => `${x.jenis}-${x.data.id}`}
+        onKlik={setBuka}
+        kosong={<><h2>Tidak ada transaksi</h2><p className="teks-pudar">Tidak ada transaksi {jenis !== 'semua' ? 'jenis ini ' : ''}pada periode ini.</p></>}
+        kolom={[
+          { judul: 'Tanggal', isi: (x) => <Sel utama={new Date(`${tglBaris(x)}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} bawah={x.jenis === 'kasbon' ? undefined : jam(x.waktuIso)} /> },
+          { judul: 'No. transaksi', isi: (x) => <strong>{x.data.nomor}</strong> },
+          { judul: 'Jenis', isi: (x) => (x.jenis === 'jual'
+            ? <span className="chip-status chip-status--abu">Penjualan</span>
+            : x.jenis === 'kasbon' ? <span className="chip-status chip-status--biru">Bayar kasbon</span> : <span className="chip-status chip-status--merah">Retur</span>) },
+          { judul: 'Pelanggan', isi: (x) => namaPelanggan(x.data.pelangganId) },
+          { judul: 'Keterangan', bungkus: true, isi: (x) => (x.jenis === 'jual'
+            ? <Sel utama={`${x.data.baris.length} barang · ${caraBayar(x.data)}`} bawah={adaRetur(x.data.id) ? 'ada retur' : undefined} />
+            : x.jenis === 'kasbon' ? `${x.data.metode}${x.data.bank ? ` ${x.data.bank}` : ''} · ${x.data.alokasi.map((a) => a.nomor).join(', ')}`
+            : `dari ${x.data.nomorAsal ?? 'tanpa nota'} · ${x.data.alasan}`) },
+          { judul: 'Nilai', kanan: true, isi: (x) => <strong className={nilai(x) < 0 ? 'teks-bahaya' : ''}>{nilai(x) < 0 ? '−' : ''}{rupiah(Math.abs(nilai(x)))}</strong>,
+            total: rupiah(tampil.reduce((t, x) => t + nilai(x), 0)) },
+        ]}
+      />
 
       {buka?.jenis === 'jual' && (
         <DialogNotaRiwayat

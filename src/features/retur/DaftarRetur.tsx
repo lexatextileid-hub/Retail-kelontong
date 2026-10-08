@@ -1,50 +1,44 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PilihPeriode, teksPeriode, periodeDari, type Periode } from '../../components/PilihPeriode';
+import { BilahAtas, KartuRingkas, KotakFilter, PilihanChip, Sel, TabelDaftar } from '../../components/Daftar';
+import { PilihPeriode, periodeDari, teksPeriode, type Periode } from '../../components/PilihPeriode';
 import { useToko, type Retur } from '../../data/toko';
 import { isoHari } from '../../domain/kasbon';
 import { rupiah } from '../../lib/format';
 import { namaPelanggan } from '../pesanan/bersama';
 import { DialogStrukRetur, teksCara } from './DialogRetur';
-import '../../styles/pesanan.css';
-import '../../styles/kasbon.css';
 
 type Sumber = 'semua' | Retur['sumber'];
 
-/** Daftar retur: filter periode, pelanggan/nomor, sumber. Tambah retur dari sini. */
+/** Daftar retur — format seragam: ringkasan, filter periode/pelanggan/nomor/sumber, tabel dengan total. */
 export function DaftarRetur() {
   const { retur, pelanggan } = useToko();
   const [periode, setPeriode] = useState<Periode>(() => periodeDari('7-hari', '', { dari: '', sampai: '' }));
-  const { dari, sampai } = periode;
   const [cari, setCari] = useState('');
   const [fPelanggan, setFPelanggan] = useState('');
   const [sumber, setSumber] = useState<Sumber>('semua');
   const [buka, setBuka] = useState<Retur | null>(null);
 
   const q = cari.trim().toLowerCase();
-  const diPeriode = retur.filter((r) => {
-    const t = isoHari(new Date(r.waktuIso));
-    return t >= dari && t <= sampai;
-  });
+  const diPeriode = retur.filter((r) => { const t = isoHari(new Date(r.waktuIso)); return t >= periode.dari && t <= periode.sampai; });
   const tampil = diPeriode
     .filter((r) => sumber === 'semua' || r.sumber === sumber)
     .filter((r) => !fPelanggan || r.pelangganId === fPelanggan)
     .filter((r) => !q || r.nomor.toLowerCase().includes(q) || (r.nomorAsal ?? '').toLowerCase().includes(q));
-  const total = tampil.reduce((t, r) => t + r.nilaiRetur, 0);
+  const jumlah = (xs: Retur[], fn: (r: Retur) => number) => xs.reduce((t, r) => t + fn(r), 0);
   const banyak = (s: Sumber) => diPeriode.filter((r) => s === 'semua' || r.sumber === s).length;
+  const kembali = diPeriode.filter((r) => r.selisih > 0 && (r.cara === 'tunai' || r.cara === 'transfer'));
 
   return (
     <div className="ps-halaman">
-      <div className="ps-atas">
-        <div className="kartu kb-angka" style={{ minWidth: 220 }}>
-          <span className="teks-pudar">Total retur · {teksPeriode(periode)}</span>
-          <strong>{rupiah(total)}</strong>
-          <span className="teks-pudar">{tampil.length} retur</span>
-        </div>
-        <Link to="../baru" className="tombol tombol--utama">+ Tambah retur</Link>
-      </div>
-
-      <div className="kartu tumpuk">
+      <BilahAtas kanan={<Link to="../baru" className="tombol tombol--utama">+ Tambah retur</Link>} />
+      <KartuRingkas item={[
+        { judul: `Retur · ${teksPeriode(periode)}`, nilai: rupiah(jumlah(diPeriode, (r) => r.nilaiRetur)), catatan: `${diPeriode.length} retur` },
+        { judul: 'Uang dikembalikan', nilai: rupiah(jumlah(kembali, (r) => r.selisih)), catatan: 'tunai / transfer' },
+        { judul: 'Tukar barang', nilai: diPeriode.filter((r) => r.tukar.length).length, catatan: 'retur dengan barang pengganti' },
+        { judul: 'Pengecualian', nilai: diPeriode.filter((r) => r.pengecualian).length, catatan: 'lewat batas / tanpa nota', warna: diPeriode.some((r) => r.pengecualian) ? 'merah' : undefined },
+      ]} />
+      <KotakFilter>
         <PilihPeriode awal="7-hari" onUbah={setPeriode} />
         <div className="rt-filter">
           <label className="isian">
@@ -59,36 +53,27 @@ export function DaftarRetur() {
             <input className="isian__kontrol" value={cari} onChange={(e) => setCari(e.target.value)} placeholder="RT-… atau nota asal" />
           </label>
         </div>
-        <div className="pj__kategori" role="group" aria-label="Sumber">
-          {([['semua', 'Semua'], ['nota', 'Dari nota'], ['pesanan', 'Dari pesanan'], ['tanpa-nota', 'Tanpa nota']] as [Sumber, string][]).map(([k, t]) => (
-            <button key={k} type="button" aria-pressed={sumber === k} onClick={() => setSumber(k)}>{t}<span className="ps-hitung">{banyak(k)}</span></button>
-          ))}
-        </div>
-      </div>
-
-      {tampil.length === 0 ? (
-        <div className="kartu ps-kosong-besar">
-          <h2>Tidak ada retur</h2>
-          <p className="teks-pudar">Tidak ada retur untuk filter ini. Tambah retur: pilih nota (cari nomor, tanggal, atau pelanggan), lalu pilih barangnya.</p>
-        </div>
-      ) : (
-        <div className="kartu rw-daftar">
-          {tampil.map((r) => (
-            <button key={r.id} type="button" className="rw-baris" onClick={() => setBuka(r)}>
-              <span className="rw-baris__kiri">
-                <span className="rw-baris__nomor">
-                  <strong>{r.nomor}</strong>
-                  <span className="chip-status chip-status--abu">{r.nomorAsal ?? 'Tanpa nota'}</span>
-                  {r.pengecualian && <span className="chip-status chip-status--kuning">Pengecualian</span>}
-                  {r.tukar.length > 0 && <span className="chip-status chip-status--biru">Tukar barang</span>}
-                </span>
-                <span className="teks-pudar">{r.waktu} · {namaPelanggan(r.pelangganId)} · {teksCara(r)} · {r.alasan}</span>
-              </span>
-              <strong className="rw-baris__nilai">{rupiah(r.nilaiRetur)}</strong>
-            </button>
-          ))}
-        </div>
-      )}
+        <PilihanChip label="Sumber" nilai={sumber} onUbah={setSumber} pilihan={[
+          { k: 'semua', judul: 'Semua', jumlah: banyak('semua') }, { k: 'nota', judul: 'Dari nota', jumlah: banyak('nota') },
+          { k: 'pesanan', judul: 'Dari pesanan', jumlah: banyak('pesanan') }, { k: 'tanpa-nota', judul: 'Tanpa nota', jumlah: banyak('tanpa-nota') },
+        ]} />
+      </KotakFilter>
+      <TabelDaftar
+        data={tampil}
+        kunci={(r) => r.id}
+        onKlik={setBuka}
+        kosong={<><h2>Tidak ada retur</h2><p className="teks-pudar">Tambah retur: pilih nota (nomor, tanggal, atau pelanggan), lalu pilih barangnya.</p></>}
+        kolom={[
+          { judul: 'No. retur', isi: (r) => <Sel utama={<strong>{r.nomor}</strong>} bawah={r.waktu} /> },
+          { judul: 'Pelanggan', isi: (r) => namaPelanggan(r.pelangganId) },
+          { judul: 'Asal', isi: (r) => <Sel utama={r.nomorAsal ?? 'Tanpa nota'} bawah={r.pengecualian ? 'pengecualian' : undefined} /> },
+          { judul: 'Barang', isi: (r) => <Sel utama={`${r.baris.length} kembali`} bawah={r.tukar.length ? `${r.tukar.length} pengganti` : undefined} /> },
+          { judul: 'Alasan', isi: (r) => r.alasan, bungkus: true },
+          { judul: 'Penyelesaian', isi: (r) => teksCara(r) },
+          { judul: 'Nilai retur', kanan: true, isi: (r) => <strong>{rupiah(r.nilaiRetur)}</strong>, total: rupiah(jumlah(tampil, (r) => r.nilaiRetur)) },
+          { judul: 'Selisih', kanan: true, isi: (r) => (r.selisih === 0 ? '-' : `${r.selisih > 0 ? 'kembali ' : 'tambah '}${rupiah(Math.abs(r.selisih))}`) },
+        ]}
+      />
       {buka && <DialogStrukRetur retur={buka} onTutup={() => setBuka(null)} />}
     </div>
   );

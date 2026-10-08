@@ -174,3 +174,11 @@ a.kb-tagihan__baris:hover { background: var(--permukaan-2); color: var(--teks); 
   .bd-tabel th, .bd-tabel td { white-space: nowrap; }
   .bd-tabel td[data-label='Keterangan'], .bd-tabel td[data-label='Faktur dibayar'] { white-space: normal; min-width: 180px; }
 }
+.kk-klik { text-align: left; cursor: pointer; font: inherit; color: inherit; }
+.pj__kategori--bungkus { flex-wrap: wrap; overflow: visible; }
+@media (min-width: 721px) { .bd-tabel td.bd-bungkus { white-space: normal; min-width: 160px; } }
+@media (max-width: 860px) { .kk-ringkas { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+@media (max-width: 520px) {
+  .kb-angka strong { font-size: 18px; white-space: nowrap; }
+  .rt-filter { grid-template-columns: 1fr; }
+}
