@@ -6,6 +6,8 @@ import { infoBarang, useToko, type InfoBarang } from '../../data/toko';
 import type { StatusGerak, WarnaUmur } from '../../domain/stok';
 import type { Produk } from '../../domain/tipe';
 import { rupiah } from '../../lib/format';
+import { cekTurunHarga } from '../../domain/harga';
+import { singkatan } from '../penjualan/model';
 import { ChipGerak, ChipUmur, hargaJualTingkat, labelDasarSaja, labelStok, namaKategori, satuanBeli, teksPersen } from './bersama';
 
 type FGerak = 'semua' | StatusGerak;
@@ -130,6 +132,12 @@ export function DaftarBarang() {
                     <div key={x.judul}><span className="teks-pudar">{x.judul}</span> <strong>{rupiah(x.harga)}</strong> <span className={x.untungPersen !== undefined && x.untungPersen < 5 ? 'teks-bahaya' : 'sb-untung'}>{teksPersen(x.untungPersen)}</span></div>
                   ))}
                   {h.length > 3 && <span className="chip-status chip-status--abu">+{h.length - 3}</span>}
+                  {(() => {
+                    const beli = cekTurunHarga(p.satuan.filter((x) => x.dibeli && i.beliPerSatuan[x.id]).map((x) => ({ isi: x.isi, harga: i.beliPerSatuan[x.id].harga })));
+                    const jual = cekTurunHarga(p.metodeHarga === 'per_satuan' ? p.satuan.filter((x) => x.dijual).map((x) => ({ isi: x.isi, harga: x.hargaJual })) : []);
+                    const b = [...beli.values()].some((x) => x.lebihMahal), j = [...jual.values()].some((x) => x.lebihMahal);
+                    return b || j ? <span className="sb-mahal" style={{ marginLeft: 0 }}>⚠ {b ? 'beli' : 'jual'} satuan besar lebih mahal per {singkatan(p.satuanDasarId)}</span> : null;
+                  })()}
                 </div>
               );
             },

@@ -120,3 +120,21 @@ export function hitungHargaBaris(
     netto: bruto - diskon,
   };
 }
+
+/**
+ * Pembanding harga antar satuan: harga per satuan dasar harus TURUN (atau sama) untuk satuan yang lebih besar.
+ * Mis. per bungkus: karton ≤ slop ≤ bungkus. Satuan besar yang lebih mahal per satuan dasar ditandai `lebihMahal`
+ * (dibandingkan satuan lebih kecil termurah sebelumnya), dengan selisih per satuan dasar.
+ */
+export function cekTurunHarga<T extends { isi: number; harga?: number }>(baris: T[]) {
+  const urut = [...baris].filter((b) => b.harga && b.isi > 0).sort((a, b) => a.isi - b.isi);
+  let termurah: { perDasar: number; baris: T } | undefined;
+  const hasil = new Map<T, { perDasar: number; lebihMahal: boolean; selisih: number; dibanding?: T }>();
+  for (const b of urut) {
+    const perDasar = b.harga! / b.isi;
+    const lebihMahal = !!termurah && perDasar > termurah.perDasar + 0.0001;
+    hasil.set(b, { perDasar, lebihMahal, selisih: termurah ? perDasar - termurah.perDasar : 0, dibanding: termurah?.baris });
+    if (!termurah || perDasar < termurah.perDasar) termurah = { perDasar, baris: b };
+  }
+  return hasil;
+}

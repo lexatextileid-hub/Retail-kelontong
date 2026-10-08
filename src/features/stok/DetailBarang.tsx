@@ -5,6 +5,7 @@ import { PilihPeriode, periodeDari, teksPeriode, type Periode } from '../../comp
 import { hargaBeliContoh } from '../../data/contoh';
 import { hariIni, infoBarang, mutasiBarang, useToko } from '../../data/toko';
 import { selisihHari } from '../../domain/kasbon';
+import { cekTurunHarga } from '../../domain/harga';
 import { ATURAN_GERAK, namaJenisStok, warnaUmur, type JenisMutasiStok, type MutasiStok } from '../../domain/stok';
 import { rupiah } from '../../lib/format';
 import { tanggalPendek } from '../kasbon/bersama';
@@ -56,6 +57,15 @@ export function DetailBarang() {
   (hargaBeliContoh[id] ?? []).forEach((h) => {
     if (!perDist.has(h.distributorId)) perDist.set(h.distributorId, { terakhir: { tanggal: '', nomor: 'daftar harga', modal: h.harga / (p.satuan.find((s) => s.id === h.satuanProdukId)?.isi ?? 1) } as MutasiStok, terendah: (h.harga / (p.satuan.find((s) => s.id === h.satuanProdukId)?.isi ?? 1)) * sb.isi, kali: 0 });
   });
+
+  // Pembanding harga per satuan dasar: harus turun dari satuan kecil ke besar.
+  const cekBeli = cekTurunHarga(p.satuan.filter((x) => x.dibeli && i.beliPerSatuan[x.id]).map((x) => ({ id: x.id, isi: x.isi, harga: i.beliPerSatuan[x.id].harga as number | undefined })));
+  const cekJual = cekTurunHarga(p.metodeHarga === 'per_satuan' ? p.satuan.filter((x) => x.dijual).map((x) => ({ id: x.id, isi: x.isi, harga: x.hargaJual })) : []);
+  const PerDasar = ({ peta, id: sid }: { peta: typeof cekBeli; id: string }) => {
+    const h = [...peta].find(([k]) => k.id === sid)?.[1];
+    if (!h || ambilProduk(id).satuan.find((x) => x.id === sid)?.isi === 1) return null;
+    return <div className={h.lebihMahal ? 'sb-mahal' : 'sb-perdasar'}>{h.lebihMahal ? '⚠ ' : '= '}{rupiah(h.perDasar)}/{dasar}{h.lebihMahal ? ` · lebih mahal ${rupiah(h.selisih)}` : ''}</div>;
+  };
 
   return (
     <div className="ps-halaman">
@@ -131,8 +141,8 @@ export function DetailBarang() {
               { judul: 'Satuan', isi: (s) => <Sel utama={<strong>{s.label}</strong>} bawah={s.isi === 1 ? 'satuan dasar' : `${s.isi.toLocaleString('id-ID')} ${dasar}`} /> },
               { judul: 'Dipakai', isi: (s) => [s.dibeli && 'beli', s.dijual && 'jual'].filter(Boolean).join(' · ') || '-' },
               { judul: 'Barcode', isi: (s) => s.barcode ?? '-' },
-              { judul: 'Harga beli terakhir', kanan: true, isi: (s) => (i.beliPerSatuan[s.id] ? <Sel utama={rupiah(i.beliPerSatuan[s.id].harga)} bawah={i.beliPerSatuan[s.id].nomor} /> : i.beliAcuan ? <Sel utama={rupiah(i.beliAcuan * s.isi)} bawah="dihitung dari isi" /> : '-') },
-              { judul: 'Harga jual', kanan: true, isi: (s) => (p.metodeHarga === 'per_satuan' && s.hargaJual ? rupiah(s.hargaJual) : p.metodeHarga === 'bertingkat' ? 'bertingkat' : '-') },
+              { judul: 'Harga beli terakhir', kanan: true, isi: (s) => (i.beliPerSatuan[s.id] ? <Sel utama={rupiah(i.beliPerSatuan[s.id].harga)} bawah={<>{i.beliPerSatuan[s.id].nomor}<PerDasar peta={cekBeli} id={s.id} /></>} /> : i.beliAcuan ? <Sel utama={rupiah(i.beliAcuan * s.isi)} bawah="dihitung dari isi" /> : '-') },
+              { judul: 'Harga jual', kanan: true, isi: (s) => (p.metodeHarga === 'per_satuan' && s.hargaJual ? <Sel utama={rupiah(s.hargaJual)} bawah={<PerDasar peta={cekJual} id={s.id} />} /> : p.metodeHarga === 'bertingkat' ? 'bertingkat' : '-') },
               { judul: 'Untung', kanan: true, isi: (s) => {
                 const h = hargaJualTingkat(p, i.beliAcuan, i.beliPerSatuan).find((x) => x.judul === s.label);
                 return h?.untungRp !== undefined ? <Sel utama={rupiah(h.untungRp)} bawah={teksPersen(h.untungPersen)} /> : '-';

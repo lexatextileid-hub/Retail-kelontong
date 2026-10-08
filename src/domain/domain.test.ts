@@ -7,7 +7,7 @@ import { formatStok } from '../lib/format';
 import { ringkasTempat, saldoBerjalan, type MutasiKas } from './kas';
 import { hitungLapisan, modalRata, statusGerak, stokBertingkat, umurStok, type MutasiStok } from './stok';
 import { ambilFifo, modalBarisFaktur } from './fifo';
-import { bulatkanHarga, hargaDariPersen, hargaDariUntungRp, hitungHargaBaris, untungDariModal } from './harga';
+import { bulatkanHarga, cekTurunHarga, hargaDariPersen, hargaDariUntungRp, hitungHargaBaris, untungDariModal } from './harga';
 import { alokasiTertua, cekKasbon, selisihHari, tambahHari } from './kasbon';
 import { kunciNama, satuanBawaan } from './satuanBawaan';
 import { buatSku, kategoriBawaan, kelompokBawaan } from './kategoriBawaan';
@@ -323,5 +323,22 @@ describe('form harga: isi harga jual, untung %, atau untung Rp', () => {
     expect(bulatkanHarga(3401)).toBe(3500);
     // % ditampilkan dari harga setelah dibulatkan
     expect(untungDariModal(hargaDariPersen(3000, 16), 3000)).toBe(16.7);
+  });
+});
+
+describe('pembanding harga antar satuan (harus turun per satuan dasar)', () => {
+  const bks = { isi: 1, harga: 31500 }, slp = { isi: 10, harga: 310000 }, ktn = { isi: 100, harga: 3050000 };
+  it('karton ≤ slop ≤ bungkus per bungkus → aman', () => {
+    const r = cekTurunHarga([ktn, bks, slp]);
+    expect(r.get(slp)).toMatchObject({ perDasar: 31000, lebihMahal: false });
+    expect(r.get(ktn)).toMatchObject({ perDasar: 30500, lebihMahal: false });
+  });
+  it('karton lebih mahal per bungkus daripada slop → ditandai dengan selisih', () => {
+    const ktnMahal = { isi: 100, harga: 3150000 };
+    const r = cekTurunHarga([bks, slp, ktnMahal]);
+    expect(r.get(ktnMahal)).toMatchObject({ perDasar: 31500, lebihMahal: true, selisih: 500, dibanding: slp });
+  });
+  it('satuan tanpa harga dilewati', () => {
+    expect(cekTurunHarga([bks, { isi: 10, harga: 0 }]).size).toBe(1);
   });
 });

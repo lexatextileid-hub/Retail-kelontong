@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { InputRupiah } from '../../components/InputRupiah';
 import { PIN_PEMILIK_CONTOH, produkContoh } from '../../data/contoh';
 import { infoBarang, simpanProduk, useToko } from '../../data/toko';
-import { hargaDariPersen, hargaDariUntungRp, TARGET_UNTUNG_PERSEN, untungDariModal } from '../../domain/harga';
+import { cekTurunHarga, hargaDariPersen, hargaDariUntungRp, TARGET_UNTUNG_PERSEN, untungDariModal } from '../../domain/harga';
 import { buatSku, kategoriBawaan, kelompokBawaan } from '../../domain/kategoriBawaan';
 import { satuanBawaan } from '../../domain/satuanBawaan';
 import type { MetodeHarga, Produk, SatuanProduk, TingkatHarga } from '../../domain/tipe';
@@ -71,14 +71,14 @@ function InputPersen({ nilai, onUbah, label, merah }: { nilai?: number; onUbah: 
 }
 
 /** Tiga isian yang saling terhubung: harga jual · untung % · untung Rp (isi salah satu). */
-function HargaUntung({ id, modalTotal, harga, onHarga }: { id: string; modalTotal?: number; harga: number; onHarga: (n: number) => void }) {
+function HargaUntung({ id, modalTotal, harga, onHarga, catatan }: { id: string; modalTotal?: number; harga: number; onHarga: (n: number) => void; catatan?: ReactNode }) {
   const ada = !!modalTotal && modalTotal > 0;
   const persen = ada && harga ? untungDariModal(harga, modalTotal!) : undefined;
   const rp = ada && harga ? harga - modalTotal! : undefined;
   const merah = persen !== undefined && persen < TARGET_UNTUNG_PERSEN;
   return (
     <>
-      <td data-label="Harga jual" className="kanan"><InputRupiah id={`hj-${id}`} nilai={harga} label={`Harga jual ${id}`} onUbah={onHarga} /></td>
+      <td data-label="Harga jual" className="kanan"><InputRupiah id={`hj-${id}`} nilai={harga} label={`Harga jual ${id}`} onUbah={onHarga} />{catatan}</td>
       <td data-label="Untung %" className="kanan">
         {ada ? <InputPersen nilai={persen} merah={merah} label={`Untung persen ${id}`} onUbah={(n) => onHarga(hargaDariPersen(modalTotal!, n))} /> : <span className="teks-pudar">isi harga beli</span>}
       </td>
@@ -153,6 +153,18 @@ export function FormBarang() {
   const diubah = satuan.filter((x) => x.dibeli && x.hargaBeli && !isiSalah(x) && x.hargaBeli !== awal.baris.find((b) => b.id && b.id === x.id)?.hargaBeli).sort((a, b) => a.isi - b.isi)[0];
   const acuanDasar = diubah ? diubah.hargaBeli! / diubah.isi : info?.beliAcuan ?? (perkiraan ? perkiraan.hargaBeli! / perkiraan.isi : undefined);
   const modalBaris = (s: BarisSatuan) => (s.dibeli && s.hargaBeli ? s.hargaBeli : acuanDasar ? acuanDasar * s.isi : undefined);
+  // Pembanding harga: per satuan dasar harus turun dari satuan kecil ke besar (karton ≤ slop ≤ bungkus).
+  const cekBeli = cekTurunHarga(satuan.filter((x) => x.dibeli && !isiSalah(x)).map((x) => ({ x, isi: x.isi, harga: x.hargaBeli || modalBaris(x) })));
+  const cekJual = cekTurunHarga(satuan.filter((x) => x.dijual && !isiSalah(x) && metode === 'per_satuan').map((x) => ({ x, isi: x.isi, harga: x.hargaJual })));
+  const hasilCek = (peta: typeof cekBeli, s: BarisSatuan) => [...peta].find(([k]) => k.x.kunci === s.kunci)?.[1];
+  const CatatanPerDasar = ({ peta, s }: { peta: typeof cekBeli; s: BarisSatuan }) => {
+    const h = hasilCek(peta, s);
+    if (!h || s.kunci === dasarKunci) return null;
+    return h.lebihMahal
+      ? <div className="sb-mahal">⚠ {rupiah(h.perDasar)}/{dasar} — lebih mahal {rupiah(h.selisih)}/{dasar} dari {h.dibanding ? namaSatuan(h.dibanding.x.satuanId) : ''}</div>
+      : <div className="sb-perdasar">= {rupiah(h.perDasar)}/{dasar}</div>;
+  };
+  const adaMahal = [...cekBeli.values(), ...cekJual.values()].some((h) => h.lebihMahal);
   const masalah: string[] = [];
   if (!nama.trim()) masalah.push('Nama barang wajib.');
   if (!lama && produkContoh.some((p) => p.nama.trim().toLowerCase() === nama.trim().toLowerCase())) masalah.push('Nama barang sudah ada.');
@@ -308,6 +320,7 @@ export function FormBarang() {
                     {s.dibeli ? (
                       <>
                         <InputRupiah id={`hb-${s.kunci}`} nilai={s.hargaBeli ?? 0} label={`Harga beli ${s.label}`} onUbah={(n) => ubahSatuan(s.kunci, { hargaBeli: n })} />
+                        <CatatanPerDasar peta={cekBeli} s={s} />
                         {(() => {
                           const f = info?.beliPerSatuan[s.id];
                           const awalnya = awal.baris.find((b) => b.id && b.id === s.id)?.hargaBeli;
@@ -319,7 +332,7 @@ export function FormBarang() {
                       : modalBaris(s) ? <span className="teks-pudar">≈ {rupiah(modalBaris(s)!)}</span> : '-'}
                   </td>
                   {metode === 'per_satuan' && (s.dijual
-                    ? <HargaUntung id={s.label} modalTotal={modalBaris(s)} harga={s.hargaJual ?? 0} onHarga={(n) => ubahSatuan(s.kunci, { hargaJual: n })} />
+                    ? <HargaUntung id={s.label} modalTotal={modalBaris(s)} harga={s.hargaJual ?? 0} onHarga={(n) => ubahSatuan(s.kunci, { hargaJual: n })} catatan={<CatatanPerDasar peta={cekJual} s={s} />} />
                     : <><td data-label="Harga jual" className="kanan teks-pudar">tidak dijual</td><td /><td /></>)}
                   <td data-label="">{s.kunci !== dasarKunci && <button type="button" className="tautan teks-bahaya" onClick={() => setSatuan((xs) => xs.filter((x) => x.kunci !== s.kunci))}>Hapus</button>}</td>
                 </tr>
@@ -331,6 +344,12 @@ export function FormBarang() {
           Setiap satuan yang dibeli (✓ Beli) punya harga beli sendiri — mis. per slop dan per karton bisa berbeda. Terisi dari faktur terakhir dan boleh diubah
           (mis. distributor mengabari harga naik); harga yang diubah dipakai sampai faktur berikutnya masuk. Belum pernah difaktur → isi perkiraan. Satuan yang tidak dibeli (eceran) dihitung dari {dariFaktur ? `faktur terakhir ${dariFaktur.nomor}` : 'satuan beli terkecil'}.
         </p>
+        {adaMahal && (
+          <p className="catatan catatan--peringatan" style={{ margin: '8px 0 0' }}>
+            Ada satuan besar yang <strong>lebih mahal per {namaSatuan(dasar).toLowerCase()}</strong> daripada satuan yang lebih kecil (tanda ⚠).
+            Harga beli: cek lagi ke distributor — jangan sampai beli karton justru lebih mahal. Harga jual: grosir seharusnya lebih murah per {namaSatuan(dasar).toLowerCase()} dari eceran.
+          </p>
+        )}
         {terbalik.length > 0 && (
           <p className="catatan catatan--peringatan" style={{ margin: '8px 0 0' }}>
             Periksa satuan: "1 {namaSatuan(terbalik[0].satuanId)} = {terbalik[0].isi} {namaSatuan(dasar)}" tampak terbalik.
