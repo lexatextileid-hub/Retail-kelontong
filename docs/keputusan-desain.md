@@ -262,6 +262,8 @@ Setiap barang memilih satu metode:
 - SP bisa dikirim ke distributor lewat **WhatsApp** (teks siap kirim), disalin, atau dicetak.
 - **Faktur dibuat dari SP**: baris terisi otomatis, penerima mengecek isi kemasan, jumlah, dan harga. Selisih dengan SP (kurang kirim, beda harga, salah barang) terlihat.
 - Barang untuk pesanan langsung terkunci saat faktur dari SP dicatat.
+- **SP manual** bisa dibuat kapan saja. Barisnya: barang terdaftar, atau **permintaan** (teks bebas, mis. "Minyak goreng 1 L, merek lain"; boleh ditandai sebagai pengganti barang terdaftar).
+- **Produk tidak dibuat saat SP.** Nama di SP sering berbeda dengan barang yang datang. Saat faktur dibuat dari SP, baris permintaan dicocokkan dengan barang fisik: pilih produk yang sudah terdaftar, atau daftarkan produk baru dengan **nama asli di kemasan/faktur** (pemilik/PIN pemilik). SP menyimpan catatan permintaan mana dipenuhi produk apa.
 - Belum diputuskan: siapa yang membuat & mengirim SP (hanya pemilik di Back Office, atau gudang juga dengan PIN).
 
 ## Pesanan grosir (barang belum ada, perlu order ke distributor)
