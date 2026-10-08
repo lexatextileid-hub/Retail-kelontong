@@ -49,8 +49,8 @@ export const menuKasir: Menu[] = [
     halaman: <Penjualan />,
   },
   {
-    path: 'pesanan', judul: 'Pesanan', ikon: 'pesanan',
-    ringkasan: 'Pesanan grosir yang barangnya perlu diorder ke distributor dulu.',
+    path: 'pesanan', judul: 'Pesanan Pelanggan', ikon: 'pesanan',
+    ringkasan: 'Pelanggan memesan ke toko: dicatat, disiapkan, diserahkan, lalu dibayar.',
     rencana: [
       'Status: Dicatat → Menunggu barang → Barang siap → Disiapkan → Diserahkan → Lunas/Tempo',
       'Pelanggan wajib terdaftar; DP opsional',
@@ -58,8 +58,8 @@ export const menuKasir: Menu[] = [
       'Serah terima sebagian boleh; surat jalan otomatis bila diantar',
     ],
     anak: [
-      { path: 'daftar', judul: 'Daftar Pesanan', halaman: <DaftarPesanan /> },
-      { path: 'baru', judul: 'Buat Pesanan', halaman: <BuatPesanan /> },
+      { path: 'daftar', judul: 'Daftar', halaman: <DaftarPesanan /> },
+      { path: 'baru', judul: 'Buat', halaman: <BuatPesanan /> },
       { path: 'detail/:id', judul: 'Detail', halaman: <DetailPesanan />, tersembunyi: true },
     ],
   },
@@ -114,28 +114,30 @@ export const menuGudang: Menu[] = [
     ],
   },
   {
-    path: 'surat-pesanan', judul: 'Surat Pesanan', ikon: 'pembelian', izin: ['pemilik', 'admin'],
-    ringkasan: 'Order ke distributor: saran dari stok menipis & pesanan pelanggan, atau buat manual.',
+    path: 'pesanan-toko', judul: 'Pesanan Toko', ikon: 'pembelian', izin: ['pemilik', 'admin'],
+    ringkasan: 'Toko memesan ke distributor lewat Surat Pesanan: dari pesanan pelanggan, stok menipis, atau pesanan baru.',
     rencana: [
-      'Saran SP: stok di bawah minimum + barang pesanan yang belum ada; jumlah dari 3 cara (sampai maksimum, order tetap, rata-rata penjualan)',
-      'SP manual: barang terdaftar atau baris permintaan (barang belum terdaftar)',
-      'Kirim ke distributor lewat WhatsApp, salin, atau cetak',
+      'Dari Pesanan Pelanggan: barang pre-order yang belum ada, jumlah sesuai pesanan',
+      'Stok Menipis: stok di bawah minimum; jumlah dari 3 cara (sampai maksimum, order tetap, rata-rata penjualan)',
+      'Pesanan Baru: barang terdaftar atau permintaan (barang belum terdaftar)',
+      'Kirim Surat Pesanan ke distributor lewat WhatsApp, salin, atau cetak',
     ],
     anak: [
-      { path: 'saran', judul: 'Saran SP', halaman: <SaranSP /> },
-      { path: 'daftar', judul: 'Daftar SP', halaman: <DaftarSP /> },
-      { path: 'baru', judul: 'Buat SP', halaman: <BuatSPManual /> },
+      { path: 'dari-pesanan', judul: 'Dari Pesanan Pelanggan', halaman: <SaranSP sumber="pesanan" /> },
+      { path: 'stok-menipis', judul: 'Stok Menipis', halaman: <SaranSP sumber="stok" /> },
+      { path: 'baru', judul: 'Pesanan Baru', halaman: <BuatSPManual /> },
+      { path: 'daftar', judul: 'Daftar Pesanan Toko', halaman: <DaftarSP /> },
     ],
   },
   {
     path: 'barang-masuk', judul: 'Barang Masuk', ikon: 'masuk',
     ringkasan: 'Input faktur distributor atau pembelian tanpa nota.',
     rencana: ['Satuan urut besar → kecil; isi kemasan wajib dicek fisik', 'Tandai baris untuk pesanan atau barang ikutan', 'Cash/tempo; total dicocokkan dengan kertas faktur'],
-    anak: [{ path: 'dari-sp', judul: 'Terima dari SP', halaman: <DaftarSP hanyaTerbuka /> }, { path: 'tanpa-nota', judul: 'Tanpa Nota' }],
+    anak: [{ path: 'dari-sp', judul: 'Dari Pesanan Toko', halaman: <DaftarSP hanyaTerbuka /> }, { path: 'tanpa-nota', judul: 'Tanpa Nota' }],
   },
   {
     path: 'siapkan-pesanan', judul: 'Siapkan Pesanan', ikon: 'siapkan',
-    ringkasan: 'Menyiapkan dan menyerahkan pesanan.',
+    ringkasan: 'Menyiapkan dan menyerahkan pesanan pelanggan.',
     rencana: ['Daftar pesanan siap beserta letak barang', 'Cetak surat jalan / nota serah terima'],
   },
   {
@@ -184,11 +186,11 @@ export const menuBackOffice: Menu[] = [
   },
   {
     path: 'pembelian', judul: 'Pembelian', ikon: 'pembelian',
-    ringkasan: 'Periksa faktur, daftar order, pantauan per distributor.',
-    rencana: ['Periksa faktur & pembelian tanpa nota', 'Daftar order', 'Barang laku/lambat/berhenti per distributor'],
+    ringkasan: 'Semua pesanan toko ke distributor beserta fakturnya, periksa faktur, pantauan per distributor.',
+    rencana: ['Pesanan Toko: data yang sama dengan Gudang (dari pesanan pelanggan, stok menipis, pesanan baru) + faktur', 'Periksa faktur & pembelian tanpa nota', 'Barang laku/lambat/berhenti per distributor'],
     anak: [
+      { path: 'pesanan-toko', judul: 'Pesanan Toko', halaman: <DaftarSP dariOffice /> },
       { path: 'periksa-faktur', judul: 'Periksa Faktur' },
-      { path: 'daftar-order', judul: 'Daftar Order' },
       { path: 'per-distributor', judul: 'Per Distributor' },
     ],
   },

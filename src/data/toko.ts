@@ -82,8 +82,13 @@ export interface BarisSP {
 
 export type StatusSP = 'draf' | 'dikirim' | 'sebagian' | 'selesai' | 'ditutup';
 
+/** Sumber pesanan toko: dari pesanan pelanggan, stok menipis, atau pesanan baru (manual). */
+export type SumberSP = 'pesanan' | 'stok' | 'baru';
+export const namaSumberSP: Record<SumberSP, string> = { pesanan: 'Dari pesanan pelanggan', stok: 'Stok menipis', baru: 'Pesanan baru' };
+
 export interface SuratPesanan {
   id: string;
+  sumber: SumberSP;
   nomor: string;
   dibuat: string;
   oleh: string;
@@ -332,10 +337,10 @@ const p0 = (dp: 'kembali' | 'saldo') => (dp === 'kembali' ? ' · DP dikembalikan
 
 /* ---------- Aksi Surat Pesanan ---------- */
 
-export function buatSP(data: { distributorId: string; baris: Omit<BarisSP, 'id'>[]; catatan?: string }): string {
+export function buatSP(data: { distributorId: string; baris: Omit<BarisSP, 'id'>[]; catatan?: string; sumber?: SumberSP }): string {
   const nomor = nomorBaru('SP');
   const sp: SuratPesanan = {
-    id: id('sp'), nomor, dibuat: sekarang(), oleh: namaAkun[state.peran],
+    id: id('sp'), sumber: data.sumber ?? 'baru', nomor, dibuat: sekarang(), oleh: namaAkun[state.peran],
     distributorId: data.distributorId, baris: data.baris.map((b) => ({ ...b, id: id('bs') })), status: 'draf', catatan: data.catatan, faktur: [],
   };
   ubah((s) => ({ ...s, sp: [sp, ...s.sp] }));

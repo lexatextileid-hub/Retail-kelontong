@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { InputRupiah } from '../../components/InputRupiah';
 import { distributorContoh, produkContoh } from '../../data/contoh';
-import { buatSP, tandaiSPDikirim, terimaDariSP, useToko, type BarisSP, type SuratPesanan } from '../../data/toko';
+import { buatSP, tandaiSPDikirim, terimaDariSP, useToko, type BarisSP, type SuratPesanan, type SumberSP } from '../../data/toko';
 import { rupiah } from '../../lib/format';
 import { ambilProduk, ambilSatuan, angka } from '../penjualan/model';
 import {
@@ -50,10 +50,12 @@ function rencanaAwal(k: Kebutuhan, i: number): Rencana {
 /** Susun Surat Pesanan dari daftar kebutuhan; satu SP per distributor. */
 export function DialogBuatSP({
   kebutuhan,
+  sumber,
   onTutup,
   onDibuat,
 }: {
   kebutuhan: Kebutuhan[];
+  sumber: SumberSP;
   onTutup: () => void;
   onDibuat: (spIds: string[]) => void;
 }) {
@@ -68,6 +70,7 @@ export function DialogBuatSP({
     const ids = perDistributor.map(({ d, baris }) =>
       buatSP({
         distributorId: d.id,
+        sumber,
         baris: baris.map((r) => {
           const s = ambilSatuan(ambilProduk(r.produkId), r.satuanProdukId);
           return { produkId: r.produkId, satuanProdukId: r.satuanProdukId, labelSatuan: s.label, qty: r.qty, hargaPerkiraan: r.harga, untukPesanan: r.untukPesanan };

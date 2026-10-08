@@ -273,6 +273,12 @@ Setiap barang memilih satu metode:
 
 ## Surat Pesanan (SP) ke distributor
 
+- **Dua jenis pesanan, nama dibedakan tegas:**
+  - **Pesanan Pelanggan** (Mode Kasir): pelanggan memesan ke toko.
+  - **Pesanan Toko** (Mode Gudang): toko memesan ke distributor; dokumennya **Surat Pesanan**.
+- **Pesanan Toko punya 3 sumber**, masing-masing sub-menu sendiri: (1) **Dari Pesanan Pelanggan** (pre-order yang barangnya belum ada, jumlah sesuai pesanan), (2) **Stok Menipis**, (3) **Pesanan Baru** (manual). Ditambah **Daftar Pesanan Toko**.
+- Setiap Surat Pesanan menyimpan **sumbernya** dan pembuatnya. Semua masuk satu daftar yang sama, dan **Back Office → Pembelian → Pesanan Toko** membaca data yang sama (bukan salinan). Terima barang tetap dikerjakan gudang (Barang Masuk).
+- Pelanggan (Buat Pesanan) dan distributor (Pesanan Baru) **tidak terisi otomatis**; wajib dipilih.
 - **SP adalah satu-satunya jalur membeli barang ke distributor.**
 - Saran SP otomatis dari: (1) stok habis / di bawah stok minimum, (2) baris pesanan pelanggan yang barangnya belum ada (ditandai "untuk pesanan PS-xxx"). Dikelompokkan per distributor; distributor bawaan = yang terakhir paling murah, bisa diganti.
 - SP bisa dikirim ke distributor lewat **WhatsApp** (teks siap kirim), disalin, atau dicetak.

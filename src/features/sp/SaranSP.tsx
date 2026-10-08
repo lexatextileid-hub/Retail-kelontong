@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { aturStokContoh, produkContoh } from '../../data/contoh';
 import { ringkasPesanan, stokBebas, useToko } from '../../data/toko';
 import { ambilProduk, ambilSatuan, angka } from '../penjualan/model';
-import { ambilDistributor, distributorTermurah, labelDasar, satuanBeliUrut } from '../pesanan/bersama';
+import { ambilDistributor, distributorTermurah, labelDasar, namaPelanggan, satuanBeliUrut, tanggalPanjang } from '../pesanan/bersama';
 import { DialogBuatSP, DialogDokumenSP, type Kebutuhan } from './DialogSP';
 import '../../styles/pesanan.css';
 
@@ -23,10 +23,11 @@ interface Saran {
 }
 
 /**
- * Saran Surat Pesanan: barang di bawah stok minimum + barang pesanan pelanggan yang belum ada.
- * Jumlah saran dari 3 cara (sampai stok maksimum, order tetap, rata-rata penjualan), admin memilih.
+ * Pesanan Toko dari dua sumber (halaman terpisah):
+ * - `pesanan`: barang pesanan pelanggan (pre-order) yang belum ada, jumlah sesuai pesanan.
+ * - `stok`: barang di bawah stok minimum; jumlah dari 3 cara (sampai maks, order tetap, rata-rata), admin memilih.
  */
-export function SaranSP() {
+export function SaranSP({ sumber }: { sumber: 'pesanan' | 'stok' }) {
   const toko = useToko();
   const navigasi = useNavigate();
   const [pilih, setPilih] = useState<Record<string, { aktif: boolean; cara: Cara; manual: number }>>({});
@@ -40,13 +41,13 @@ export function SaranSP() {
   const saran: Saran[] = [];
   // 1) Dari pesanan pelanggan
   for (const p of toko.pesanan) {
-    if (p.dibatalkan) continue;
+    if (sumber !== 'pesanan' || p.dibatalkan) continue;
     for (const x of ringkasPesanan(p).baris) {
       const kurang = x.masihOrder - x.diOrderDiSP;
       if (kurang <= 0) continue;
       const s = satuanBeliUrut(x.b.produkId)[0];
       saran.push({
-        key: `ps-${x.b.id}`, produkId: x.b.produkId, sumber: 'pesanan', keterangan: `untuk ${p.nomor}`,
+        key: `ps-${x.b.id}`, produkId: x.b.produkId, sumber: 'pesanan', keterangan: `${namaPelanggan(p.pelangganId)} · ${p.nomor} · janji ${tanggalPanjang(p.tanggalJanji)}`,
         untukPesanan: [{ pesananId: p.id, barisId: x.b.id, jumlahDasar: kurang }],
         usulan: { maks: Math.ceil(kurang / s.isi) }, isi: s.isi, labelSatuan: s.label,
       });
@@ -54,7 +55,7 @@ export function SaranSP() {
   }
   // 2) Dari stok di bawah minimum
   for (const pr of produkContoh) {
-    if (diSPTerbuka.has(pr.id)) continue;
+    if (sumber !== 'stok' || diSPTerbuka.has(pr.id)) continue;
     const s = satuanBeliUrut(pr.id)[0];
     if (!s) continue; // barang hasil repack tidak dibeli
     const stok = stokBebas(pr.id);
@@ -98,7 +99,9 @@ export function SaranSP() {
     <div className="ps-halaman">
       <div className="ps-atas">
         <p className="teks-pudar" style={{ margin: 0, maxWidth: 720 }}>
-          Barang di bawah stok minimum dan barang pesanan pelanggan yang belum ada. Pilih cara hitung jumlah per barang, lalu jadikan Surat Pesanan (satu per distributor).
+          {sumber === 'pesanan'
+            ? 'Barang pesanan pelanggan yang stoknya belum ada dan belum dipesan ke distributor. Jumlah sesuai pesanan, dibulatkan ke satuan beli.'
+            : 'Barang di bawah stok minimum. Pilih cara hitung jumlah per barang, lalu jadikan Surat Pesanan (satu per distributor).'}
         </p>
         <button type="button" className="tombol tombol--utama" disabled={!terpilih.length} onClick={lanjut}>
           Jadikan Surat Pesanan ({terpilih.length})
@@ -107,8 +110,13 @@ export function SaranSP() {
 
       {saran.length === 0 ? (
         <div className="kartu ps-kosong-besar">
-          <h2>Tidak ada saran saat ini</h2>
-          <p className="teks-pudar">Semua stok di atas minimum dan pesanan pelanggan sudah diorder. Barang lain bisa dipesan lewat Buat SP.</p>
+          <h2>{sumber === 'pesanan' ? 'Tidak ada pesanan pelanggan yang perlu dipesan' : 'Tidak ada stok menipis'}</h2>
+          <p className="teks-pudar">
+            {sumber === 'pesanan'
+              ? 'Semua barang pesanan pelanggan sudah ada stoknya atau sudah dipesan ke distributor.'
+              : 'Semua stok di atas minimum, atau barangnya sudah ada di pesanan toko yang masih terbuka.'}{' '}
+            Barang lain bisa dipesan lewat Pesanan Baru.
+          </p>
         </div>
       ) : (
         <div className="kartu sp-saran-daftar">
@@ -122,7 +130,6 @@ export function SaranSP() {
                 <div className="sp-saran__barang">
                   <strong>{pr.nama}</strong>
                   <div>
-                    <span className={`chip-status chip-status--${x.sumber === 'pesanan' ? 'merah' : 'kuning'}`}>{x.sumber === 'pesanan' ? 'Pesanan' : 'Stok menipis'}</span>{' '}
                     <span className="teks-pudar">{x.keterangan}</span>
                   </div>
                   <span className="teks-pudar">Termurah: {t ? `${ambilDistributor(t.distributorId).nama} · ${ambilSatuan(pr, t.satuanProdukId).label}` : '-'}</span>
@@ -160,7 +167,7 @@ export function SaranSP() {
       )}
 
       {dialog?.jenis === 'buat' && (
-        <DialogBuatSP kebutuhan={dialog.kebutuhan} onTutup={() => setDialog(null)} onDibuat={(ids) => { setPilih({}); setDialog({ jenis: 'dok', ids }); }} />
+        <DialogBuatSP sumber={sumber} kebutuhan={dialog.kebutuhan} onTutup={() => setDialog(null)} onDibuat={(ids) => { setPilih({}); setDialog({ jenis: 'dok', ids }); }} />
       )}
       {dialog?.jenis === 'dok' && (
         <DialogDokumenSP

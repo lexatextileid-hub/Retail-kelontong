@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { tutupSP, useToko, type StatusSP } from '../../data/toko';
+import { namaSumberSP, tutupSP, useToko, type StatusSP } from '../../data/toko';
 import { rupiah } from '../../lib/format';
 import { ambilProduk, angka } from '../penjualan/model';
 import { ambilDistributor, ChipStatus, totalPerkiraanSP } from '../pesanan/bersama';
@@ -10,9 +10,12 @@ import '../../styles/pesanan.css';
 const terbuka: StatusSP[] = ['draf', 'dikirim', 'sebagian'];
 
 /** Daftar Surat Pesanan. `hanyaTerbuka` dipakai di Barang Masuk → Terima dari SP. */
-export function DaftarSP({ hanyaTerbuka = false }: { hanyaTerbuka?: boolean }) {
+export function DaftarSP({ hanyaTerbuka = false, dariOffice = false }: { hanyaTerbuka?: boolean; dariOffice?: boolean }) {
+  const [fOffice, setFOffice] = useState<'terbuka' | 'semua'>('semua');
   const { sp } = useToko();
-  const [f, setF] = useState<'terbuka' | 'semua'>('terbuka');
+  const [fGudang, setFGudang] = useState<'terbuka' | 'semua'>('terbuka');
+  const f = dariOffice ? fOffice : fGudang;
+  const setF = dariOffice ? setFOffice : setFGudang;
   const [dialog, setDialog] = useState<null | { jenis: 'dok' | 'terima'; id: string }>(null);
   const [info, setInfo] = useState('');
   const tampil = sp.filter((x) => (hanyaTerbuka || f === 'terbuka' ? terbuka.includes(x.status) : true));
@@ -20,9 +23,14 @@ export function DaftarSP({ hanyaTerbuka = false }: { hanyaTerbuka?: boolean }) {
   return (
     <div className="ps-halaman">
       <div className="ps-atas">
+        {dariOffice && (
+          <p className="teks-pudar" style={{ margin: 0, maxWidth: 720, flexBasis: '100%' }}>
+            Semua pesanan toko ke distributor, apa pun sumbernya, beserta faktur yang sudah dicatat gudang.
+          </p>
+        )}
         {hanyaTerbuka ? (
           <p className="teks-pudar" style={{ margin: 0, maxWidth: 720 }}>
-            Barang datang dari distributor? Pilih Surat Pesanannya, lalu catat faktur sesuai barang yang benar-benar diterima.
+            Barang datang dari distributor? Pilih pesanan tokonya (nomor Surat Pesanan), lalu catat faktur sesuai barang yang benar-benar diterima.
           </p>
         ) : (
           <div className="pj__kategori" role="group" aria-label="Filter">
@@ -30,10 +38,9 @@ export function DaftarSP({ hanyaTerbuka = false }: { hanyaTerbuka?: boolean }) {
             <button type="button" aria-pressed={f === 'semua'} onClick={() => setF('semua')}>Semua</button>
           </div>
         )}
-        {!hanyaTerbuka && (
+        {!hanyaTerbuka && !dariOffice && (
           <div className="baris-tombol">
-            <Link to="../saran" className="tombol">Lihat saran</Link>
-            <Link to="../baru" className="tombol tombol--utama">+ Buat SP</Link>
+            <Link to="../baru" className="tombol tombol--utama">+ Pesanan baru</Link>
           </div>
         )}
       </div>
@@ -41,9 +48,9 @@ export function DaftarSP({ hanyaTerbuka = false }: { hanyaTerbuka?: boolean }) {
 
       {tampil.length === 0 ? (
         <div className="kartu ps-kosong-besar">
-          <h2>Belum ada Surat Pesanan {hanyaTerbuka || f === 'terbuka' ? 'yang terbuka' : ''}</h2>
-          <p className="teks-pudar">Surat Pesanan dibuat dari Saran SP, dari pesanan pelanggan, atau manual lewat Buat SP.</p>
-          {hanyaTerbuka && <Link to="/gudang/surat-pesanan/saran" className="tombol tombol--utama" style={{ alignSelf: 'flex-start' }}>Ke Saran SP</Link>}
+          <h2>Belum ada pesanan toko {hanyaTerbuka || f === 'terbuka' ? 'yang terbuka' : ''}</h2>
+          <p className="teks-pudar">Pesanan toko dibuat dari pesanan pelanggan, dari stok menipis, atau lewat Pesanan Baru.</p>
+          {hanyaTerbuka && <Link to="/gudang/pesanan-toko/daftar" className="tombol tombol--utama" style={{ alignSelf: 'flex-start' }}>Ke Pesanan Toko</Link>}
         </div>
       ) : (
         <div className="ps-grid">
@@ -57,6 +64,7 @@ export function DaftarSP({ hanyaTerbuka = false }: { hanyaTerbuka?: boolean }) {
                   <ChipStatus status={x.status} />
                 </span>
                 <strong className="ps-kartu__nama">{d.nama}</strong>
+                <span className="teks-pudar" style={{ fontSize: 12.5 }}>{namaSumberSP[x.sumber]} · dibuat {x.oleh}</span>
                 <ul className="sp-ringkas">
                   {x.baris.map((b) => (
                     <li key={b.id} className={b.diterima ? 'sp-ringkas--selesai' : ''}>
@@ -72,9 +80,9 @@ export function DaftarSP({ hanyaTerbuka = false }: { hanyaTerbuka?: boolean }) {
                 </span>
                 <div className="baris-tombol">
                   <button type="button" className="tombol tombol--kecil" onClick={() => setDialog({ jenis: 'dok', id: x.id })}>
-                    {x.status === 'draf' ? 'Kirim' : 'Lihat'}
+                    {x.status === 'draf' && !dariOffice ? 'Kirim' : 'Lihat'}
                   </button>
-                  {terbuka.includes(x.status) && sisa.length > 0 && (
+                  {!dariOffice && terbuka.includes(x.status) && sisa.length > 0 && (
                     <button type="button" className="tombol tombol--kecil tombol--utama" onClick={() => setDialog({ jenis: 'terima', id: x.id })}>Terima barang</button>
                   )}
                   {x.status === 'sebagian' && (

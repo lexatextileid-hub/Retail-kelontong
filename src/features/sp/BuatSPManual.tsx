@@ -49,6 +49,7 @@ export function BuatSPManual() {
     if (!siap) return;
     const id = buatSP({
       distributorId,
+      sumber: 'baru',
       catatan: catatan.trim() || undefined,
       baris: baris.map((b): Omit<BarisSP, 'id'> => ({
         produkId: b.produkId, permintaan: b.permintaan?.trim(), penggantiProdukId: b.penggantiProdukId,

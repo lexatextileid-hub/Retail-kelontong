@@ -122,7 +122,7 @@ export function BuatPesanan() {
                 ))}
               </ul>
             )}
-            {q && hasilCari.length === 0 && <p className="teks-pudar" style={{ margin: 0 }}>Barang tidak ditemukan. Barang belum terdaftar bisa diminta lewat Surat Pesanan oleh admin.</p>}
+            {q && hasilCari.length === 0 && <p className="teks-pudar" style={{ margin: 0 }}>Barang tidak ditemukan. Barang belum terdaftar dipesan admin lewat Pesanan Toko → Pesanan Baru.</p>}
 
             {rinci.length === 0 ? (
               <p className="ps-kosong">Belum ada barang. Cari barang di atas untuk menambahkan.</p>

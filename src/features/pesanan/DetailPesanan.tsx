@@ -264,7 +264,7 @@ export function DetailPesanan() {
       </div>
 
       {dialog?.jenis === 'sp' && (
-        <DialogBuatSP kebutuhan={kebutuhan} onTutup={() => setDialog(null)} onDibuat={(spIds) => setDialog({ jenis: 'dokumen', spIds })} />
+        <DialogBuatSP sumber="pesanan" kebutuhan={kebutuhan} onTutup={() => setDialog(null)} onDibuat={(spIds) => setDialog({ jenis: 'dokumen', spIds })} />
       )}
       {dialog?.jenis === 'dokumen' && (
         <DialogDokumenSP
