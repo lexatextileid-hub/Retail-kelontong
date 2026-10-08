@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { diskonContoh, produkContoh } from '../../data/contoh';
 import {
-  akunAktif, bayarKasbon, catatArus, catatKasbonPenjualan, hariIni, laciTerakhirDitutup, laciTerbuka, catatPenjualan, nomorNotaBaru, pelangganDenganKasbon, ringkasKasbon, stokBebas, stokTerkunci,
+  akunAktif, bayarKasbon, catatArus, pisahBayarKasbon, catatKasbonPenjualan, hariIni, laciTerakhirDitutup, laciTerbuka, catatPenjualan, nomorNotaBaru, pelangganDenganKasbon, ringkasKasbon, stokBebas, stokTerkunci,
   susunNotaPenjualan, tambahPelanggan, useToko,
 } from '../../data/toko';
 import { hitungHargaBaris } from '../../domain/harga';
@@ -130,7 +130,10 @@ export function Penjualan() {
       tunai: h.tunai, transfer: h.transfer, kembalian: h.kembalian, kasbonBaru: h.kasbonBaru, bayarKasbon: h.bayarKasbon, sisaKasbon,
     });
     catatPenjualan(n);
-    catatArus({ jenis: 'penjualan', nomor: no, tunai: h.tunai - h.kembalian, transfer: h.transfer, keterangan: `Penjualan · ${plg.nama}` });
+    // Uang yang diterima dipisah: bagian bayar kasbon lama dicatat sebagai bayar kasbon, sisanya penjualan.
+    const u = pisahBayarKasbon(h.tunai - h.kembalian, h.transfer, h.bayarKasbon);
+    catatArus({ jenis: 'penjualan', nomor: no, tunai: u.jual.tunai, transfer: u.jual.transfer, keterangan: `Penjualan · ${plg.nama}` });
+    if (h.bayarKasbon > 0) catatArus({ jenis: 'kasbon', nomor: no, tunai: u.kasbon.tunai, transfer: u.kasbon.transfer, keterangan: `Bayar kasbon ${plg.nama} (di nota ${no})` });
     setNota(n.struk);
     setDialog(null);
   };

@@ -31,7 +31,9 @@ export function ChipStatus({ status }: { status: StatusPesanan | StatusSP }) {
 }
 
 export const namaPelanggan = (id: string) => ambilPelanggan(id)?.nama ?? '-';
-export const ambilDistributor = (id: string) => distributorContoh.find((d) => d.id === id)!;
+/** Distributor terdaftar; "lain:<nama>" = pemasok lain (faktur tunai tanpa nota). */
+export const ambilDistributor = (id: string) =>
+  distributorContoh.find((d) => d.id === id) ?? { id, nama: id.startsWith('lain:') ? id.slice(5) : id, hp: '', terminHari: 0 };
 
 /** Jumlah dalam satuan yang dipilih, mis. "72 Karton isi 5 renteng" atau "0,35 kg". */
 export function labelJumlah(produkId: string, satuanProdukId: string, qty: number) {

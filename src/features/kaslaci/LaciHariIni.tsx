@@ -93,6 +93,7 @@ export function LaciHariIni() {
           <button type="button" className="tombol" onClick={() => setD('masuk')}>+ Kas masuk</button>
           <Link to="../pengeluaran?baru=1" className="tombol">− Pengeluaran</Link>
           <Link to="../bayar-distributor?baru=1" className="tombol">Bayar distributor</Link>
+          <Link to="../bayar-distributor?tunai=1" className="tombol">Belanja tanpa nota</Link>
           <button type="button" className="tombol" onClick={() => setD('setor')}>Setor bank</button>
           <button type="button" className="tombol" onClick={() => setD({ laporan: sesi.id })}>Laporan sementara</button>
         </div>
@@ -136,7 +137,7 @@ export function LaciHariIni() {
                 <tr key={a.id} onClick={() => bisaBukti(a) && setD({ bukti: a })} style={bisaBukti(a) ? undefined : { cursor: 'default' }}>
                   <td data-label="Jam">{jam(a.waktuIso)}</td>
                   <td data-label="No. bukti"><strong>{a.nomor}</strong></td>
-                  <td data-label="Jenis"><span className={`chip-status chip-status--${a.tunai < 0 ? 'merah' : 'abu'}`}>{namaJenis[a.jenis]}</span></td>
+                  <td data-label="Jenis"><span className={`chip-status chip-status--${a.tunai < 0 ? 'merah' : 'abu'}`}>{a.tahap ? `Pesanan · ${a.tahap}` : a.jenis === 'bayar-distributor' && a.faktur?.some((f) => f.id.startsWith('ft:')) ? 'Faktur tunai' : namaJenis[a.jenis]}</span></td>
                   <td data-label="Keterangan">{a.keterangan}{a.penerima ? ` · ${a.penerima}` : ''}</td>
                   <td data-label="Masuk" className="kanan">{a.tunai > 0 ? rupiah(a.tunai) : '-'}</td>
                   <td data-label="Keluar" className={`kanan ${a.tunai < 0 ? 'teks-bahaya' : ''}`}>{a.tunai < 0 ? rupiah(-a.tunai) : '-'}</td>

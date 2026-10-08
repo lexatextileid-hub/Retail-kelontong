@@ -157,7 +157,15 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - **Selama hari itu:** pengeluaran operasional (dengan keterangan), **bayar distributor** (pilih fakturnya; boleh dilakukan kasir), **setor tunai ke bank** (bisa beberapa kali; dicatat sebagai pindah dana laci → rekening, bukan pengeluaran), retur uang kembali.
 - **Tutup kasir (akhir hari):** kasir mengetik **total uang fisik** (tidak per pecahan); sistem menampilkan selisih.
 - **Selisih wajib disetujui pemilik**, karena itu kerugian. Saat menyetujui pemilik memilih: ditanggung toko (biaya) atau **dibebankan ke kasir** (tercatat sebagai tagihan ke kasir).
-- **Laporan harian kasir:** hanya laci, dikelompokkan sama dengan Laporan Harian Toko: saldo awal laci; uang masuk tunai (A pendapatan usaha — penjualan, pesanan, pendapatan lain per kategori; B bayar kasbon; C dari pemilik); uang keluar tunai (D biaya per kategori + daftar bukti; E bayar distributor; F uang kembali retur; G setor bank); seharusnya di laci; uang fisik; selisih; pembagian (sisa laci, diserahkan ke pemilik, setor bank). Catatan non-tunai: transfer per kelompok, penjualan kasbon, potongan pembulatan/diskon akhir.
+- **Laporan harian kasir** (struk thermal, per buka–tutup laci; tanpa modal/laba):
+  - **I. Pendapatan** — 1. Penjualan: tunai / transfer / kasbon (jumlah nota + rupiah), total penjualan, retur penjualan (−, bersih setelah tukar), penjualan bersih, info potongan/pembulatan. 2. Pesanan pelanggan: **DP** dan **pelunasan** (termasuk bayar sebagian). 3. Pendapatan lain-lain per kategori. Total pendapatan.
+  - **II. Pengeluaran dari laci** — 1. Belanja barang: per faktur (faktur tempo yang dibayar + faktur tunai). 2. Operasional per kategori + daftar bukti. Total. Info terpisah: pengeluaran yang dicatat kasir tapi **dibayar pemilik** (brankas/rekening, PIN) — tidak mengurangi laci.
+  - **III. Kasbon pelanggan** — kasbon baru, dibayar hari ini (tunai/transfer), dipotong retur, **total kasbon semua pelanggan**.
+  - **IV. Kas laci (tunai)** — saldo awal + dari pemilik + pendapatan tunai + bayar kasbon tunai − uang kembali retur − pengeluaran laci − setor bank = seharusnya; uang fisik; selisih; pembagian.
+  - **V. Transfer masuk** (dicek di mutasi) — penjualan, DP, pelunasan, bayar kasbon, pendapatan lain, total.
+  - **VI. Barang terjual** — per kategori (jumlah barang, rupiah) dan 10 barang terlaris.
+  - Daftar per nota penjualan tidak dicetak (ada di Riwayat).
+  - Retur mengurangi penjualan, bukan pengeluaran. Bayar kasbon bukan pendapatan (pendapatannya saat penjualan kasbon). Bayar kasbon lama yang ikut di nota penjualan dicatat terpisah sebagai bayar kasbon (diambil dari tunai dulu).
 - **Riwayat transaksi:** semua nota (penjualan, pembayaran kasbon, pesanan, retur), bisa dicari/difilter; buka nota untuk cetak ulang, kirim WhatsApp, atau retur (PIN pemilik).
 
 ## Retur
@@ -217,10 +225,11 @@ Sumber utama laporan bulanan (bulanan = jumlah harian). Back Office → Laporan 
   Saldo akhir = saldo awal + masuk − keluar + pindah masuk − pindah keluar ± selisih. Pindah dana tidak mengubah total uang toko.
 - **2. Rincian uang masuk** dan **3. Rincian uang keluar** — per kelompok dan rinciannya, kolom laci / brankas / rekening / total:
   - Masuk: **A. Pendapatan usaha** (penjualan, pesanan DP & pelunasan, tambah bayar tukar barang, **pendapatan lain-lain** per kategori); **B. Terima piutang** (bayar kasbon pelanggan, cicilan kasbon karyawan); **tambahan modal pemilik**.
-  - Keluar: **D. Biaya operasional** per kategori; **E. Belanja barang** (bayar faktur distributor; beli tanpa nota dari laci menyusul bersama Gudang → Barang Masuk tanpa nota); **F. Kembali ke pelanggan** (uang retur); **kasbon karyawan**; **prive**.
+  - Keluar: **D. Biaya operasional** per kategori; **E. Belanja barang** (bayar faktur distributor; **faktur tunai** untuk belanja tanpa nota); **F. Kembali ke pelanggan** (uang retur); **kasbon karyawan**; **prive**.
 - **4. Pindah dana** (C masuk / G keluar): laci → pemilik/brankas dan laci → bank saat tutup kasir, setor bank dari laci, brankas → laci (tambahan modal / "dari pemilik"), brankas ↔ rekening.
 - **5. Catatan non-kas**: total penjualan, penjualan kasbon, potongan pembulatan/diskon akhir, diskon dari distributor.
 - Transfer yang diterima kasir (penjualan, kasbon, pesanan) langsung masuk **rekening**, bukan laci.
+- **Belanja barang tanpa nota = faktur tunai.** Barang dagangan yang dibeli tunai tanpa faktur distributor (mis. dari toko sebelah saat stok habis) dibuatkan **faktur oleh toko** (FT-…): penjual (distributor terdaftar atau penjual lain), barang, satuan, jumlah, harga beli; langsung dibayar (laci, atau brankas/rekening dengan PIN pemilik) dan stok bertambah. Masuk belanja barang, bukan operasional. Kebutuhan toko (plastik, sapu, token) tetap di Pengeluaran. Pintu: Kas Laci → Laci Hari Ini → Belanja tanpa nota, atau Bayar Distributor → Faktur tunai.
 - **Pendapatan lain-lain** (kategori awal, nanti bisa diubah di Pengaturan): jual kardus/karung bekas; jual barang rusak/kedaluwarsa; kelebihan bayar/pembulatan; sewa tempat/titip jual; bonus/cashback distributor; bunga/cashback bank; lain-lain. Dicatat kasir lewat Kas masuk → Pendapatan lain (laci), atau pemilik di buku brankas/rekening.
 - **Buku Brankas** dan **Rekening Bank** (Back Office → Keuangan): saldo awal (sekali saat mulai), kas masuk (pendapatan lain, tambahan modal, cicilan karyawan), kas keluar (prive, kasbon karyawan), biaya (lewat Pengeluaran), pindah dana; tabel dengan saldo berjalan; PIN pemilik bila bukan pemilik.
 - **Hitung fisik brankas dan cocokkan rekening dengan mutasi bank: oleh pemilik, mingguan.** Saldo buku dibandingkan dengan uang fisik / saldo mutasi; selisih wajib dijelaskan, dicatat sebagai penyesuaian hari itu, dan saldo buku ikut angka fisik/mutasi. Sebelum mencocokkan, pastikan semua pengeluaran sudah dicatat (selisih biasanya karena lupa dicatat). Lewat seminggu tanpa pencocokan → ditandai.

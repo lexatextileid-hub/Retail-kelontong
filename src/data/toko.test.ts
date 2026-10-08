@@ -214,3 +214,40 @@ describe('buku kas per tempat uang (laci, brankas, rekening)', () => {
     expect(t.mutasiTempat('brankas').find((m) => m.nomor === 'KR-2610-0002')?.kelompok).toBe('piutang');
   });
 });
+
+describe('laporan harian kasir', () => {
+  it('bayar kasbon di nota penjualan dipisah dari uang penjualan (tunai dulu)', async () => {
+    const { pisahBayarKasbon } = await import('./toko');
+    expect(pisahBayarKasbon(50000, 0, 20000)).toEqual({ jual: { tunai: 30000, transfer: 0 }, kasbon: { tunai: 20000, transfer: 0 } });
+    expect(pisahBayarKasbon(5000, 30000, 10000)).toEqual({ jual: { tunai: 0, transfer: 25000 }, kasbon: { tunai: 5000, transfer: 5000 } });
+  });
+
+  it('pesanan DP/pelunasan, pendapatan lain, faktur tunai, operasional → kas laci seimbang', async () => {
+    const t = await import('./toko');
+    t.setPeran('admin');
+    const sesi = t.laciTerbuka() ?? t.bukaLaci(0);
+    const stok0 = t.__state().stokTambahan['gula-1kg'] ?? 0;
+    t.catatArus({ jenis: 'penjualan', nomor: 'PJ-UJI-K1', tunai: 30000, transfer: 0, keterangan: 'uji' });
+    t.catatArus({ jenis: 'pesanan', tahap: 'DP', nomor: 'PS-UJI', tunai: 0, transfer: 100000, keterangan: 'DP' });
+    t.catatArus({ jenis: 'pesanan', tahap: 'Pelunasan', nomor: 'PS-UJI', tunai: 50000, transfer: 0, keterangan: 'lunas' });
+    t.catatArus({ jenis: 'kas-masuk', nomor: 'KM-UJI-K', tunai: 20000, transfer: 0, kategori: 'Jual kardus/karung bekas', keterangan: 'kardus' });
+    const { faktur, arus } = t.buatFakturTunai({ distributorId: 'lain:Toko Sebelah', namaPemasok: 'Toko Sebelah', baris: [{ produkId: 'gula-1kg', satuanProdukId: 'gula-1kg-bks', qty: 2, harga: 15000 }] });
+    t.catatArus({ jenis: 'pengeluaran', nomor: 'KK-UJI-K', tunai: -5000, transfer: 0, kategori: 'Kemasan', penerima: 'x', keterangan: 'plastik' });
+    expect(faktur.total).toBe(30000);
+    expect(t.__state().stokTambahan['gula-1kg']).toBe(stok0 + 2);
+    expect(t.daftarFaktur().find((f) => f.id === `ft:${faktur.id}`)).toMatchObject({ status: 'lunas', sisa: 0 });
+    expect(t.mutasiTempat('laci').find((m) => m.nomor === arus.nomor)?.rincian).toBe('Faktur tunai (tanpa nota)');
+    expect(t.mutasiTempat('bank').find((m) => m.nomor === 'PS-UJI')?.rincian).toBe('Pesanan · DP');
+
+    const l = t.laporanKasir(sesi.id);
+    expect(l.pesanan.DP).toMatchObject({ n: 1, transfer: 100000 });
+    expect(l.pesanan.Pelunasan).toMatchObject({ n: 1, tunai: 50000 });
+    expect(l.lain).toContainEqual(['Jual kardus/karung bekas', { n: 1, tunai: 20000, transfer: 0 }]);
+    expect(l.faktur.find((f) => f.tunaiTanpaNota)?.jumlah).toBe(30000);
+    expect(l.operasional).toContainEqual(['Kemasan', { n: 1, jumlah: 5000 }]);
+    expect(l.transfer.dp).toBe(100000);
+    const k = l.kas;
+    expect(k.saldoAwal + k.dariPemilik + k.pendapatan + k.bayarKasbon - k.returKembali - k.pengeluaran - k.setorBank).toBe(k.seharusnya);
+    t.setPeran('pemilik');
+  });
+});

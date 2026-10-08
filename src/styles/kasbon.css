@@ -203,3 +203,5 @@ a.kb-tagihan__baris:hover { background: var(--permukaan-2); color: var(--teks); 
   .kk-ringkas { display: flex !important; overflow-x: auto; gap: 10px; padding-bottom: 2px; scroll-snap-type: x mandatory; }
   .kk-ringkas > * { flex: 0 0 64%; scroll-snap-align: start; padding: 10px 14px; }
 }
+
+.kk-qty { width: 90px; height: 38px; text-align: right; margin-left: auto; }

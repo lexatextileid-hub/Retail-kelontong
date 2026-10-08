@@ -12,6 +12,7 @@ import { tanggalPendek } from '../kasbon/bersama';
 import { ambilDistributor } from '../pesanan/bersama';
 import { DialogBuktiKasKeluar, DialogLaporanHarian } from './DialogLaci';
 import { KepalaKas } from './KepalaKas';
+import { FormFakturTunai } from './FormFakturTunai';
 import '../../styles/pesanan.css';
 import '../../styles/penjualan.css';
 import '../../styles/kasbon.css';
@@ -265,6 +266,11 @@ export function BayarDistributor() {
   const minggu = terbuka.filter((f) => f.jatuhTempo >= hari && f.jatuhTempo <= tambahHari(hari, 7));
   const jumlah = (xs: FakturHutang[]) => xs.reduce((t, f) => t + f.sisa, 0);
   const adaLaci = !!laciTerbuka(undefined, toko);
+  const [fakturTunai, setFakturTunai] = useState(!!params.get('tunai'));
+
+  if (fakturTunai) {
+    return <FormFakturTunai onBatal={() => { setFakturTunai(false); setParams({}); }} onSelesai={(a) => { setFakturTunai(false); setParams({}); setTab('pembayaran'); setD(a); }} />;
+  }
 
   if (form) {
     return (
@@ -333,8 +339,11 @@ export function BayarDistributor() {
 
       <KotakFilter
         cari={{ nilai: cari, onUbah: setCari, placeholder: tab === 'faktur' ? 'Cari no. faktur / PB-…' : 'Cari BD-… atau no. faktur' }}
-        aksi={<button type="button" className="tombol tombol--utama" disabled={!adaLaci || !terbuka.length} title={adaLaci ? undefined : 'Buka kasir dulu'}
-          onClick={() => setForm({ distributorId: fDist, faktur: [] })}>+ Pembayaran baru</button>}
+        aksi={<div className="baris-tombol">
+          <button type="button" className="tombol" onClick={() => setFakturTunai(true)}>+ Faktur tunai (tanpa nota)</button>
+          <button type="button" className="tombol tombol--utama" disabled={!adaLaci || !terbuka.length} title={adaLaci ? undefined : 'Buka kasir dulu'}
+            onClick={() => setForm({ distributorId: fDist, faktur: [] })}>+ Pembayaran baru</button>
+        </div>}
         ringkas={[tab === 'pembayaran' ? teksPeriode(periode) : { 'belum-lunas': 'Belum lunas', lewat: 'Lewat jatuh tempo', 'minggu-ini': 'Jatuh tempo 7 hari', lunas: 'Lunas', semua: 'Semua status' }[fStatus],
         fDist ? ambilDistributor(fDist).nama : 'semua distributor', q && `"${cari}"`].filter(Boolean).join(' · ')}>
         {tab === 'pembayaran' && <PilihPeriode awal="bulan-ini" onUbah={setPeriode} />}
