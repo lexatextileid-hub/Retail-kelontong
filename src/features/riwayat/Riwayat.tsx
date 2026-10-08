@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog } from '../../components/Dialog';
+import { PilihPeriode, teksPeriode, type Periode } from '../../components/PilihPeriode';
 import { hariIni, useToko, type BayarKasbon, type NotaPenjualan, type Retur } from '../../data/toko';
 import { isoHari } from '../../domain/kasbon';
 import { rupiah } from '../../lib/format';
@@ -29,7 +30,7 @@ function caraBayar(n: NotaPenjualan) {
 export function Riwayat() {
   const toko = useToko();
   const navigasi = useNavigate();
-  const [tanggal, setTanggal] = useState(hariIni());
+  const [periode, setPeriode] = useState<Periode>({ dari: hariIni(), sampai: hariIni() });
   const [jenis, setJenis] = useState<Jenis>('semua');
   const [cari, setCari] = useState('');
   const [buka, setBuka] = useState<Baris | null>(null);
@@ -40,7 +41,8 @@ export function Riwayat() {
     ...toko.bayarKasbon.filter((b) => b.lewat === 'kasbon').map((d) => ({ jenis: 'kasbon' as const, waktuIso: `${d.tanggal}T12:00:00`, data: d })),
     ...toko.retur.map((d) => ({ jenis: 'retur' as const, waktuIso: d.waktuIso, data: d })),
   ];
-  const hariItu = semua.filter((x) => (x.jenis === 'kasbon' ? x.data.tanggal : isoHari(new Date(x.waktuIso))) === tanggal);
+  const tglBaris = (x: Baris) => (x.jenis === 'kasbon' ? x.data.tanggal : isoHari(new Date(x.waktuIso)));
+  const hariItu = semua.filter((x) => tglBaris(x) >= periode.dari && tglBaris(x) <= periode.sampai);
   const q = cari.trim().toLowerCase();
   const tampil = hariItu
     .filter((x) => jenis === 'semua' || x.jenis === jenis)
@@ -49,20 +51,24 @@ export function Riwayat() {
 
   const jual = hariItu.filter((x): x is Extract<Baris, { jenis: 'jual' }> => x.jenis === 'jual');
   const omzet = jual.reduce((t, x) => t + x.data.total, 0);
+  const returPeriode = hariItu.reduce((t, x) => t + (x.jenis === 'retur' ? x.data.nilaiRetur : 0), 0);
+  const banyakHari = periode.dari !== periode.sampai;
   const banyak = (j: Jenis) => (j === 'semua' ? hariItu.length : hariItu.filter((x) => x.jenis === j).length);
   const adaRetur = (notaId: string) => toko.retur.some((r) => r.notaId === notaId);
 
   return (
     <div className="ps-halaman">
+      <PilihPeriode onUbah={setPeriode} />
       <div className="kb-ringkas">
         <div className="kartu kb-angka">
-          <span className="teks-pudar">Penjualan</span>
+          <span className="teks-pudar">Penjualan · {teksPeriode(periode)}</span>
           <strong>{rupiah(omzet)}</strong>
-          <span className="teks-pudar">{jual.length} nota</span>
+          <span className="teks-pudar">{jual.length} nota{jual.length ? ` · rata-rata ${rupiah(Math.round(omzet / jual.length))}` : ''}</span>
         </div>
         <div className="kartu kb-angka">
-          <span className="teks-pudar">Tanggal</span>
-          <input type="date" className="isian__kontrol" max={hariIni()} value={tanggal} onChange={(e) => setTanggal(e.target.value || hariIni())} aria-label="Tanggal" />
+          <span className="teks-pudar">Retur</span>
+          <strong>{rupiah(returPeriode)}</strong>
+          <span className="teks-pudar">{hariItu.filter((x) => x.jenis === 'retur').length} retur</span>
         </div>
       </div>
 
@@ -84,12 +90,19 @@ export function Riwayat() {
       {tampil.length === 0 ? (
         <div className="kartu ps-kosong-besar">
           <h2>Tidak ada transaksi</h2>
-          <p className="teks-pudar">Tidak ada transaksi {jenis !== 'semua' ? 'jenis ini ' : ''}pada tanggal ini. Ganti tanggal untuk melihat hari lain.</p>
+          <p className="teks-pudar">Tidak ada transaksi {jenis !== 'semua' ? 'jenis ini ' : ''}pada periode ini. Pilih periode lain.</p>
         </div>
       ) : (
         <div className="kartu rw-daftar">
-          {tampil.map((x) => (
-            <button key={`${x.jenis}-${x.data.id}`} type="button" className="rw-baris" onClick={() => setBuka(x)}>
+          {tampil.map((x, i) => (
+            <div key={`${x.jenis}-${x.data.id}`} className="rw-grup">
+            {banyakHari && (i === 0 || tglBaris(tampil[i - 1]) !== tglBaris(x)) && (
+              <div className="rw-tanggal">
+                <span>{new Date(`${tglBaris(x)}T00:00:00`).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                <span>{rupiah(tampil.filter((y) => y.jenis === 'jual' && tglBaris(y) === tglBaris(x)).reduce((t, y) => t + (y.jenis === 'jual' ? y.data.total : 0), 0))}</span>
+              </div>
+            )}
+            <button type="button" className="rw-baris" onClick={() => setBuka(x)}>
               <span className="rw-baris__kiri">
                 <span className="rw-baris__nomor">
                   <strong>{x.data.nomor}</strong>
@@ -108,6 +121,7 @@ export function Riwayat() {
                 {x.jenis === 'jual' ? rupiah(x.data.total) : x.jenis === 'kasbon' ? rupiah(x.data.jumlah) : `−${rupiah(x.data.nilaiRetur)}`}
               </strong>
             </button>
+            </div>
           ))}
         </div>
       )}

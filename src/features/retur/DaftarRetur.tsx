@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { hariIni, useToko, type Retur } from '../../data/toko';
-import { isoHari, tambahHari } from '../../domain/kasbon';
+import { PilihPeriode, teksPeriode, periodeDari, type Periode } from '../../components/PilihPeriode';
+import { useToko, type Retur } from '../../data/toko';
+import { isoHari } from '../../domain/kasbon';
 import { rupiah } from '../../lib/format';
 import { namaPelanggan } from '../pesanan/bersama';
 import { DialogStrukRetur, teksCara } from './DialogRetur';
@@ -13,8 +14,8 @@ type Sumber = 'semua' | Retur['sumber'];
 /** Daftar retur: filter periode, pelanggan/nomor, sumber. Tambah retur dari sini. */
 export function DaftarRetur() {
   const { retur, pelanggan } = useToko();
-  const [dari, setDari] = useState(tambahHari(hariIni(), -6));
-  const [sampai, setSampai] = useState(hariIni());
+  const [periode, setPeriode] = useState<Periode>(() => periodeDari('7-hari', '', { dari: '', sampai: '' }));
+  const { dari, sampai } = periode;
   const [cari, setCari] = useState('');
   const [fPelanggan, setFPelanggan] = useState('');
   const [sumber, setSumber] = useState<Sumber>('semua');
@@ -36,7 +37,7 @@ export function DaftarRetur() {
     <div className="ps-halaman">
       <div className="ps-atas">
         <div className="kartu kb-angka" style={{ minWidth: 220 }}>
-          <span className="teks-pudar">Total retur periode ini</span>
+          <span className="teks-pudar">Total retur · {teksPeriode(periode)}</span>
           <strong>{rupiah(total)}</strong>
           <span className="teks-pudar">{tampil.length} retur</span>
         </div>
@@ -44,15 +45,8 @@ export function DaftarRetur() {
       </div>
 
       <div className="kartu tumpuk">
+        <PilihPeriode awal="7-hari" onUbah={setPeriode} />
         <div className="rt-filter">
-          <label className="isian">
-            Dari
-            <input type="date" className="isian__kontrol" value={dari} max={sampai} onChange={(e) => setDari(e.target.value || dari)} />
-          </label>
-          <label className="isian">
-            Sampai
-            <input type="date" className="isian__kontrol" value={sampai} min={dari} max={hariIni()} onChange={(e) => setSampai(e.target.value || sampai)} />
-          </label>
           <label className="isian">
             Pelanggan
             <select className="isian__kontrol" value={fPelanggan} onChange={(e) => setFPelanggan(e.target.value)}>

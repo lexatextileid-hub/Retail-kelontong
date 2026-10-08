@@ -100,3 +100,11 @@ a.kb-tagihan__baris:hover { background: var(--permukaan-2); color: var(--teks); 
 .rt-langkah li.aktif { color: var(--biru-tua); border-color: var(--biru-garis); background: var(--biru-muda); }
 .rt-langkah li.aktif span { background: var(--biru); color: #fff; }
 .rt-langkah li.selesai span { background: #1d6b3c; color: #fff; }
+.pp { display: flex; flex-direction: column; gap: 10px; }
+.pp__isian { max-width: 220px; }
+.pp__rentang { display: grid; grid-template-columns: repeat(2, minmax(0, 200px)); gap: 10px; }
+.rw-grup { display: contents; }
+.rw-tanggal { display: flex; justify-content: space-between; gap: 12px; padding: 14px 0 6px; font-size: 12.5px; font-weight: 700; color: var(--teks-2); text-transform: uppercase; letter-spacing: 0.03em; border-top: 1px solid var(--garis); }
+.rw-grup:first-child .rw-tanggal { border-top: 0; padding-top: 6px; }
+.rw-tanggal + .rw-baris { border-top: 0; }
+.pp .pj__kategori { flex-wrap: wrap; overflow: visible; }
