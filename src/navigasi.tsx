@@ -16,6 +16,9 @@ import { DaftarRetur } from './features/retur/DaftarRetur';
 import { Riwayat } from './features/riwayat/Riwayat';
 import { BayarDistributor, LaporanHarian, Pengeluaran } from './features/kaslaci/HalamanKas';
 import { LaciHariIni } from './features/kaslaci/LaciHariIni';
+import { BukuKas } from './features/keuangan/BukuKas';
+import { KasbonKaryawan } from './features/keuangan/KasbonKaryawan';
+import { LaporanHarianToko } from './features/keuangan/LaporanHarianToko';
 import { DaftarKasbon } from './features/kasbon/DaftarKasbon';
 import { DetailKasbon } from './features/kasbon/DetailKasbon';
 import { KasbonLama } from './features/kasbon/KasbonLama';
@@ -228,22 +231,23 @@ export const menuBackOffice: Menu[] = [
   },
   {
     path: 'keuangan', judul: 'Keuangan', ikon: 'keuangan',
-    ringkasan: 'Laci, brankas, bank, pengeluaran, prive.',
-    rencana: ['Buku brankas', 'Pengeluaran dari brankas/bank (cermin pengeluaran kasir)', 'Prive per sumber', 'Posisi usaha'],
+    ringkasan: 'Brankas, rekening bank, pengeluaran, kasbon karyawan.',
+    rencana: ['Buku brankas & rekening: saldo awal, kas masuk/keluar, prive, pindah dana, hitung fisik / cocokkan mutasi mingguan', 'Pengeluaran dari laci/brankas/rekening (data sama dengan kasir)', 'Kasbon karyawan (hanya Back Office)', 'Posisi usaha'],
     anak: [
-      { path: 'brankas', judul: 'Buku Brankas' },
-      { path: 'pengeluaran', judul: 'Pengeluaran' },
-      { path: 'prive', judul: 'Prive' },
+      { path: 'brankas', judul: 'Buku Brankas', halaman: <BukuKas key="brankas" tempat="brankas" /> },
+      { path: 'rekening', judul: 'Rekening Bank', halaman: <BukuKas key="bank" tempat="bank" /> },
+      { path: 'pengeluaran', judul: 'Pengeluaran', halaman: <Pengeluaran /> },
+      { path: 'kasbon-karyawan', judul: 'Kasbon Karyawan', halaman: <KasbonKaryawan /> },
       { path: 'posisi-usaha', judul: 'Posisi Usaha' },
     ],
   },
   {
     path: 'laporan', judul: 'Laporan', ikon: 'laporan',
     ringkasan: 'Harian, bulanan (kalender), rentang bebas.',
-    rencana: ['Laba (pasti vs perkiraan)', 'Susut, potongan, diskon pelanggan', 'Laporan harian per kasir'],
+    rencana: ['Harian toko: posisi uang laci, brankas, rekening + rincian masuk/keluar A–G', 'Bulanan = jumlah harian', 'Laba (pasti vs perkiraan)', 'Susut, potongan, diskon pelanggan'],
     anak: [
-      { path: 'harian', judul: 'Harian' },
-      { path: 'bulanan', judul: 'Bulanan' },
+      { path: 'harian', judul: 'Harian Toko', halaman: <LaporanHarianToko key="harian" /> },
+      { path: 'bulanan', judul: 'Bulanan', halaman: <LaporanHarianToko key="bulanan" awal="bulan-ini" /> },
       { path: 'susut', judul: 'Susut' },
       { path: 'umur-stok', judul: 'Umur Stok' },
     ],

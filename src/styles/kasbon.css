@@ -189,11 +189,13 @@ a.kb-tagihan__baris:hover { background: var(--permukaan-2); color: var(--teks); 
 .kf__tombol { display: inline-flex; align-items: center; gap: 6px; height: 42px; flex: none; }
 .kf__tombol--aktif { background: var(--biru-muda); border-color: var(--biru-garis); color: var(--biru-tua); }
 .kf__ringkas { flex: 1 1 160px; min-width: 0; font-size: 13px; color: var(--teks-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.kf__aksi { margin-left: auto; display: flex; gap: 8px; flex: none; }
+.kf__aksi { margin-left: auto; display: flex; gap: 8px; flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.kf__aksi .baris-tombol { justify-content: flex-end; }
 .kf__panel { padding: 14px 16px; }
 @media (max-width: 520px) {
   .kf__cari { flex-basis: 100%; max-width: none; }
   .kf__ringkas { flex-basis: 100%; order: 3; }
+  .kf__aksi .baris-tombol { justify-content: flex-start; }
 }
 .kk-sumber .tombol { height: 40px; }
 /* Di HP ringkasan jadi satu baris geser, supaya daftar langsung terlihat */

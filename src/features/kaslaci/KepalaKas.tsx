@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { laciTerbuka, ringkasLaci, useToko } from '../../data/toko';
 import { rupiah } from '../../lib/format';
 
@@ -7,7 +7,10 @@ const jam = (iso: string) => new Date(iso).toLocaleTimeString('id-ID', { hour: '
 /** Bilah status laci yang sama di semua sub-menu Kas Laci. */
 export function KepalaKas({ tanpaAksi = false }: { tanpaAksi?: boolean }) {
   const toko = useToko();
+  const { pathname } = useLocation();
   const sesi = laciTerbuka(undefined, toko);
+  // Di Back Office halaman yang sama dipakai tanpa bilah laci.
+  if (pathname.startsWith('/admin')) return null;
   if (!sesi) {
     return (
       <div className="kk-bilah kk-bilah--tutup">

@@ -1,0 +1,34 @@
+/* Keuangan: buku brankas / rekening, laporan harian toko */
+.kf-judul { font-size: 16px; margin: 8px 0 0; }
+.lh-tabel { width: 100%; }
+.lh-tabel tbody tr { cursor: default; }
+.lh-tabel .lh-kelompok td { font-weight: 700; background: var(--permukaan-2); }
+.lh-tabel .lh-rinci td:first-child { padding-left: 24px; color: var(--teks-2); }
+.lh-tabel tfoot td { padding-top: 12px; border-top: 1px solid var(--garis); }
+.lh-catatan { display: flex; flex-direction: column; gap: 8px; padding: 16px; }
+
+@media (max-width: 720px) {
+  /* Rincian per kelompok: nama di baris sendiri, 4 angka (laci, brankas, rekening, total) di bawahnya */
+  .lh-tabel, .lh-tabel thead, .lh-tabel tbody, .lh-tabel tfoot { display: block; width: 100%; min-width: 0; }
+  .lh-tabel thead tr, .lh-tabel tbody tr, .lh-tabel tfoot tr {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--garis-halus);
+  }
+  .lh-tabel th, .lh-tabel td { display: block; padding: 0; border: 0; font-size: 13px; overflow-wrap: anywhere; }
+  .lh-tabel thead th { font-size: 11px; }
+  .lh-tabel td:not(:first-child) { white-space: nowrap; font-size: 12px; overflow-wrap: normal; }
+  .lh-tabel tr { column-gap: 4px !important; }
+  .lh-tabel th:first-child, .lh-tabel td:first-child { grid-column: 1 / -1; padding: 0 0 4px; }
+  .lh-tabel thead th:first-child { display: none; }
+  .lh-tabel .lh-rinci td:first-child { padding-left: 12px; }
+  .lh-tabel .lh-kelompok { background: var(--permukaan-2); }
+  .lh-tabel .lh-kelompok td { background: none; }
+  .lh-tabel td[colspan] { grid-column: 1 / -1; }
+}
+
+@media (max-width: 720px) {
+  /* Total uang toko tetap tampil di HP */
+  .bd-tabel.lh-posisi tfoot { display: table-footer-group; }
+  .lh-posisi tfoot tr { background: var(--permukaan-2); padding: 12px 8px; border-radius: 8px; }
+  .lh-posisi tfoot td { padding-top: 0; border-top: 0; }
+  .lh-posisi .lh-kosong { display: none; }
+}

@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { formatStok } from '../lib/format';
+import { ringkasTempat, saldoBerjalan, type MutasiKas } from './kas';
 import { ambilFifo, modalBarisFaktur } from './fifo';
 import { hitungHargaBaris } from './harga';
 import { alokasiTertua, cekKasbon, selisihHari, tambahHari } from './kasbon';
@@ -237,5 +238,34 @@ describe('retur', () => {
   it('tukar barang lain: bisa kembali uang atau tambah bayar', () => {
     expect(selisihTukar(35000, 20000)).toBe(15000); // toko mengembalikan
     expect(selisihTukar(35000, 50000)).toBe(-15000); // pelanggan menambah
+  });
+});
+
+describe('laporan kas per tempat uang', () => {
+  const m = (tanggal: string, kelompok: MutasiKas['kelompok'], jumlah: number, rincian = 'x'): MutasiKas =>
+    ({ id: `${tanggal}${kelompok}${jumlah}`, nomor: '-', waktuIso: `${tanggal}T10:00:00`, tanggal, tempat: 'brankas', akun: '-', kelompok, rincian, jumlah, keterangan: '' });
+  const data = [
+    m('2026-10-01', 'saldo-awal', 10000000),
+    m('2026-10-02', 'pindah-masuk', 2000000),
+    m('2026-10-03', 'biaya', -150000, 'Kemasan'),
+    m('2026-10-03', 'biaya', -50000, 'Kemasan'),
+    m('2026-10-03', 'pendapatan', 35000, 'Pendapatan lain · Jual kardus/karung bekas'),
+    m('2026-10-03', 'pindah-keluar', -5000000),
+    m('2026-10-03', 'selisih', -5000),
+    m('2026-10-04', 'prive', -1000000),
+  ];
+  it('saldo awal hari = semua mutasi sebelumnya; saldo akhir = awal + masuk − keluar ± pindah + selisih', () => {
+    const r = ringkasTempat(data, '2026-10-03', '2026-10-03');
+    expect(r.saldoAwal).toBe(12000000);
+    expect(r).toMatchObject({ masuk: 35000, keluar: 200000, pindahMasuk: 0, pindahKeluar: 5000000, selisih: -5000 });
+    expect(r.saldoAkhir).toBe(12000000 + 35000 - 200000 - 5000000 - 5000);
+    expect(r.perKelompok.biaya?.rincian.Kemasan).toBe(-200000);
+  });
+  it('laporan bulanan = jumlah harian (saldo akhir hari sebelumnya = saldo awal hari berikutnya)', () => {
+    const bulan = ringkasTempat(data, '2026-10-01', '2026-10-31');
+    expect(bulan.saldoAwal).toBe(10000000);
+    expect(bulan.saldoAkhir).toBe(ringkasTempat(data, '2026-10-04', '2026-10-04').saldoAkhir);
+    expect(ringkasTempat(data, '2026-10-03', '2026-10-03').saldoAkhir).toBe(ringkasTempat(data, '2026-10-04', '2026-10-04').saldoAwal);
+    expect(saldoBerjalan(data).slice(-1)[0].saldo).toBe(bulan.saldoAkhir);
   });
 });

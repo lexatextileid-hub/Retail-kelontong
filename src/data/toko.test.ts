@@ -166,3 +166,51 @@ describe('kas laci', () => {
     t.setPeran('pemilik');
   });
 });
+
+describe('buku kas per tempat uang (laci, brankas, rekening)', () => {
+  it('laci yang ditutup berakhir di sisa laci; transfer masuk rekening; pindah dana seimbang', async () => {
+    const t = await import('./toko');
+    const { ringkasTempat } = await import('../domain/kas');
+    const st = t.__state();
+    const sesi = st.sesiLaci.find((x) => x.akun === '[Admin A]' && x.ditutupIso)!;
+    const r = ringkasTempat(t.mutasiTempat('laci', st, sesi.id), '0000-01-01', '9999-12-31');
+    expect(r.pindahMasuk).toBe(100000); // tambahan dari pemilik saat buka
+    expect(r.masuk).toBe(50000);
+    expect(r.keluar).toBe(15000); // pengeluaran dari brankas tidak ikut laci
+    expect(r.selisih).toBe(-1000);
+    expect(r.pindahKeluar).toBe(34000); // diserahkan ke pemilik saat tutup
+    expect(r.saldoAkhir).toBe(sesi.pembagian!.sisaLaci);
+    const bank = t.mutasiTempat('bank', st).find((m) => m.nomor === 'PJ-UJI-L1')!;
+    expect(bank).toMatchObject({ kelompok: 'pendapatan', rincian: 'Penjualan', jumlah: 20000 });
+    const brankasUji = t.mutasiTempat('brankas', st).find((m) => m.nomor === 'KK-UJI2')!;
+    expect(brankasUji).toMatchObject({ kelompok: 'biaya', rincian: 'Sewa ruko', jumlah: -99000 });
+    const pindah = t.mutasiKas(st).filter((m) => m.kelompok === 'pindah-masuk' || m.kelompok === 'pindah-keluar');
+    expect(pindah.reduce((a, m) => a + m.jumlah, 0)).toBe(0);
+  });
+
+  it('brankas & rekening: pindah, prive, pendapatan lain, hitung fisik dengan selisih', async () => {
+    const t = await import('./toko');
+    const brankas0 = t.saldoTempat('brankas');
+    const bank0 = t.saldoTempat('bank');
+    t.catatKasPemilik({ jenis: 'pindah', nomor: 'PD-UJI', sumber: 'brankas', ke: 'bank', tunai: -1000000, transfer: 0, keterangan: 'uji' });
+    t.catatKasPemilik({ jenis: 'prive', nomor: 'PR-UJI', sumber: 'brankas', tunai: -200000, transfer: 0, keterangan: 'uji' });
+    t.catatKasPemilik({ jenis: 'kas-masuk', nomor: 'KM-UJI', sumber: 'bank', tunai: 0, transfer: 5000, kategori: 'Bunga/cashback bank', keterangan: 'uji' });
+    expect(t.saldoTempat('brankas')).toBe(brankas0 - 1200000);
+    expect(t.saldoTempat('bank')).toBe(bank0 + 1005000);
+    const km = t.mutasiTempat('bank').find((m) => m.nomor === 'KM-UJI')!;
+    expect(km.rincian).toBe('Pendapatan lain · Bunga/cashback bank');
+    // Hitung fisik: uang kurang 5.000 (pengeluaran lupa dicatat) → selisih, saldo buku ikut fisik
+    const c = t.cocokkanTempat('brankas', t.saldoTempat('brankas') - 5000, 'lupa catat parkir');
+    expect(c.selisih).toBe(-5000);
+    expect(t.saldoTempat('brankas')).toBe(c.fisik);
+    expect(t.pencocokanTerakhir('brankas')?.id).toBe(c.id);
+  });
+
+  it('kasbon karyawan: diberi dikurangi cicilan', async () => {
+    const t = await import('./toko');
+    const rudi = t.kasbonKaryawan().find((k) => k.nama === 'Rudi')!;
+    expect(rudi).toMatchObject({ diberi: 300000, dibayar: 100000, sisa: 200000 });
+    expect(t.mutasiTempat('brankas').find((m) => m.nomor === 'KR-2610-0001')?.kelompok).toBe('kasbon-karyawan');
+    expect(t.mutasiTempat('brankas').find((m) => m.nomor === 'KR-2610-0002')?.kelompok).toBe('piutang');
+  });
+});

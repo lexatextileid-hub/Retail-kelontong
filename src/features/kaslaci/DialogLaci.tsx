@@ -3,9 +3,10 @@ import { Dialog } from '../../components/Dialog';
 import { InputRupiah } from '../../components/InputRupiah';
 import { bankContoh, PIN_PEMILIK_CONTOH } from '../../data/contoh';
 import {
-  catatArus, fakturTerbuka, KATEGORI_PENGELUARAN, nomorArus, ringkasLaci, tutupLaci, useToko,
+  catatArus, fakturTerbuka, KATEGORI_PENDAPATAN_LAIN, KATEGORI_PENGELUARAN, nomorArus, ringkasLaci, ringkasSesiKas, tutupLaci, useToko,
   type ArusKas, type SesiLaci,
 } from '../../data/toko';
+import { KELOMPOK_KELUAR, KELOMPOK_MASUK, namaKelompok, type KelompokKas, type MutasiKas } from '../../domain/kas';
 import { rupiah } from '../../lib/format';
 import { ambilDistributor } from '../pesanan/bersama';
 import { tanggalPendek } from '../kasbon/bersama';
@@ -38,6 +39,7 @@ function PilihBank({ bank, setBank }: { bank: string; setBank: (s: string) => vo
 export const namaJenis: Record<ArusKas['jenis'], string> = {
   penjualan: 'Penjualan', kasbon: 'Bayar kasbon', pesanan: 'Pesanan', retur: 'Retur', 'kas-masuk': 'Kas masuk lain',
   'titipan-brankas': 'Dari pemilik', pengeluaran: 'Pengeluaran', 'bayar-distributor': 'Bayar distributor', 'setor-bank': 'Setor bank',
+  'saldo-awal': 'Saldo awal', modal: 'Tambahan modal', prive: 'Prive', pindah: 'Pindah dana', 'kasbon-karyawan': 'Kasbon karyawan', 'cicilan-karyawan': 'Cicilan kasbon karyawan',
 };
 
 /* ---------- Buka kasir ---------- */
@@ -69,14 +71,15 @@ export function DialogKasMasuk({ onSelesai, onTutup }: { onSelesai: (a: ArusKas)
   const { peran } = useToko();
   const [jenis, setJenis] = useState<'kas-masuk' | 'titipan-brankas'>('kas-masuk');
   const [jumlah, setJumlah] = useState(0);
+  const [kategori, setKategori] = useState('');
   const [ket, setKet] = useState('');
   const [pin, setPin] = useState('');
   const perluPin = jenis === 'titipan-brankas' && peran !== 'pemilik';
-  const siap = jumlah > 0 && !!ket.trim() && (!perluPin || pin === PIN_PEMILIK_CONTOH);
+  const siap = jumlah > 0 && !!ket.trim() && (jenis !== 'kas-masuk' || !!kategori) && (!perluPin || pin === PIN_PEMILIK_CONTOH);
   return (
     <Dialog judul="Kas masuk" onTutup={onTutup} lebar={480}
       kaki={<button type="button" className="tombol tombol--utama tombol--besar" disabled={!siap}
-        onClick={() => onSelesai(catatArus({ jenis, nomor: nomorArus('KM'), tunai: jumlah, transfer: 0, keterangan: ket.trim() }))}>Simpan kas masuk</button>}>
+        onClick={() => onSelesai(catatArus({ jenis, nomor: nomorArus('KM'), tunai: jumlah, transfer: 0, keterangan: ket.trim(), kategori: jenis === 'kas-masuk' ? kategori : undefined }))}>Simpan kas masuk</button>}>
       <div className="saklar" role="group" aria-label="Jenis kas masuk" style={{ alignSelf: 'flex-start' }}>
         <button type="button" aria-pressed={jenis === 'kas-masuk'} onClick={() => setJenis('kas-masuk')}>Pendapatan lain</button>
         <button type="button" aria-pressed={jenis === 'titipan-brankas'} onClick={() => setJenis('titipan-brankas')}>Dari pemilik</button>
@@ -86,6 +89,15 @@ export function DialogKasMasuk({ onSelesai, onTutup }: { onSelesai: (a: ArusKas)
           ? 'Mis. jual kardus bekas, barang rusak/kedaluwarsa (pendapatan lain-lain). Bukan penjualan barang.'
           : 'Uang yang diberikan pemilik ke laci, mis. titipan untuk bayar distributor atau tambahan uang kembalian. Bukan pendapatan.'}
       </p>
+      {jenis === 'kas-masuk' && (
+        <label className="isian">
+          Kategori
+          <select className="isian__kontrol" value={kategori} onChange={(e) => setKategori(e.target.value)} style={!kategori ? { color: 'var(--teks-3)' } : undefined}>
+            <option value="" disabled>Pilih kategori…</option>
+            {KATEGORI_PENDAPATAN_LAIN.filter((k) => k !== 'Bunga/cashback bank').map((k) => <option key={k} value={k}>{k}</option>)}
+          </select>
+        </label>
+      )}
       <label className="isian">Jumlah<InputRupiah id="km-jumlah" nilai={jumlah} onUbah={setJumlah} autoFocus /></label>
       <label className="isian">
         Keterangan
@@ -326,15 +338,43 @@ function Baris({ k, v, tebal, minus }: { k: ReactNode; v: number; tebal?: boolea
   return <div className={`struk__baris ${tebal ? 'struk__tebal' : ''}`}><span>{k}</span><span>{minus && v > 0 ? '−' : ''}{rupiah(Math.abs(v))}</span></div>;
 }
 
+/** Nama rincian untuk kasir: kasir hanya tahu laci (brankas/rekening disebut "pemilik" / "setor bank"). */
+const rincianKasir = (m: MutasiKas) =>
+  m.rincian.startsWith('Pendapatan lain · ') ? `Lain: ${m.rincian.slice(18)}`
+    : m.kelompok === 'pindah-masuk' ? 'Dari pemilik'
+    : m.kelompok === 'pindah-keluar' ? (m.lawan === 'bank' ? 'Setor bank' : 'Diserahkan ke pemilik')
+      : m.rincian;
+
+function KelompokStruk({ judul, data, minus }: { judul: string; data: MutasiKas[]; minus?: boolean }) {
+  if (data.length === 0) return null;
+  const per = new Map<string, number>();
+  data.forEach((m) => per.set(rincianKasir(m), (per.get(rincianKasir(m)) ?? 0) + m.jumlah));
+  const total = data.reduce((t, m) => t + m.jumlah, 0);
+  return (
+    <>
+      <Baris k={judul} v={Math.abs(total)} tebal minus={minus} />
+      {[...per].map(([k, v]) => <Baris key={k} k={`  ${k}`} v={Math.abs(v)} minus={minus} />)}
+    </>
+  );
+}
+
+/** Laporan kasir per buka–tutup laci, dikelompokkan sama dengan Laporan Harian Toko (A–G). */
 export function DialogLaporanHarian({ sesiId, onTutup }: { sesiId: string; onTutup: () => void }) {
   const toko = useToko();
   const r = ringkasLaci(sesiId, toko);
+  const k = ringkasSesiKas(sesiId, toko);
   const s = r.sesi;
   const [info, setInfo] = useState('');
   const [biasa, setBiasa] = useState(false);
-  const t = r.tunai;
-  const tf = r.transfer;
-  const keluar = r.arus.filter((a) => a.tunai < 0 && a.sumber === 'laci');
+  // Pembagian & selisih saat tutup kasir ditampilkan terpisah di bawah.
+  const saatTutup = (m: MutasiKas) => !!s.ditutupIso && m.waktuIso === s.ditutupIso && m.kelompok !== 'biaya';
+  const harian = k.laci.filter((m) => !saatTutup(m));
+  const dari = (kel: KelompokKas, data = harian) => data.filter((m) => m.kelompok === kel);
+  const masukKel = KELOMPOK_MASUK.filter((x) => dari(x).length);
+  const keluarKel = KELOMPOK_KELUAR.filter((x) => dari(x).length);
+  const judulKasir = (x: KelompokKas) => (x === 'pindah-masuk' ? 'C. Dari pemilik' : x === 'pindah-keluar' ? 'G. Setor / serahkan' : namaKelompok[x]);
+  const buktiKeluar = harian.filter((m) => m.kelompok === 'biaya' || m.kelompok === 'belanja');
+  const nonTunaiKel = KELOMPOK_MASUK.concat(KELOMPOK_KELUAR).filter((x) => dari(x, k.nonTunai).length);
   return (
     <Dialog judul={`Laporan harian ${s.nomor}`} onTutup={onTutup} lebar={biasa ? 640 : 420}
       kaki={<>
@@ -355,21 +395,16 @@ export function DialogLaporanHarian({ sesiId, onTutup }: { sesiId: string; onTut
         <div>Buka {new Date(s.dibukaIso).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
           {s.ditutupIso ? ` · Tutup ${new Date(s.ditutupIso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}` : ' · masih buka'}</div>
         <div className="struk__garis" />
-        <Baris k="Modal awal" v={r.modal} tebal />
-        {s.tambahBrankas > 0 && <Baris k="  termasuk tambahan dari pemilik" v={s.tambahBrankas} />}
-        <div className="struk__tebal" style={{ marginTop: 6 }}>Uang masuk tunai</div>
-        <Baris k="  Penjualan" v={t.penjualan} />
-        <Baris k="  Bayar kasbon" v={t.kasbon} />
-        <Baris k="  Pesanan" v={t.pesanan} />
-        {t['kas-masuk'] > 0 && <Baris k="  Kas masuk lain" v={t['kas-masuk']} />}
-        {t['titipan-brankas'] > 0 && <Baris k="  Dari pemilik" v={t['titipan-brankas']} />}
-        {t.retur > 0 && <Baris k="  Retur (tambah bayar)" v={t.retur} />}
-        <div className="struk__tebal" style={{ marginTop: 6 }}>Uang keluar tunai</div>
-        <Baris k="  Pengeluaran" v={-t.pengeluaran} minus />
-        <Baris k="  Bayar distributor" v={-t['bayar-distributor']} minus />
-        <Baris k="  Setor bank" v={-t['setor-bank']} minus />
-        {t.retur < 0 && <Baris k="  Retur uang kembali" v={-t.retur} minus />}
-        {keluar.length > 0 && keluar.map((a) => <div key={a.id} className="struk__baris" style={{ fontSize: '0.92em' }}><span>    {a.nomor} {a.penerima ?? a.bank ?? ''}</span><span>−{rupiah(-a.tunai)}</span></div>)}
+        <Baris k="Saldo awal laci" v={s.dariKemarin} tebal />
+        <div className="struk__garis" />
+        <div className="struk__tebal">UANG MASUK (tunai)</div>
+        {masukKel.length === 0 && <div className="teks-pudar">  -</div>}
+        {masukKel.map((x) => <KelompokStruk key={x} judul={judulKasir(x)} data={dari(x)} />)}
+        <div className="struk__tebal" style={{ marginTop: 6 }}>UANG KELUAR (tunai)</div>
+        {keluarKel.length === 0 && <div className="teks-pudar">  -</div>}
+        {keluarKel.map((x) => <KelompokStruk key={x} judul={judulKasir(x)} data={dari(x)} minus />)}
+        {buktiKeluar.length > 0 && <div style={{ fontSize: '0.92em', marginTop: 4 }}>Bukti kas keluar:</div>}
+        {buktiKeluar.map((m) => <div key={m.id} className="struk__baris" style={{ fontSize: '0.92em' }}><span>    {m.nomor} {m.keterangan}</span><span>−{rupiah(-m.jumlah)}</span></div>)}
         <div className="struk__garis" />
         <Baris k="SEHARUSNYA DI LACI" v={r.seharusnya} tebal />
         {s.uangFisik !== undefined && <Baris k="Uang fisik" v={s.uangFisik} />}
@@ -380,16 +415,15 @@ export function DialogLaporanHarian({ sesiId, onTutup }: { sesiId: string; onTut
           <>
             <div className="struk__garis" />
             <div className="struk__tebal">Pembagian uang fisik</div>
-            <Baris k="  Sisa di laci" v={s.pembagian.sisaLaci} />
+            <Baris k="  Sisa di laci (modal berikutnya)" v={s.pembagian.sisaLaci} />
             <Baris k="  Diserahkan ke pemilik" v={s.pembagian.brankas + s.pembagian.prive} />
             <Baris k={`  Setor bank${s.pembagian.bankNama ? ` ${s.pembagian.bankNama}` : ''}`} v={s.pembagian.bank} />
           </>
         )}
         <div className="struk__garis" />
-        <div className="struk__tebal">Non-tunai (catatan)</div>
-        <Baris k="  Penjualan transfer" v={tf.penjualan} />
-        <Baris k="  Kasbon & pesanan transfer" v={tf.kasbon + tf.pesanan} />
-        <Baris k="  Kasbon baru" v={r.kasbonBaru} />
+        <div className="struk__tebal">NON-TUNAI (catatan, tidak di laci)</div>
+        {nonTunaiKel.map((x) => <KelompokStruk key={x} judul={`${judulKasir(x)} · transfer`} data={dari(x, k.nonTunai)} minus={!KELOMPOK_MASUK.includes(x)} />)}
+        <Baris k="  Penjualan kasbon (belum dibayar)" v={r.kasbonBaru} />
         <Baris k="  Potongan pembulatan/diskon akhir" v={r.potongan} />
         <div className="struk__garis" />
         <Baris k={`Total penjualan (${r.banyakNota} nota)`} v={r.omzet} tebal />

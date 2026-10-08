@@ -7,6 +7,8 @@ import { diskonContoh, distributorContoh, hargaBeliContoh, modalContoh, pelangga
 import { alokasiTertua, isoHari, selisihHari, tambahHari } from '../domain/kasbon';
 import { hitungHargaBaris, TARGET_UNTUNG_PERSEN, untungDariModal } from '../domain/harga';
 import { ambilProduk, ambilSatuan, bolehDesimal, singkatan, type Nota } from '../features/penjualan/model';
+import type { KelompokKas, MutasiKas, TempatUang } from '../domain/kas';
+import { ringkasTempat, saldoPada } from '../domain/kas';
 import { ATURAN_RETUR_BAWAAN, nilaiAkhirBaris, nilaiRetur as hitungNilaiRetur, type AturanRetur } from '../domain/retur';
 
 export type Peran = 'pemilik' | 'admin' | 'kasir';
@@ -256,7 +258,9 @@ export interface SesiLaci {
 
 export type JenisArus =
   | 'penjualan' | 'kasbon' | 'pesanan' | 'retur' | 'kas-masuk' | 'titipan-brankas'
-  | 'pengeluaran' | 'bayar-distributor' | 'setor-bank';
+  | 'pengeluaran' | 'bayar-distributor' | 'setor-bank'
+  // dicatat pemilik di Back Office (brankas / rekening)
+  | 'saldo-awal' | 'modal' | 'prive' | 'pindah' | 'kasbon-karyawan' | 'cicilan-karyawan';
 
 /** Arus uang yang dicatat kasir. tunai/transfer bertanda: + masuk, − keluar. */
 export interface ArusKas {
@@ -280,6 +284,8 @@ export interface ArusKas {
   memo?: string;
   penerima?: string;
   bank?: string;
+  /** Pindah dana (jenis 'pindah'): tempat tujuan. Asalnya = sumber. */
+  ke?: TempatUang;
   /** jumlah = uang dibayar; diskon = potongan dari distributor (mengurangi hutang tanpa uang). */
   faktur?: { id: string; nomor: string; jumlah: number; diskon?: number }[];
 }
@@ -288,6 +294,25 @@ export const KATEGORI_PENGELUARAN = [
   'Bongkar muat & angkut', 'Retribusi & keamanan pasar', 'Kemasan', 'Kebutuhan toko harian', 'Listrik, air, internet',
   'Gaji & uang makan', 'Sewa ruko', 'Perbaikan & perawatan', 'Lain-lain',
 ];
+
+/** Pendapatan di luar penjualan barang (kelompok A). Nanti bisa diubah di Pengaturan → Data induk. */
+export const KATEGORI_PENDAPATAN_LAIN = [
+  'Jual kardus/karung bekas', 'Jual barang rusak/kedaluwarsa', 'Kelebihan bayar/pembulatan', 'Sewa tempat/titip jual',
+  'Bonus/cashback distributor', 'Bunga/cashback bank', 'Lain-lain',
+];
+
+/** Hitung fisik brankas / cocokkan saldo rekening dengan mutasi bank (pemilik, mingguan). */
+export interface Pencocokan {
+  id: string;
+  nomor: string; // CK-…
+  tempat: 'brankas' | 'bank';
+  waktuIso: string;
+  saldoBuku: number;
+  fisik: number; // uang dihitung / saldo di mutasi bank
+  selisih: number; // fisik − buku
+  catatan?: string;
+  oleh: string;
+}
 
 /** Hutang lama ke distributor (sebelum memakai aplikasi), tanpa rincian barang. */
 export interface HutangLama {
@@ -303,6 +328,7 @@ interface State {
   peran: Peran;
   sesiLaci: SesiLaci[];
   arus: ArusKas[];
+  pencocokan: Pencocokan[];
   hutangLama: HutangLama[];
   penjualan: NotaPenjualan[];
   retur: Retur[];
@@ -313,7 +339,7 @@ interface State {
   bayarKasbon: BayarKasbon[];
   pesanan: Pesanan[];
   sp: SuratPesanan[];
-  urut: Record<'PS' | 'SP' | 'SJ' | 'PB' | 'KL' | 'BK' | 'PJ' | 'RT' | 'LC' | 'KK' | 'KM' | 'BD' | 'ST', number>;
+  urut: Record<'PS' | 'SP' | 'SJ' | 'PB' | 'KL' | 'BK' | 'PJ' | 'RT' | 'LC' | 'KK' | 'KM' | 'BD' | 'ST' | 'PD' | 'SA' | 'KR' | 'CK' | 'PR', number>;
   stokTambahan: Record<string, number>; // stok umum yang masuk dari SP (pratinjau)
 }
 
@@ -321,6 +347,7 @@ let state: State = {
   peran: 'pemilik',
   sesiLaci: [],
   arus: [],
+  pencocokan: [],
   hutangLama: [],
   penjualan: [],
   retur: [],
@@ -331,7 +358,7 @@ let state: State = {
   bayarKasbon: [],
   pesanan: [],
   sp: [],
-  urut: { PS: 1, SP: 1, SJ: 1, PB: 1, KL: 1, BK: 1, PJ: 231, RT: 1, LC: 1, KK: 1, KM: 1, BD: 1, ST: 1 },
+  urut: { PS: 1, SP: 1, SJ: 1, PB: 1, KL: 1, BK: 1, PJ: 231, RT: 1, LC: 1, KK: 1, KM: 1, BD: 1, ST: 1, PD: 1, SA: 1, KR: 1, CK: 1, PR: 1 },
   stokTambahan: {},
 };
 const pendengar = new Set<() => void>();
@@ -1038,7 +1065,152 @@ export function tutupLaci(data: {
   return sesi.id;
 }
 
-export const nomorArus = (j: 'KK' | 'KM' | 'BD' | 'ST') => nomorBaru(j);
+export const nomorArus = (j: 'KK' | 'KM' | 'BD' | 'ST' | 'PD' | 'SA' | 'KR' | 'PR') => nomorBaru(j);
+
+/* ---------- Brankas & rekening (Back Office) ---------- */
+
+/** Catatan uang oleh pemilik di Back Office: tidak terikat laci mana pun. */
+export function catatKasPemilik(a: Omit<ArusKas, 'id' | 'waktuIso' | 'akun' | 'sesiId'> & { waktuIso?: string }): ArusKas {
+  const x: ArusKas = { ...a, id: id('ak'), waktuIso: a.waktuIso ?? new Date().toISOString(), akun: akunAktif() };
+  ubah((s) => ({ ...s, arus: [...s.arus, x] }));
+  return x;
+}
+
+const hariDari = (iso: string) => isoHari(new Date(iso));
+
+/**
+ * Semua catatan uang toko dinormalkan per tempat uang (lihat domain/kas.ts).
+ * - Kolom `tunai` → tempat = sumber (laci/brankas); kolom `transfer` → rekening bank.
+ * - Pindah dana (setor bank, dari pemilik, pembagian tutup kasir, pindah Back Office) → dua baris.
+ */
+export function mutasiKas(s: State = state): MutasiKas[] {
+  const hasil: MutasiKas[] = [];
+  const dorong = (m: Omit<MutasiKas, 'tanggal' | 'id'> & { id?: string }, idx = 0) =>
+    m.jumlah !== 0 && hasil.push({ ...m, id: `${m.id ?? m.nomor}:${m.tempat}:${idx}`, tanggal: hariDari(m.waktuIso) });
+  const pindah = (dasar: Omit<MutasiKas, 'tanggal' | 'id' | 'tempat' | 'kelompok' | 'jumlah' | 'rincian'> & { id: string }, asal: TempatUang, ke: TempatUang, jumlah: number) => {
+    const label = (t: TempatUang) => ({ laci: 'laci', brankas: 'brankas', bank: 'rekening' })[t];
+    dorong({ ...dasar, tempat: asal, kelompok: 'pindah-keluar', rincian: `Ke ${label(ke)}`, jumlah: -jumlah, lawan: ke });
+    dorong({ ...dasar, tempat: ke, kelompok: 'pindah-masuk', rincian: `Dari ${label(asal)}`, jumlah, lawan: asal });
+  };
+  for (const a of s.arus) {
+    const dasar = { id: a.id, nomor: a.nomor, waktuIso: a.waktuIso, sesiId: a.sesiId, akun: a.akun, keterangan: a.keterangan };
+    const tempatTunai: TempatUang = a.sumber === 'laci' ? 'laci' : a.sumber;
+    if (a.jenis === 'setor-bank') { pindah(dasar, tempatTunai, 'bank', -a.tunai); continue; }
+    if (a.jenis === 'titipan-brankas') { pindah(dasar, 'brankas', tempatTunai, a.tunai); continue; }
+    if (a.jenis === 'pindah') { pindah(dasar, a.sumber, a.ke ?? 'bank', Math.abs(a.tunai + a.transfer)); continue; }
+    const kelompokDari = (n: number): [KelompokKas, string][] => {
+      switch (a.jenis) {
+        case 'penjualan': return [['pendapatan', 'Penjualan']];
+        case 'pesanan': return [['pendapatan', 'Pesanan (DP & pelunasan)']];
+        case 'kas-masuk': return [['pendapatan', `Pendapatan lain · ${a.kategori ?? 'Lain-lain'}`]];
+        case 'kasbon': return [['piutang', 'Bayar kasbon pelanggan']];
+        case 'cicilan-karyawan': return [['piutang', 'Cicilan kasbon karyawan']];
+        case 'modal': return [['modal', 'Tambahan modal pemilik']];
+        case 'retur': return [n > 0 ? ['pendapatan', 'Tambah bayar tukar barang'] : ['kembali', 'Uang kembali retur']];
+        case 'pengeluaran': return [['biaya', a.kategori ?? 'Lain-lain']];
+        case 'bayar-distributor': return [['belanja', 'Bayar faktur distributor']];
+        case 'kasbon-karyawan': return [['kasbon-karyawan', 'Kasbon karyawan']];
+        case 'prive': return [['prive', 'Prive']];
+        case 'saldo-awal': return [['saldo-awal', 'Saldo awal']];
+        default: return [['pendapatan', 'Lain-lain']];
+      }
+    };
+    const kolom: [number, TempatUang][] = [[a.tunai, tempatTunai], [a.transfer, 'bank']];
+    kolom.forEach(([n, tempat], i) => {
+      if (!n) return;
+      // Pengeluaran berisi beberapa kategori: pecah per rincian (potongan mengurangi baris terakhir).
+      if (a.jenis === 'pengeluaran' && a.rincian?.length) {
+        let sisa = Math.abs(n);
+        a.rincian.forEach((r, j) => {
+          const bagian = j === a.rincian!.length - 1 ? sisa : Math.min(sisa, r.jumlah);
+          sisa -= bagian;
+          dorong({ ...dasar, tempat, kelompok: 'biaya', rincian: r.kategori, jumlah: -bagian, keterangan: r.keterangan || a.keterangan }, i * 10 + j);
+        });
+        return;
+      }
+      const [kelompok, rincian] = kelompokDari(n)[0];
+      dorong({ ...dasar, tempat, kelompok, rincian, jumlah: n }, i);
+    });
+  }
+  for (const x of s.sesiLaci) {
+    const dasar = { id: x.id, nomor: x.nomor, sesiId: x.id, akun: x.akun };
+    // Laci pertama tiap akun: uang yang sudah ada di laci saat mulai memakai aplikasi.
+    const pertama = !s.sesiLaci.some((y) => y.akun === x.akun && y.dibukaIso < x.dibukaIso);
+    if (pertama && x.dariKemarin) dorong({ ...dasar, waktuIso: x.dibukaIso, tempat: 'laci', kelompok: 'saldo-awal', rincian: 'Saldo awal', jumlah: x.dariKemarin, keterangan: 'Uang laci saat mulai memakai aplikasi' });
+    if (x.tambahBrankas) pindah({ ...dasar, waktuIso: x.dibukaIso, keterangan: 'Tambahan modal laci dari pemilik' }, 'brankas', 'laci', x.tambahBrankas);
+    if (!x.ditutupIso) continue;
+    if (x.selisih) dorong({ ...dasar, waktuIso: x.ditutupIso, tempat: 'laci', kelompok: 'selisih', rincian: x.selisihDitanggung === 'kasir' ? 'Selisih laci (dibebankan kasir)' : 'Selisih laci (ditanggung toko)', jumlah: x.selisih, keterangan: 'Selisih tutup kasir' });
+    const b = x.pembagian;
+    if (!b) continue;
+    if (b.brankas) pindah({ ...dasar, waktuIso: x.ditutupIso, keterangan: 'Tutup kasir · diserahkan ke pemilik' }, 'laci', 'brankas', b.brankas);
+    if (b.bank) pindah({ ...dasar, waktuIso: x.ditutupIso, keterangan: `Tutup kasir · setor bank${b.bankNama ? ` ${b.bankNama}` : ''}` }, 'laci', 'bank', b.bank);
+    if (b.prive) dorong({ ...dasar, waktuIso: x.ditutupIso, tempat: 'laci', kelompok: 'prive', rincian: 'Prive', jumlah: -b.prive, keterangan: 'Tutup kasir · prive' });
+  }
+  for (const c of s.pencocokan)
+    dorong({ id: c.id, nomor: c.nomor, waktuIso: c.waktuIso, akun: c.oleh, tempat: c.tempat, kelompok: 'selisih', rincian: c.tempat === 'bank' ? 'Selisih mutasi bank' : 'Selisih hitung brankas', jumlah: c.selisih, keterangan: c.catatan || (c.tempat === 'bank' ? 'Cocokkan mutasi rekening' : 'Hitung fisik brankas') });
+  return hasil.sort((a, b) => a.waktuIso.localeCompare(b.waktuIso));
+}
+
+/** Mutasi satu tempat (laci: bisa dibatasi satu sesi). */
+export const mutasiTempat = (tempat: TempatUang, s: State = state, sesiId?: string) =>
+  mutasiKas(s).filter((m) => m.tempat === tempat && (!sesiId || m.sesiId === sesiId));
+
+/**
+ * Ringkasan satu laci (sesi) per kelompok: saldo awal = sisa laci sebelumnya.
+ * `nonTunai` = transfer yang dicatat kasir di sesi ini (masuk rekening; catatan di laporan kasir).
+ */
+export function ringkasSesiKas(sesiId: string, s: State = state) {
+  const sesi = s.sesiLaci.find((x) => x.id === sesiId)!;
+  const semua = mutasiKas(s).filter((m) => m.sesiId === sesiId);
+  const laci = semua.filter((m) => m.tempat === 'laci' && m.kelompok !== 'saldo-awal');
+  const r = ringkasTempat(laci, '0000-01-01', '9999-12-31');
+  return { sesi, r: { ...r, saldoAwal: sesi.dariKemarin, saldoAkhir: r.saldoAkhir + sesi.dariKemarin }, laci, nonTunai: semua.filter((m) => m.tempat === 'bank' && !m.lawan) };
+}
+
+/** Saldo buku brankas / rekening saat ini. */
+export const saldoTempat = (tempat: 'brankas' | 'bank', s: State = state) => mutasiTempat(tempat, s).reduce((t, m) => t + m.jumlah, 0);
+
+export const adaSaldoAwal = (tempat: 'brankas' | 'bank', s: State = state) =>
+  s.arus.some((a) => a.jenis === 'saldo-awal' && a.sumber === tempat);
+
+/** Hitung fisik brankas / cocokkan saldo rekening; selisih tercatat sebagai penyesuaian di hari itu. */
+export function cocokkanTempat(tempat: 'brankas' | 'bank', fisik: number, catatan?: string): Pencocokan {
+  const saldoBuku = saldoTempat(tempat);
+  const c: Pencocokan = {
+    id: id('ck'), nomor: nomorBaru('CK'), tempat, waktuIso: new Date().toISOString(), saldoBuku, fisik,
+    selisih: fisik - saldoBuku, catatan: catatan?.trim() || undefined, oleh: akunAktif(),
+  };
+  ubah((s) => ({ ...s, pencocokan: [...s.pencocokan, c] }));
+  return c;
+}
+
+export const pencocokanTerakhir = (tempat: 'brankas' | 'bank', s: State = state) =>
+  [...s.pencocokan].filter((c) => c.tempat === tempat).sort((a, b) => b.waktuIso.localeCompare(a.waktuIso))[0];
+
+/** Saldo kasbon per karyawan (piutang karyawan; hanya Back Office). */
+export function kasbonKaryawan(s: State = state) {
+  const per = new Map<string, { nama: string; diberi: number; dibayar: number; terakhir: string }>();
+  for (const a of s.arus) {
+    if (a.jenis !== 'kasbon-karyawan' && a.jenis !== 'cicilan-karyawan') continue;
+    const nama = a.penerima ?? '-';
+    const x = per.get(nama) ?? { nama, diberi: 0, dibayar: 0, terakhir: a.waktuIso };
+    const n = Math.abs(a.tunai + a.transfer);
+    if (a.jenis === 'kasbon-karyawan') x.diberi += n; else x.dibayar += n;
+    if (a.waktuIso > x.terakhir) x.terakhir = a.waktuIso;
+    per.set(nama, x);
+  }
+  return [...per.values()].map((x) => ({ ...x, sisa: x.diberi - x.dibayar })).sort((a, b) => b.sisa - a.sisa);
+}
+
+/** Saldo semua tempat uang di akhir tanggal (laci = sisa / seharusnya tiap laci). */
+export function posisiUang(tanggal: string, s: State = state) {
+  const m = mutasiKas(s);
+  return {
+    laci: saldoPada(m.filter((x) => x.tempat === 'laci'), tanggal),
+    brankas: saldoPada(m.filter((x) => x.tempat === 'brankas'), tanggal),
+    bank: saldoPada(m.filter((x) => x.tempat === 'bank'), tanggal),
+  };
+}
 
 export type StatusFaktur = 'belum' | 'sebagian' | 'lunas';
 
@@ -1181,7 +1353,23 @@ export const fakturTerbuka = (s: State = state) => daftarFaktur(s).filter((f) =>
   const n230 = notaDi('PJ-2610-0230');
   arusContoh('lc-k2', '[Kasir A]', n229.waktuIso, { jenis: 'penjualan', nomor: n229.nomor, tunai: 0, transfer: n229.total, keterangan: 'Penjualan · Amir' });
   arusContoh('lc-k2', '[Kasir A]', n230.waktuIso, { jenis: 'penjualan', nomor: n230.nomor, tunai: n230.total, transfer: 0, keterangan: 'Penjualan · Umum' });
-  state = { ...state, urut: { ...state.urut, KK: 2 } };
+  arusContoh('lc-k2', '[Kasir A]', jamKe(0, 9, 40), { jenis: 'kas-masuk', nomor: 'KM-2610-0001', tunai: 35000, transfer: 0, kategori: 'Jual kardus/karung bekas', keterangan: 'Jual 20 kardus bekas ke pengepul' });
+
+  // Brankas & rekening (dicatat pemilik di Back Office)
+  const kas = (nomor: string, h: number, jam: number, a: Omit<ArusKas, 'id' | 'waktuIso' | 'akun' | 'sesiId' | 'nomor'>) =>
+    (state = { ...state, arus: [...state.arus, { ...a, nomor, id: id('ak'), waktuIso: jamKe(h, jam), akun: '[Pemilik]' }] });
+  kas('SA-2609-0001', 10, 7, { jenis: 'saldo-awal', sumber: 'brankas', tunai: 12000000, transfer: 0, keterangan: 'Saldo awal brankas (hitung fisik)' });
+  kas('SA-2609-0002', 10, 7, { jenis: 'saldo-awal', sumber: 'bank', tunai: 0, transfer: 35000000, keterangan: 'Saldo awal rekening toko (mutasi bank)' });
+  kas('PD-2610-0001', 5, 10, { jenis: 'pindah', sumber: 'brankas', ke: 'bank', tunai: -5000000, transfer: 0, keterangan: 'Setor brankas ke rekening' });
+  kas('PR-2610-0001', 2, 18, { jenis: 'prive', sumber: 'brankas', tunai: -1000000, transfer: 0, keterangan: 'Ambil untuk keperluan rumah' });
+  kas('KR-2610-0001', 2, 12, { jenis: 'kasbon-karyawan', sumber: 'brankas', tunai: -300000, transfer: 0, penerima: 'Rudi', keterangan: 'Kasbon Rudi, potong gaji 3×' });
+  kas('KR-2610-0002', 1, 17, { jenis: 'cicilan-karyawan', sumber: 'brankas', tunai: 100000, transfer: 0, penerima: 'Rudi', keterangan: 'Potong gaji minggu ini' });
+  kas('KK-2610-0002', 1, 9, { jenis: 'pengeluaran', sumber: 'bank', tunai: 0, transfer: -450000, kategori: 'Listrik, air, internet', penerima: 'PLN', bank: 'BCA', keterangan: 'Token listrik ruko' });
+  kas('KM-2610-0002', 3, 8, { jenis: 'kas-masuk', sumber: 'bank', tunai: 0, transfer: 12500, kategori: 'Bunga/cashback bank', keterangan: 'Bunga rekening' });
+  state = { ...state, pencocokan: [
+    { id: 'ck1', nomor: 'CK-2610-0001', tempat: 'brankas', waktuIso: jamKe(7, 17), saldoBuku: 12000000, fisik: 12000000, selisih: 0, oleh: '[Pemilik]' },
+    { id: 'ck2', nomor: 'CK-2610-0002', tempat: 'bank', waktuIso: jamKe(7, 17), saldoBuku: 35000000, fisik: 34993500, selisih: -6500, catatan: 'Biaya admin bank belum dicatat', oleh: '[Pemilik]' },
+  ], urut: { ...state.urut, KK: 3, KM: 3, PD: 2, SA: 3, KR: 3, CK: 3, PR: 2 } };
 })();
 
 /** Hanya untuk tes: membaca state saat ini. */
