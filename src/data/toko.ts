@@ -588,6 +588,8 @@ export function hargaBaris(p: Pesanan, b: BarisPesanan) {
 
 /** Perkiraan modal per satuan dasar dari harga beli terakhir (paling murah). */
 export function modalPerkiraan(produkId: string): number | undefined {
+  const acuan = infoBarang(produkId).beliAcuan;
+  if (acuan) return acuan;
   const p = ambilProduk(produkId);
   const daftar = hargaBeliContoh[produkId] ?? [];
   const per = daftar.map((h) => h.harga / ambilSatuan(p, h.satuanProdukId).isi);
@@ -606,7 +608,8 @@ export function hitungBaris(p: Pesanan, b: BarisPesanan) {
     .flatMap((x) => x.untukPesanan)
     .filter((u) => u.pesananId === p.id && u.barisId === b.id)
     .reduce((t, u) => t + u.jumlahDasar, 0);
-  const modalStok = (modalContoh[b.produkId] ?? 0) * b.dariStok;
+  // Modal untuk untung pesanan = harga beli terakhir (sama dengan dasar untung di data barang).
+  const modalStok = (infoBarang(b.produkId).beliAcuan ?? modalContoh[b.produkId] ?? 0) * b.dariStok;
   const modalOrderDiketahui = b.modalOrderPerDasar !== undefined;
   const modalOrder = (b.modalOrderPerDasar ?? modalPerkiraan(b.produkId) ?? 0) * Math.max(0, total - b.dariStok);
   const modal = modalStok + modalOrder;
@@ -800,12 +803,16 @@ export function terimaBayar(pesananId: string, jumlah: number, metode: 'tunai' |
 export const aturTempo = (pesananId: string, tanggal: string) =>
   ubahPesanan(pesananId, (p) => ({ ...p, jatuhTempo: tanggal }), `Tempo sampai ${tanggal}`);
 
-export const batalkan = (pesananId: string, alasan: string, dp: 'kembali' | 'saldo') =>
-  ubahPesanan(
-    pesananId,
-    (p) => ({ ...p, dibatalkan: { waktu: sekarang(), alasan, dp } }),
-    `Dibatalkan: ${alasan}${p0(dp)}`,
-  );
+export function batalkan(pesananId: string, alasan: string, dp: 'kembali' | 'saldo') {
+  const p = state.pesanan.find((x) => x.id === pesananId)!;
+  ubahPesanan(pesananId, (x) => ({ ...x, dibatalkan: { waktu: sekarang(), alasan, dp } }), `Dibatalkan: ${alasan}${p0(dp)}`);
+  // Uang yang sudah dibayar dikembalikan lewat cara yang sama (tunai dari laci / transfer) → tercatat sebagai uang keluar "kembali ke pelanggan".
+  if (dp === 'kembali') {
+    const tunai = p.pembayaran.filter((b) => b.metode === 'tunai').reduce((t, b) => t + b.jumlah, 0);
+    const transfer = p.pembayaran.filter((b) => b.metode === 'transfer').reduce((t, b) => t + b.jumlah, 0);
+    if (tunai + transfer > 0) catatArus({ jenis: 'pesanan', nomor: p.nomor, tunai: -tunai, transfer: -transfer, keterangan: `Uang pesanan ${p.nomor} dikembalikan (batal)` });
+  }
+}
 const p0 = (dp: 'kembali' | 'saldo') => (dp === 'kembali' ? ' · DP dikembalikan' : ' · DP jadi saldo pelanggan');
 
 /* ---------- Aksi Surat Pesanan ---------- */
@@ -1275,7 +1282,7 @@ export function mutasiKas(s: State = state): MutasiKas[] {
     const kelompokDari = (n: number): [KelompokKas, string][] => {
       switch (a.jenis) {
         case 'penjualan': return [['pendapatan', 'Penjualan']];
-        case 'pesanan': return [['pendapatan', a.tahap === 'DP' ? 'Pesanan · DP' : 'Pesanan · Pelunasan']];
+        case 'pesanan': return [n < 0 ? ['kembali', 'Uang pesanan dikembalikan (batal)'] : ['pendapatan', a.tahap === 'DP' ? 'Pesanan · DP' : 'Pesanan · Pelunasan']];
         case 'kas-masuk': return [['pendapatan', `Pendapatan lain · ${a.kategori ?? 'Lain-lain'}`]];
         case 'kasbon': return [['piutang', 'Bayar kasbon pelanggan']];
         case 'cicilan-karyawan': return [['piutang', 'Cicilan kasbon karyawan']];
@@ -1370,7 +1377,7 @@ export function laporanKasir(sesiId: string, s: State = state) {
   const retur = s.retur.filter((x) => dalamSesi(x.waktuIso, x.oleh));
   const returBersih = retur.reduce((t, x) => t + x.nilaiRetur - x.nilaiTukar, 0);
   const pesanan = { DP: uang0(), Pelunasan: uang0() };
-  arus.filter((a) => a.jenis === 'pesanan').forEach((a) => { const t = a.tahap ?? 'Pelunasan'; pesanan[t] = tambahUang(pesanan[t], a); });
+  arus.filter((a) => a.jenis === 'pesanan' && a.tunai + a.transfer > 0).forEach((a) => { const t = a.tahap ?? 'Pelunasan'; pesanan[t] = tambahUang(pesanan[t], a); });
   const lain = new Map<string, Uang>();
   arus.filter((a) => a.jenis === 'kas-masuk').forEach((a) => { const kt = a.kategori ?? 'Lain-lain'; lain.set(kt, tambahUang(lain.get(kt) ?? uang0(), a)); });
   const jumlahUang = (u: Uang) => u.tunai + u.transfer;
@@ -1542,11 +1549,12 @@ export function daftarFaktur(s: State = state): FakturHutang[] {
       jatuhTempo: h.jatuhTempo ?? tambahHari(h.tanggal, termin(h.distributorId)), total: h.total, lama: true,
     })),
     ...s.sp.flatMap((sp) =>
-      sp.faktur.filter((f) => f.cara === 'tempo').map((f) => {
+      // Faktur cash juga masuk daftar: langsung dibayar saat barang diterima, jadi statusnya lunas.
+      sp.faktur.map((f) => {
         const tgl = f.tanggal ?? hariIni();
         return {
           id: `fk:${f.nomor}`, nomor: f.nomor, nomorDistributor: f.nomorDistributor, distributorId: sp.distributorId, tanggal: tgl,
-          jatuhTempo: tambahHari(tgl, termin(sp.distributorId)), total: f.total, lama: false, asli: { ...f, spNomor: sp.nomor },
+          jatuhTempo: f.cara === 'cash' ? tgl : tambahHari(tgl, termin(sp.distributorId)), total: f.total, lama: false, asli: { ...f, spNomor: sp.nomor },
         };
       }),
     ),

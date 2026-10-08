@@ -433,7 +433,7 @@ export function DialogLaporanHarian({ sesiId, onTutup }: { sesiId: string; onTut
         {k.dariPemilik > 0 && <BarisN k="+ Dari pemilik" v={k.dariPemilik} />}
         <BarisN k="+ Pendapatan tunai" v={k.pendapatan} />
         <BarisN k="+ Bayar kasbon tunai" v={k.bayarKasbon} />
-        {k.returKembali > 0 && <BarisN k="− Uang kembali retur" v={k.returKembali} minus />}
+        {k.returKembali > 0 && <BarisN k="− Uang kembali (retur / batal pesanan)" v={k.returKembali} minus />}
         <BarisN k="− Pengeluaran dari laci" v={k.pengeluaran} minus />
         {k.setorBank > 0 && <BarisN k="− Setor bank" v={k.setorBank} minus />}
         <BarisN k="= SEHARUSNYA DI LACI" v={k.seharusnya} tebal />

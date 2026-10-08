@@ -13,6 +13,7 @@ import { ambilDistributor } from '../pesanan/bersama';
 import { DialogBuktiKasKeluar, DialogLaporanHarian } from './DialogLaci';
 import { KepalaKas } from './KepalaKas';
 import { FormFakturTunai } from './FormFakturTunai';
+import { useSumberDana } from '../../components/PilihSumberDana';
 import '../../styles/pesanan.css';
 import '../../styles/penjualan.css';
 import '../../styles/kasbon.css';
@@ -265,7 +266,6 @@ export function BayarDistributor() {
   const lewat = terbuka.filter((f) => f.jatuhTempo < hari);
   const minggu = terbuka.filter((f) => f.jatuhTempo >= hari && f.jatuhTempo <= tambahHari(hari, 7));
   const jumlah = (xs: FakturHutang[]) => xs.reduce((t, f) => t + f.sisa, 0);
-  const adaLaci = !!laciTerbuka(undefined, toko);
   const [fakturTunai, setFakturTunai] = useState(!!params.get('tunai'));
 
   if (fakturTunai) {
@@ -341,7 +341,7 @@ export function BayarDistributor() {
         cari={{ nilai: cari, onUbah: setCari, placeholder: tab === 'faktur' ? 'Cari no. faktur / PB-…' : 'Cari BD-… atau no. faktur' }}
         aksi={<div className="baris-tombol">
           <button type="button" className="tombol" onClick={() => setFakturTunai(true)}>+ Faktur tunai (tanpa nota)</button>
-          <button type="button" className="tombol tombol--utama" disabled={!adaLaci || !terbuka.length} title={adaLaci ? undefined : 'Buka kasir dulu'}
+          <button type="button" className="tombol tombol--utama" disabled={!terbuka.length}
             onClick={() => setForm({ distributorId: fDist, faktur: [] })}>+ Pembayaran baru</button>
         </div>}
         ringkas={[tab === 'pembayaran' ? teksPeriode(periode) : { 'belum-lunas': 'Belum lunas', lewat: 'Lewat jatuh tempo', 'minggu-ini': 'Jatuh tempo 7 hari', lunas: 'Lunas', semua: 'Semua status' }[fStatus],
@@ -451,7 +451,7 @@ export function BayarDistributor() {
           <span><strong>{dipilih.length} faktur dipilih</strong> · {rupiah(jumlah(dipilih))}{distDipilih.length > 1 ? ' · pilih dari satu distributor' : ''}</span>
           <div className="baris-tombol">
             <button type="button" className="tombol tombol--hantu" onClick={() => setPilih([])}>Batal</button>
-            <button type="button" className="tombol tombol--utama" disabled={distDipilih.length !== 1 || !adaLaci} title={adaLaci ? undefined : 'Buka kasir dulu'}
+            <button type="button" className="tombol tombol--utama" disabled={distDipilih.length !== 1}
               onClick={() => setForm({ distributorId: distDipilih[0], faktur: dipilih.map((f) => f.id) })}>Bayar {dipilih.length} faktur</button>
           </div>
         </div>
@@ -471,15 +471,13 @@ function FormPembayaran({ awal, onBatal, onSelesai }: { awal: { distributorId: s
     Object.fromEntries(daftarFaktur(toko).filter((f) => awal.faktur.includes(f.id)).map((f) => [f.id, { bayar: f.sisa, diskon: 0 }])));
   const [ket, setKet] = useState('');
   const [detail, setDetail] = useState<FakturHutang | null>(null);
-  const laci = laciTerbuka(undefined, toko);
-  const uang = uangLaci(toko);
   const faktur = daftarFaktur(toko).filter((f) => f.sisa > 0 && f.distributorId === dist);
   const baris = (id: string) => per[id] ?? { bayar: 0, diskon: 0 };
   const totalBayar = faktur.reduce((t, f) => t + baris(f.id).bayar, 0);
   const totalDiskon = faktur.reduce((t, f) => t + baris(f.id).diskon, 0);
   const dipilih = faktur.filter((f) => baris(f.id).bayar + baris(f.id).diskon > 0);
-  const lebih = totalBayar > uang;
-  const siap = !!laci && !!dist && dipilih.length > 0 && !lebih;
+  const dana = useSumberDana(totalBayar);
+  const siap = !!dist && dipilih.length > 0 && (totalBayar === 0 || dana.siap);
   const ubah = (f: FakturHutang, patch: Partial<{ bayar: number; diskon: number }>) =>
     setPer((m) => {
       const x = { ...baris(f.id), ...patch };
@@ -491,7 +489,7 @@ function FormPembayaran({ awal, onBatal, onSelesai }: { awal: { distributorId: s
     if (!siap) return;
     const nama = ambilDistributor(dist).nama;
     onSelesai(catatArus({
-      jenis: 'bayar-distributor', nomor: nomorArus('BD'), tunai: -totalBayar, transfer: 0, penerima: nama,
+      jenis: 'bayar-distributor', nomor: nomorArus('BD'), sumber: dana.nilai.sumber, bank: dana.bank, ...dana.uang(totalBayar), penerima: nama,
       keterangan: ket.trim() || `Bayar ${nama}`,
       faktur: dipilih.map((f) => ({ id: f.id, nomor: f.nomorDistributor, jumlah: baris(f.id).bayar, diskon: baris(f.id).diskon || undefined })),
     }));
@@ -516,11 +514,11 @@ function FormPembayaran({ awal, onBatal, onSelesai }: { awal: { distributorId: s
         </label>
         <label className="isian">Tanggal<input className="isian__kontrol" value={tanggalPendek(hariIni())} readOnly /></label>
         <label className="isian">No. bukti<input className="isian__kontrol" value="BD-… (otomatis)" readOnly /></label>
-        <label className="isian">Dibayar dari<input className="isian__kontrol" value={laci ? `Laci ${laci.akun} · ${rupiah(uang)}` : 'Laci belum dibuka'} readOnly /></label>
         <label className="isian bd-kepala__lebar">
           Keterangan
           <input className="isian__kontrol" value={ket} onChange={(e) => setKet(e.target.value)} placeholder="opsional, mis. dibayar ke sales Pak Andi" />
         </label>
+        {dana.tampil}
       </div>
 
       <div className="kartu bd-tabel-kartu">
@@ -562,8 +560,7 @@ function FormPembayaran({ awal, onBatal, onSelesai }: { awal: { distributorId: s
           <div className="ringkas-total"><span>Faktur dibayar</span><strong>{dipilih.length}</strong></div>
           <div className="ringkas-total"><span>Total diskon</span><strong>{rupiah(totalDiskon)}</strong></div>
           <div className="ringkas-total"><span>Hutang berkurang</span><strong>{rupiah(totalBayar + totalDiskon)}</strong></div>
-          <div className="ringkas-total ringkas-total--besar"><span>Nilai pembayaran (tunai dari laci)</span><strong>{rupiah(totalBayar)}</strong></div>
-          {lebih && <p className="catatan catatan--peringatan" style={{ margin: 0 }}>Uang di laci hanya {rupiah(uang)}. Bayar sebagian atau minta titipan dari pemilik lewat Kas masuk.</p>}
+          <div className="ringkas-total ringkas-total--besar"><span>Nilai pembayaran ({dana.nilai.sumber === 'laci' ? 'tunai dari laci' : dana.nilai.sumber === 'bank' ? 'transfer rekening' : 'tunai brankas'})</span><strong>{rupiah(totalBayar)}</strong></div>
         </div>
         <div className="baris-tombol" style={{ justifyContent: 'flex-end' }}>
           <button type="button" className="tombol" onClick={onBatal}>Batal</button>

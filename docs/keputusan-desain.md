@@ -471,6 +471,21 @@ Setiap barang memilih satu metode:
 - Opname bergilir per kategori/rak; selisih disetujui pemilik dan dicatat sebagai penyesuaian bernilai rupiah.
 - Penyesuaian: rusak, kedaluwarsa, hilang, pakai sendiri.
 
+## Keterhubungan data (hulu → hilir)
+
+Dikunci oleh tes `src/data/hulu-hilir.test.ts` (satu barang dibawa melewati semua alur).
+
+- **Barang** (Gudang) → **Surat Pesanan** → **barang masuk/faktur** → stok (buku stok) + harga beli terakhir per satuan + hutang distributor (tempo) **atau pembayaran cash** → buku kas laci/brankas/rekening → laporan (E. belanja barang).
+- **Faktur cash dari Surat Pesanan dibayar saat barang diterima**: pilih dibayar dari laci / brankas / rekening (PIN pemilik bila bukan pemilik); tercatat sebagai bukti bayar distributor dan faktur langsung lunas.
+- **Bayar distributor** (Kasir → Kas Laci dan Back Office → Hutang Distributor, data sama) bisa dari laci, brankas, atau rekening.
+- **Penjualan** → stok keluar + kartu stok + analisis barang (terjual, status gerak) + kas laci (tunai) / rekening (transfer) + kasbon pelanggan → laporan kasir & toko.
+- **Pesanan pelanggan** → stok dikunci → SP bila kurang → barang datang → serah (stok keluar) → tagihan di Kasbon/Piutang; DP & pelunasan → kas. **Batal dengan uang dikembalikan → uang keluar tercatat** (tunai dari laci / transfer) di kelompok F. Kembali ke pelanggan.
+- **Retur** → stok kembali (bagus) / Barang Rusak, uang kembali / potong kasbon / potong tagihan pesanan → kas & laporan.
+- **Tutup kasir** → pindah dana ke brankas/rekening → buku brankas/rekening → laporan harian toko (pindah dana selalu seimbang).
+- **Saran pesan (Stok Menipis)** memakai stok bebas dari buku stok, stok minimum/maksimum dari data barang, dan **rata-rata penjualan nyata 30 hari**.
+- **Untung pesanan** memakai harga beli terakhir (sama dengan data barang).
+- Belum tersambung (perlu keputusan): **DP yang "jadi saldo pelanggan"** saat pesanan batal belum bisa dipakai di transaksi berikutnya.
+
 ## Prinsip data
 
 1. Tidak ada hapus, hanya batal (dengan alasan, nama pengguna, mutasi pembalik).

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { aturStokContoh, produkContoh } from '../../data/contoh';
-import { ringkasPesanan, stokBebas, useToko } from '../../data/toko';
+import { infoBarang, ringkasPesanan, stokBebas, useToko } from '../../data/toko';
 import { ambilProduk, ambilSatuan, angka } from '../penjualan/model';
 import { ambilDistributor, distributorTermurah, labelDasar, namaPelanggan, satuanBeliUrut, tanggalPanjang } from '../pesanan/bersama';
 import { DialogBuatSP, DialogDokumenSP, type Kebutuhan } from './DialogSP';
@@ -64,10 +64,10 @@ export function SaranSP({ sumber }: { sumber: 'pesanan' | 'stok' }) {
     const usulan: Saran['usulan'] = {};
     const maks = pr.stokMaksimum ?? a?.maks;
     if (maks) usulan.maks = Math.max(1, Math.ceil((maks - stok) / s.isi));
-    if (a) {
-      if (a.orderTetap > 0) usulan.tetap = a.orderTetap;
-      usulan.rata = Math.max(1, Math.ceil((a.rataHarian * HARI_RATA - stok) / s.isi));
-    }
+    if (a && a.orderTetap > 0) usulan.tetap = a.orderTetap;
+    // Rata-rata penjualan nyata 30 hari terakhir (dari buku stok).
+    const rata = infoBarang(pr.id).rataHarian || a?.rataHarian || 0;
+    if (rata > 0) usulan.rata = Math.max(1, Math.ceil((rata * HARI_RATA - stok) / s.isi));
     if (!usulan.maks && !usulan.tetap) usulan.maks = 1;
     saran.push({
       key: `st-${pr.id}`, produkId: pr.id, sumber: 'stok',

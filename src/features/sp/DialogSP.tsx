@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { InputRupiah } from '../../components/InputRupiah';
 import { distributorContoh, produkContoh } from '../../data/contoh';
-import { buatSP, tandaiSPDikirim, terimaDariSP, useToko, type BarisSP, type SuratPesanan, type SumberSP } from '../../data/toko';
+import { buatSP, catatArus, nomorArus, tandaiSPDikirim, terimaDariSP, useToko, type BarisSP, type SuratPesanan, type SumberSP } from '../../data/toko';
+import { useSumberDana } from '../../components/PilihSumberDana';
 import { rupiah } from '../../lib/format';
 import { ambilProduk, ambilSatuan, angka } from '../penjualan/model';
 import {
@@ -212,7 +213,9 @@ export function DialogTerimaSP({ sp, onTutup, onSelesai }: { sp: SuratPesanan; o
   const kurang = ada.some(({ b, x }) => x.qty < b.qty);
   const belumCocok = ada.some(({ x }) => x.qty > 0 && (!x.produkId || !x.satuanProdukId));
   const total = ada.reduce((t, { x }) => t + x.qty * x.harga, 0);
-  const siap = nomorDist.trim() && dicek && !belumCocok && ada.some(({ x }) => x.qty > 0);
+  // Faktur cash dibayar saat barang diterima: pilih sumber uangnya supaya tercatat di kas (laci/brankas/rekening).
+  const dana = useSumberDana(cara === 'cash' ? total : 0);
+  const siap = nomorDist.trim() && dicek && !belumCocok && ada.some(({ x }) => x.qty > 0) && (cara === 'tempo' || dana.siap);
 
   const simpan = () => {
     if (!siap) return;
@@ -222,6 +225,14 @@ export function DialogTerimaSP({ sp, onTutup, onSelesai }: { sp: SuratPesanan; o
       tutupSisa,
       baris: ada.map(({ b, x }) => ({ barisId: b.id, qty: x.qty, harga: x.harga, produkId: x.produkId || undefined, satuanProdukId: x.satuanProdukId || undefined })),
     });
+    if (cara === 'cash' && total > 0) {
+      const nama = ambilDistributor(sp.distributorId).nama;
+      catatArus({
+        jenis: 'bayar-distributor', nomor: nomorArus('BD'), sumber: dana.nilai.sumber, bank: dana.bank, ...dana.uang(total),
+        penerima: nama, keterangan: `Bayar cash faktur ${nomorDist.trim()} · ${nama}`,
+        faktur: [{ id: `fk:${nomor}`, nomor: nomorDist.trim(), jumlah: total }],
+      });
+    }
     onSelesai(nomor);
   };
 
@@ -248,6 +259,7 @@ export function DialogTerimaSP({ sp, onTutup, onSelesai }: { sp: SuratPesanan; o
           </div>
         </div>
       </div>
+      {cara === 'cash' && dana.tampil}
       {ada.map(({ b, x }) => {
         const p = x.produkId ? ambilProduk(x.produkId) : undefined;
         return (

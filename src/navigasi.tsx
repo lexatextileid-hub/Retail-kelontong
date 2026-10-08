@@ -229,7 +229,7 @@ export const menuBackOffice: Menu[] = [
     ringkasan: 'Hutang ke distributor dan piutang pelanggan.',
     rencana: ['Piutang: data sama dengan Kasir → Kasbon (kasbon kasir, kasbon lama, pesanan tempo)', 'Hutang distributor: faktur tempo + hutang lama tanpa rincian barang', 'Pembayaran bertahap dan campuran', 'Umur piutang/hutang'],
     anak: [
-      { path: 'hutang', judul: 'Hutang Distributor' },
+      { path: 'hutang', judul: 'Hutang Distributor', halaman: <BayarDistributor /> },
       { path: 'piutang', judul: 'Piutang Pelanggan', halaman: <DaftarKasbon dariOffice /> },
       { path: 'lama', judul: 'Catat Kasbon Lama', halaman: <KasbonLama />, tersembunyi: true },
       { path: 'detail/:id', judul: 'Detail Piutang', halaman: <DetailKasbon />, tersembunyi: true },
