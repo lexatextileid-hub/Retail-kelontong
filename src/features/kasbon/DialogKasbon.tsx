@@ -12,11 +12,14 @@ import { ChipSumber, tanggalPendek } from './bersama';
 export function DialogBayarKasbon({
   pelanggan,
   tagihan,
+  notaAwal,
   onTutup,
   onSelesai,
 }: {
   pelanggan: PelangganKasbon;
   tagihan: TagihanKasbon[];
+  /** Dibuka dari satu baris tagihan: langsung mode "Pilih nota" dengan nota itu dilunasi. */
+  notaAwal?: string;
   onTutup: () => void;
   onSelesai: (b: BayarKasbon) => void;
 }) {
@@ -26,8 +29,9 @@ export function DialogBayarKasbon({
   const [metode, setMetode] = useState<'tunai' | 'transfer'>('tunai');
   const [bank, setBank] = useState('');
   const [diterima, setDiterima] = useState(0);
-  const [manual, setManual] = useState(false);
-  const [pilih, setPilih] = useState<Record<string, number>>({});
+  const awal = notaAwal ? terbuka.find((t) => t.id === notaAwal) : undefined;
+  const [manual, setManual] = useState(!!awal);
+  const [pilih, setPilih] = useState<Record<string, number>>(awal ? { [awal.id]: awal.sisa } : {});
 
   const totalManual = Object.values(pilih).reduce((t, x) => t + x, 0);
   const bayar = manual ? totalManual : jumlah;

@@ -150,6 +150,7 @@ h2 { font-size: 17px; font-weight: 700; }
 }
 .dialog__kepala { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px 6px 20px; }
 .dialog__isi { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
+.dialog__isi > * { flex-shrink: 0; } /* isi panjang digulir, bukan digencet */
 .dialog__kaki { flex: none; padding: 12px 20px 16px; border-top: 1px solid var(--garis); display: flex; flex-direction: column; gap: 10px; background: var(--permukaan); }
 
 @media (max-width: 860px) {

@@ -12,7 +12,7 @@ import '../../styles/kasbon.css';
 export function DetailKasbon() {
   const { id = '' } = useParams();
   const toko = useToko();
-  const [dialog, setDialog] = useState<null | { jenis: 'bayar' } | { jenis: 'struk'; bayar: BayarKasbon }>(null);
+  const [dialog, setDialog] = useState<null | { jenis: 'bayar'; nota?: string } | { jenis: 'struk'; bayar: BayarKasbon }>(null);
   const [lihatLunas, setLihatLunas] = useState(false);
   const p = toko.pelanggan.find((x) => x.id === id);
 
@@ -59,7 +59,7 @@ export function DetailKasbon() {
       </div>
 
       <div className="baris-tombol">
-        <button type="button" className="tombol tombol--utama" disabled={plg.saldoKasbon === 0} onClick={() => setDialog({ jenis: 'bayar' })}>Terima pembayaran</button>
+        <button type="button" className="tombol tombol--utama" disabled={plg.saldoKasbon === 0} onClick={() => setDialog({ jenis: 'bayar' })}>Bayar kasbon</button>
         <Link to={`../lama?pelanggan=${plg.id}`} className="tombol">+ Catat kasbon lama</Link>
       </div>
 
@@ -77,10 +77,13 @@ export function DetailKasbon() {
             {tampil.map((t) => {
               const sel = selisihHari(hari, t.jatuhTempo);
               const lewat = t.sisa > 0 && sel < 0;
-              const isi = (
-                <>
+              return (
+                <div key={t.id} className={`kb-tagihan__baris ${lewat ? 'kb-tagihan__baris--lewat' : ''}`}>
                   <div className="kb-tagihan__kiri">
-                    <span className="kb-tagihan__nomor"><strong>{t.nomor}</strong> <ChipSumber sumber={t.sumber} /></span>
+                    <span className="kb-tagihan__nomor">
+                      {t.pesananId ? <Link to={`/kasir/pesanan/detail/${t.pesananId}`} className="tautan"><strong>{t.nomor}</strong></Link> : <strong>{t.nomor}</strong>}{' '}
+                      <ChipSumber sumber={t.sumber} />
+                    </span>
                     <span className="teks-pudar">
                       {tanggalPendek(t.tanggal)} · jatuh tempo {tanggalPendek(t.jatuhTempo)}
                       {t.sisa > 0 && <span className={lewat ? 'teks-bahaya' : ''}> ({teksTempo(sel)})</span>}
@@ -90,13 +93,11 @@ export function DetailKasbon() {
                   <div className="kb-tagihan__kanan">
                     <strong className={lewat ? 'teks-bahaya' : ''}>{t.sisa > 0 ? rupiah(t.sisa) : 'Lunas'}</strong>
                     {t.terbayar > 0 && <span className="teks-pudar">dari {rupiah(t.jumlah)}</span>}
+                    {t.sisa > 0 && (
+                      <button type="button" className="tombol tombol--kecil" onClick={() => setDialog({ jenis: 'bayar', nota: t.id })}>Bayar</button>
+                    )}
                   </div>
-                </>
-              );
-              return t.pesananId ? (
-                <Link key={t.id} to={`/kasir/pesanan/detail/${t.pesananId}`} className={`kb-tagihan__baris ${lewat ? 'kb-tagihan__baris--lewat' : ''}`}>{isi}</Link>
-              ) : (
-                <div key={t.id} className={`kb-tagihan__baris ${lewat ? 'kb-tagihan__baris--lewat' : ''}`}>{isi}</div>
+                </div>
               );
             })}
           </div>
@@ -127,7 +128,7 @@ export function DetailKasbon() {
       </div>
 
       {dialog?.jenis === 'bayar' && (
-        <DialogBayarKasbon pelanggan={plg} tagihan={tagihan} onTutup={() => setDialog(null)} onSelesai={(b) => setDialog({ jenis: 'struk', bayar: b })} />
+        <DialogBayarKasbon pelanggan={plg} tagihan={tagihan} notaAwal={dialog.nota} onTutup={() => setDialog(null)} onSelesai={(b) => setDialog({ jenis: 'struk', bayar: b })} />
       )}
       {dialog?.jenis === 'struk' && <DialogStrukKasbon bayar={dialog.bayar} nama={plg.nama} onTutup={() => setDialog(null)} />}
     </div>

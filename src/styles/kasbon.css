@@ -18,7 +18,7 @@ a.kb-tagihan__baris:hover { background: var(--permukaan-2); color: var(--teks); 
 .kb-tagihan__kiri { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .kb-tagihan__kiri .teks-pudar { font-size: 12.5px; }
 .kb-tagihan__nomor { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.kb-tagihan__kanan { display: flex; flex-direction: column; align-items: flex-end; text-align: right; gap: 2px; flex: none; }
+.kb-tagihan__kanan { display: flex; flex-direction: column; align-items: flex-end; text-align: right; gap: 4px; flex: none; }
 .kb-tagihan__kanan .teks-pudar { font-size: 12px; }
 
 .kb-riwayat { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
