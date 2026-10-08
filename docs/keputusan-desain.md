@@ -187,7 +187,7 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
   Jumlah pembagian harus sama dengan uang fisik.
 - **Pengeluaran: satu catatan, dua pintu input**, sumber dana dipilih di keduanya:
   - **Back Office:** laci kasir mana pun, brankas, atau rekening bank mana pun.
-  - **Kasir:** laci sendiri (bawaan); brankas atau bank bisa dipilih dengan **PIN pemilik**.
+  - **Kasir:** hanya dari **laci sendiri**. Pengeluaran dari brankas/bank dicatat di Back Office.
   Back Office menampilkan semua pengeluaran dari kedua pintu (cermin); kasir hanya melihat pengeluaran yang ia catat.
 - **Format pengeluaran:** tanggal (otomatis), kategori, jumlah, sumber dana, **keterangan (wajib)**, **nama penerima (wajib)**, foto nota (opsional, karena tidak semua ada nota), dicatat oleh (otomatis).
 - Setiap pengeluaran bisa **dicetak sebagai bukti kas keluar** (lewat stasiun printer atau unduh PDF) dengan kolom tanda tangan penerima, untuk ditandatangani manual.
@@ -198,6 +198,7 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - **Bayar distributor bisa dua cara:** kasir membayar dari laci memakai pendapatan hari itu; atau pemilik **menitipkan uang dari brankas** ke kasir (dicatat pindah dana brankas → laci "titipan bayar distributor"), lalu kasir membayar dan memilih fakturnya.
 - **Brankas hanya diakses pemilik**, dikelola di **Back Office**: pembayaran distributor, setor ke bank, dan pengeluaran lain dari brankas dicatat di sana dengan **buku brankas** sendiri (saldo + daftar keluar-masuk).
 - Laporan harian kasir **hanya mencakup laci**; kasir tidak perlu tahu atau menghitung isi brankas.
+- **Kasir hanya tahu isi lacinya sendiri.** Di Mode Kasir tidak ada brankas, bank (selain setor bank dari laci), atau prive. Uang dari pemilik ke laci disebut "dari pemilik" (PIN pemilik); saat tutup kasir uang fisik dibagi ke: sisa di laci, **diserahkan ke pemilik**, setor bank. Pemilik yang mencatat di Back Office apakah uang itu masuk brankas atau prive.
 
 ## Pembayaran (pelanggan & distributor)
 

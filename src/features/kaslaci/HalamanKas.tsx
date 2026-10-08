@@ -21,7 +21,7 @@ export function Pengeluaran() {
   const [d, setD] = useState<null | 'baru' | ArusKas>(null);
   const semua = toko.peran === 'pemilik';
   const daftar = toko.arus
-    .filter((a) => a.jenis === 'pengeluaran' && (semua || a.akun === akunAktif(toko)) && diPeriode(a.waktuIso, periode))
+    .filter((a) => a.jenis === 'pengeluaran' && a.sumber === 'laci' && (semua || a.akun === akunAktif(toko)) && diPeriode(a.waktuIso, periode))
     .sort((a, b) => b.waktuIso.localeCompare(a.waktuIso));
   const total = daftar.reduce((t, a) => t - a.tunai - a.transfer, 0);
   return (
@@ -32,18 +32,19 @@ export function Pengeluaran() {
           <strong>{rupiah(total)}</strong>
           <span className="teks-pudar">{daftar.length} catatan{semua ? ' · semua akun' : ''}</span>
         </div>
-        <button type="button" className="tombol tombol--utama" onClick={() => setD('baru')}>+ Catat pengeluaran</button>
+        <button type="button" className="tombol tombol--utama" disabled={!laciTerbuka(undefined, toko)} title={laciTerbuka(undefined, toko) ? undefined : 'Buka kasir dulu'} onClick={() => setD('baru')}>+ Catat pengeluaran</button>
       </div>
+      {!laciTerbuka(undefined, toko) && <p className="catatan catatan--peringatan" style={{ margin: 0 }}>Laci belum dibuka. Pengeluaran dari laci dicatat setelah buka kasir.</p>}
       <PilihPeriode onUbah={setPeriode} />
       {daftar.length === 0 ? (
-        <div className="kartu ps-kosong-besar"><h2>Belum ada pengeluaran</h2><p className="teks-pudar">Pengeluaran dari laci, brankas, atau bank untuk periode ini.</p></div>
+        <div className="kartu ps-kosong-besar"><h2>Belum ada pengeluaran</h2><p className="teks-pudar">Pengeluaran dari laci untuk periode ini. Pengeluaran dari kas pemilik/bank dicatat di Back Office.</p></div>
       ) : (
         <div className="kartu rw-daftar">
           {daftar.map((a) => (
             <button key={a.id} type="button" className="rw-baris" onClick={() => setD(a)}>
               <span className="rw-baris__kiri">
                 <span className="rw-baris__nomor"><strong>{a.nomor}</strong><span className="chip-status chip-status--abu">{a.kategori}</span>
-                  {a.sumber !== 'laci' && <span className="chip-status chip-status--kuning">{a.sumber}</span>}</span>
+</span>
                 <span className="teks-pudar">{waktu(a.waktuIso)} · {a.keterangan} · penerima {a.penerima}{semua ? ` · ${a.akun}` : ''}</span>
               </span>
               <strong className="rw-baris__nilai teks-bahaya">−{rupiah(Math.abs(a.tunai + a.transfer))}</strong>
@@ -72,7 +73,7 @@ export function BayarDistributor() {
           <strong>{rupiah(totalHutang)}</strong>
           <span className="teks-pudar">{faktur.length} faktur belum lunas</span>
         </div>
-        <button type="button" className="tombol tombol--utama" disabled={!faktur.length} onClick={() => setD('baru')}>Bayar faktur</button>
+        <button type="button" className="tombol tombol--utama" disabled={!faktur.length || !laciTerbuka(undefined, toko)} onClick={() => setD('baru')}>Bayar faktur</button>
       </div>
       <div className="kartu rw-daftar">
         {faktur.length === 0 && <p className="ps-kosong">Semua faktur tempo sudah lunas.</p>}
@@ -94,7 +95,7 @@ export function BayarDistributor() {
               <button key={a.id} type="button" className="rw-baris" onClick={() => setD(a)}>
                 <span className="rw-baris__kiri">
                   <strong>{a.nomor} · {a.penerima}</strong>
-                  <span className="teks-pudar">{waktu(a.waktuIso)} · {a.faktur?.map((f) => f.nomor).join(', ')} · dari {a.sumber}{a.bank ? ` ${a.bank}` : ''} · {a.akun}</span>
+                  <span className="teks-pudar">{waktu(a.waktuIso)} · {a.faktur?.map((f) => f.nomor).join(', ')} · {a.akun}</span>
                 </span>
                 <strong className="rw-baris__nilai">{rupiah(Math.abs(a.tunai + a.transfer))}</strong>
               </button>

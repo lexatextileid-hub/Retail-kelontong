@@ -54,9 +54,8 @@ export function LaciHariIni() {
             {lalu.pembagian && (
               <div className="lc-bagi-lihat">
                 <span>Sisa di laci <strong>{rupiah(lalu.pembagian.sisaLaci)}</strong></span>
-                <span>Ke brankas <strong>{rupiah(lalu.pembagian.brankas)}</strong></span>
+                <span>Diserahkan ke pemilik <strong>{rupiah(lalu.pembagian.brankas + lalu.pembagian.prive)}</strong></span>
                 <span>Setor bank <strong>{rupiah(lalu.pembagian.bank)}</strong></span>
-                <span>Prive <strong>{rupiah(lalu.pembagian.prive)}</strong></span>
               </div>
             )}
           </div>
@@ -125,7 +124,6 @@ export function LaciHariIni() {
                         <span className="rw-baris__nomor">
                           <strong>{a.nomor}</strong>
                           <span className={`chip-status chip-status--${keluar ? 'merah' : 'abu'}`}>{namaJenis[a.jenis]}</span>
-                          {a.sumber !== 'laci' && <span className="chip-status chip-status--kuning">dari {a.sumber}</span>}
                         </span>
                         <span className="teks-pudar">{jam(a.waktuIso)} · {a.keterangan}{a.penerima ? ` · ${a.penerima}` : ''}</span>
                       </span>
@@ -147,7 +145,7 @@ export function LaciHariIni() {
           {baris('Bayar kasbon', t.kasbon)}
           {baris('Pesanan', t.pesanan)}
           {baris('Kas masuk lain', t['kas-masuk'])}
-          {baris('Titipan brankas', t['titipan-brankas'])}
+          {baris('Dari pemilik', t['titipan-brankas'])}
           {baris('Retur', t.retur)}
           {baris('Pengeluaran', t.pengeluaran)}
           {baris('Bayar distributor', t['bayar-distributor'])}

@@ -37,7 +37,7 @@ function PilihBank({ bank, setBank }: { bank: string; setBank: (s: string) => vo
 
 export const namaJenis: Record<ArusKas['jenis'], string> = {
   penjualan: 'Penjualan', kasbon: 'Bayar kasbon', pesanan: 'Pesanan', retur: 'Retur', 'kas-masuk': 'Kas masuk lain',
-  'titipan-brankas': 'Titipan brankas', pengeluaran: 'Pengeluaran', 'bayar-distributor': 'Bayar distributor', 'setor-bank': 'Setor bank',
+  'titipan-brankas': 'Dari pemilik', pengeluaran: 'Pengeluaran', 'bayar-distributor': 'Bayar distributor', 'setor-bank': 'Setor bank',
 };
 
 /* ---------- Buka kasir ---------- */
@@ -53,11 +53,11 @@ export function DialogBukaKasir({ dariKemarin, onBuka, onTutup }: { dariKemarin:
       kaki={<button type="button" className="tombol tombol--utama tombol--besar" disabled={!siap} onClick={() => onBuka(tambah)}>Buka kasir · modal {rupiah(dariKemarin + tambah)}</button>}>
       <div className="ringkas-total"><span>Sisa laci sebelumnya</span><strong>{rupiah(dariKemarin)}</strong></div>
       <label className="isian">
-        Tambah modal dari brankas (opsional)
+        Tambahan uang dari pemilik (opsional)
         <InputRupiah id="buka-tambah" nilai={tambah} onUbah={setTambah} />
-        <span className="isian__bantuan">Dicatat sebagai pindah dana brankas → laci.</span>
+        <span className="isian__bantuan">Mis. tambahan uang kembalian yang diberikan pemilik.</span>
       </label>
-      {perluPin && <IsianPin pin={pin} setPin={setPin} alasan="ambil dari brankas" />}
+      {perluPin && <IsianPin pin={pin} setPin={setPin} alasan="uang dari pemilik" />}
       <div className="ringkas-total ringkas-total--besar"><span>Modal awal</span><strong>{rupiah(dariKemarin + tambah)}</strong></div>
     </Dialog>
   );
@@ -79,44 +79,38 @@ export function DialogKasMasuk({ onSelesai, onTutup }: { onSelesai: (a: ArusKas)
         onClick={() => onSelesai(catatArus({ jenis, nomor: nomorArus('KM'), tunai: jumlah, transfer: 0, keterangan: ket.trim() }))}>Simpan kas masuk</button>}>
       <div className="saklar" role="group" aria-label="Jenis kas masuk" style={{ alignSelf: 'flex-start' }}>
         <button type="button" aria-pressed={jenis === 'kas-masuk'} onClick={() => setJenis('kas-masuk')}>Pendapatan lain</button>
-        <button type="button" aria-pressed={jenis === 'titipan-brankas'} onClick={() => setJenis('titipan-brankas')}>Dari brankas</button>
+        <button type="button" aria-pressed={jenis === 'titipan-brankas'} onClick={() => setJenis('titipan-brankas')}>Dari pemilik</button>
       </div>
       <p className="teks-pudar" style={{ margin: 0, fontSize: 13 }}>
         {jenis === 'kas-masuk'
           ? 'Mis. jual kardus bekas, barang rusak/kedaluwarsa (pendapatan lain-lain). Bukan penjualan barang.'
-          : 'Uang dari brankas ke laci, mis. titipan untuk bayar distributor atau tambahan uang kembalian. Pindah dana, bukan pendapatan.'}
+          : 'Uang yang diberikan pemilik ke laci, mis. titipan untuk bayar distributor atau tambahan uang kembalian. Bukan pendapatan.'}
       </p>
       <label className="isian">Jumlah<InputRupiah id="km-jumlah" nilai={jumlah} onUbah={setJumlah} autoFocus /></label>
       <label className="isian">
         Keterangan
         <input className="isian__kontrol" value={ket} onChange={(e) => setKet(e.target.value)} placeholder={jenis === 'kas-masuk' ? 'mis. jual 20 kardus bekas' : 'mis. titipan bayar Distributor A'} />
       </label>
-      {perluPin && <IsianPin pin={pin} setPin={setPin} alasan="uang dari brankas" />}
+      {perluPin && <IsianPin pin={pin} setPin={setPin} alasan="uang dari pemilik" />}
     </Dialog>
   );
 }
 
 /* ---------- Pengeluaran ---------- */
 
-export function DialogPengeluaran({ adaLaci, maksLaci = 0, onSelesai, onTutup }: { adaLaci: boolean; maksLaci?: number; onSelesai: (a: ArusKas) => void; onTutup: () => void }) {
-  const { peran } = useToko();
+export function DialogPengeluaran({ maksLaci = 0, onSelesai, onTutup }: { adaLaci?: boolean; maksLaci?: number; onSelesai: (a: ArusKas) => void; onTutup: () => void }) {
   const [kategori, setKategori] = useState('');
   const [jumlah, setJumlah] = useState(0);
-  const [sumber, setSumber] = useState<ArusKas['sumber']>(adaLaci ? 'laci' : 'brankas');
-  const [bank, setBank] = useState('');
   const [ket, setKet] = useState('');
   const [penerima, setPenerima] = useState('');
-  const [pin, setPin] = useState('');
-  const perluPin = sumber !== 'laci' && peran !== 'pemilik';
-  const lebihLaci = sumber === 'laci' && jumlah > maksLaci;
-  const siap = !!kategori && jumlah > 0 && !lebihLaci && !!ket.trim() && !!penerima.trim() && (!perluPin || pin === PIN_PEMILIK_CONTOH);
+  const lebihLaci = jumlah > maksLaci;
+  const siap = !!kategori && jumlah > 0 && !lebihLaci && !!ket.trim() && !!penerima.trim();
   const simpan = () =>
     onSelesai(catatArus({
-      jenis: 'pengeluaran', nomor: nomorArus('KK'), sumber, kategori, penerima: penerima.trim(), keterangan: ket.trim(),
-      tunai: sumber === 'bank' ? 0 : -jumlah, transfer: sumber === 'bank' ? -jumlah : 0, bank: sumber === 'bank' ? bank || undefined : undefined,
+      jenis: 'pengeluaran', nomor: nomorArus('KK'), kategori, penerima: penerima.trim(), keterangan: ket.trim(), tunai: -jumlah, transfer: 0,
     }));
   return (
-    <Dialog judul="Catat pengeluaran" onTutup={onTutup} lebar={520}
+    <Dialog judul="Catat pengeluaran dari laci" onTutup={onTutup} lebar={520}
       kaki={<button type="button" className="tombol tombol--utama tombol--besar" disabled={!siap} onClick={simpan}>Simpan & cetak bukti kas keluar</button>}>
       <label className="isian">
         Kategori
@@ -126,17 +120,7 @@ export function DialogPengeluaran({ adaLaci, maksLaci = 0, onSelesai, onTutup }:
         </select>
       </label>
       <label className="isian">Jumlah<InputRupiah id="kk-jumlah" nilai={jumlah} onUbah={setJumlah} /></label>
-      {lebihLaci && <span className="teks-bahaya" style={{ fontSize: 12.5 }}>Melebihi uang di laci ({rupiah(maksLaci)}). Pilih brankas/bank atau kurangi jumlah.</span>}
-      <div className="isian">
-        Sumber dana
-        <div className="saklar" role="group" aria-label="Sumber dana" style={{ alignSelf: 'flex-start' }}>
-          <button type="button" disabled={!adaLaci} aria-pressed={sumber === 'laci'} onClick={() => setSumber('laci')}>Laci saya</button>
-          <button type="button" aria-pressed={sumber === 'brankas'} onClick={() => setSumber('brankas')}>Brankas</button>
-          <button type="button" aria-pressed={sumber === 'bank'} onClick={() => setSumber('bank')}>Bank</button>
-        </div>
-        {!adaLaci && <span className="isian__bantuan">Laci belum dibuka; pengeluaran dari laci perlu buka kasir dulu.</span>}
-      </div>
-      {sumber === 'bank' && <PilihBank bank={bank} setBank={setBank} />}
+      {lebihLaci && <span className="teks-bahaya" style={{ fontSize: 12.5 }}>Melebihi uang di laci ({rupiah(maksLaci)}).</span>}
       <label className="isian">
         Keterangan (wajib)
         <input className="isian__kontrol" value={ket} onChange={(e) => setKet(e.target.value)} placeholder="mis. bongkar 2 colt gula dari Distributor A" />
@@ -146,7 +130,6 @@ export function DialogPengeluaran({ adaLaci, maksLaci = 0, onSelesai, onTutup }:
         <input className="isian__kontrol" value={penerima} onChange={(e) => setPenerima(e.target.value)} placeholder="mis. Pak Udin (kuli)" />
       </label>
       <p className="teks-pudar" style={{ margin: 0, fontSize: 12.5 }}>Foto nota (opsional) bisa ditambahkan di versi jadi.</p>
-      {perluPin && <IsianPin pin={pin} setPin={setPin} alasan={`uang dari ${sumber}`} />}
     </Dialog>
   );
 }
@@ -171,7 +154,7 @@ export function DialogBuktiKasKeluar({ a, onTutup }: { a: ArusKas; onTutup: () =
         <div className="struk__tengah struk__tebal">BUKTI KAS KELUAR</div>
         <div>{a.nomor} · {new Date(a.waktuIso).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
         <div>Kategori: {a.kategori ?? (a.jenis === 'bayar-distributor' ? 'Bayar distributor' : 'Setor bank')}</div>
-        <div>Sumber: {a.sumber === 'laci' ? `Laci ${a.akun}` : a.sumber === 'bank' ? `Bank ${a.bank ?? ''}` : 'Brankas'}</div>
+        <div>Sumber: {a.sumber === 'laci' ? `Laci ${a.akun}` : a.sumber === 'bank' ? `Bank ${a.bank ?? ''}` : 'Kas pemilik'}</div>
         <div className="struk__garis" />
         <div>{a.keterangan}</div>
         {a.faktur?.map((f) => <div key={f.id} className="struk__baris"><span>  {f.nomor}</span><span>{rupiah(f.jumlah)}</span></div>)}
@@ -205,23 +188,18 @@ export function DialogSetorBank({ maks, onSelesai, onTutup }: { maks: number; on
 
 /* ---------- Bayar distributor ---------- */
 
-export function DialogBayarDistributor({ adaLaci, maksLaci = 0, onSelesai, onTutup }: { adaLaci: boolean; maksLaci?: number; onSelesai: (a: ArusKas) => void; onTutup: () => void }) {
+export function DialogBayarDistributor({ maksLaci = 0, onSelesai, onTutup }: { adaLaci?: boolean; maksLaci?: number; onSelesai: (a: ArusKas) => void; onTutup: () => void }) {
   const toko = useToko();
   const faktur = fakturTerbuka(toko);
   const [per, setPer] = useState<Record<string, number>>({});
-  const [sumber, setSumber] = useState<ArusKas['sumber']>(adaLaci ? 'laci' : 'brankas');
-  const [bank, setBank] = useState('');
-  const [pin, setPin] = useState('');
   const total = faktur.reduce((t, f) => t + (per[f.id] ?? 0), 0);
   const dipilih = faktur.filter((f) => (per[f.id] ?? 0) > 0);
   const distributor = [...new Set(dipilih.map((f) => f.distributorId))];
-  const perluPin = sumber !== 'laci' && toko.peran !== 'pemilik';
-  const lebihLaci = sumber === 'laci' && total > maksLaci;
-  const siap = total > 0 && !lebihLaci && distributor.length === 1 && (!perluPin || pin === PIN_PEMILIK_CONTOH);
+  const lebihLaci = total > maksLaci;
+  const siap = total > 0 && !lebihLaci && distributor.length === 1;
   const simpan = () =>
     onSelesai(catatArus({
-      jenis: 'bayar-distributor', nomor: nomorArus('BD'), sumber, bank: sumber === 'bank' ? bank || undefined : undefined,
-      tunai: sumber === 'bank' ? 0 : -total, transfer: sumber === 'bank' ? -total : 0,
+      jenis: 'bayar-distributor', nomor: nomorArus('BD'), tunai: -total, transfer: 0,
       penerima: ambilDistributor(distributor[0]).nama, keterangan: `Bayar ${ambilDistributor(distributor[0]).nama}`,
       faktur: dipilih.map((f) => ({ id: f.id, nomor: f.nomorDistributor, jumlah: per[f.id] })),
     }));
@@ -252,18 +230,10 @@ export function DialogBayarDistributor({ adaLaci, maksLaci = 0, onSelesai, onTut
         </div>
       ))}
       {distributor.length > 1 && <p className="catatan catatan--peringatan" style={{ margin: 0 }}>Satu pembayaran untuk satu distributor. Pilih faktur dari distributor yang sama.</p>}
-      <div className="isian">
-        Sumber dana
-        <div className="saklar" role="group" aria-label="Sumber dana" style={{ alignSelf: 'flex-start' }}>
-          <button type="button" disabled={!adaLaci} aria-pressed={sumber === 'laci'} onClick={() => setSumber('laci')}>Laci saya</button>
-          <button type="button" aria-pressed={sumber === 'brankas'} onClick={() => setSumber('brankas')}>Brankas</button>
-          <button type="button" aria-pressed={sumber === 'bank'} onClick={() => setSumber('bank')}>Transfer bank</button>
-        </div>
-        <span className="isian__bantuan">Uang titipan dari brankas: catat dulu lewat Kas masuk → Dari brankas, lalu bayar dari laci.</span>
-      </div>
-      {lebihLaci && <p className="catatan catatan--peringatan" style={{ margin: 0 }}>Uang di laci hanya {rupiah(maksLaci)}. Bayar sebagian, ambil titipan dari brankas dulu (Kas masuk), atau pilih brankas/bank.</p>}
-      {sumber === 'bank' && <PilihBank bank={bank} setBank={setBank} />}
-      {perluPin && <IsianPin pin={pin} setPin={setPin} alasan={`uang dari ${sumber}`} />}
+      <p className="teks-pudar" style={{ margin: 0, fontSize: 12.5 }}>
+        Dibayar tunai dari laci (uang di laci {rupiah(maksLaci)}). Bila kurang, minta titipan dari pemilik lewat Kas masuk → Dari pemilik.
+      </p>
+      {lebihLaci && <p className="catatan catatan--peringatan" style={{ margin: 0 }}>Uang di laci hanya {rupiah(maksLaci)}. Bayar sebagian atau minta titipan dari pemilik dulu.</p>}
     </Dialog>
   );
 }
@@ -277,27 +247,26 @@ export function DialogTutupKasir({ sesi, onSelesai, onTutup }: { sesi: SesiLaci;
   const [diisi, setDiisi] = useState(false);
   const [tanggung, setTanggung] = useState<'toko' | 'kasir'>('toko');
   const [sisaLaci, setSisaLaci] = useState(Math.min(r.modal, r.seharusnya));
-  const [brankas, setBrankas] = useState(0);
+  const [keKasPemilik, setKePemilik] = useState(0);
   const [bank, setBank] = useState(0);
   const [bankNama, setBankNama] = useState('');
-  const [prive, setPrive] = useState(0);
   const [pin, setPin] = useState('');
   const selisih = fisik - r.seharusnya;
-  const dibagi = sisaLaci + brankas + bank + prive;
-  const perluPin = toko.peran !== 'pemilik' && (selisih !== 0 || brankas > 0 || prive > 0);
+  const dibagi = sisaLaci + keKasPemilik + bank;
+  const perluPin = toko.peran !== 'pemilik' && (selisih !== 0 || keKasPemilik > 0);
   const siap = diisi && dibagi === fisik && (bank === 0 || !!bankNama) && (!perluPin || pin === PIN_PEMILIK_CONTOH);
   const isiFisik = (n: number) => {
     setFisik(n); setDiisi(true);
-    // Bawaan: sisakan modal awal, sisanya ke brankas
+    // Bawaan: sisakan modal awal, sisanya diserahkan ke pemilik
     const sisa = Math.min(n, r.modal);
-    setSisaLaci(sisa); setBrankas(Math.max(0, n - sisa)); setBank(0); setPrive(0);
+    setSisaLaci(sisa); setKePemilik(Math.max(0, n - sisa)); setBank(0);
   };
   return (
     <Dialog judul="Tutup kasir" onTutup={onTutup} lebar={540}
       kaki={<>
         {diisi && dibagi !== fisik && <p className="teks-bahaya" style={{ margin: 0, fontSize: 13 }}>Pembagian {rupiah(dibagi)} harus sama dengan uang fisik {rupiah(fisik)} (beda {rupiah(fisik - dibagi)}).</p>}
         <button type="button" className="tombol tombol--utama tombol--besar" disabled={!siap}
-          onClick={() => { const id = tutupLaci({ uangFisik: fisik, selisihDitanggung: tanggung, pembagian: { sisaLaci, brankas, bank, bankNama: bankNama || undefined, prive } }); if (id) onSelesai(id); }}>
+          onClick={() => { const id = tutupLaci({ uangFisik: fisik, selisihDitanggung: tanggung, pembagian: { sisaLaci, brankas: keKasPemilik, bank, bankNama: bankNama || undefined, prive: 0 } }); if (id) onSelesai(id); }}>
           Tutup kasir & cetak laporan
         </button>
       </>}>
@@ -335,14 +304,13 @@ export function DialogTutupKasir({ sesi, onSelesai, onTutup }: { sesi: SesiLaci;
           <strong>Uang fisik dibagi ke</strong>
           <div className="lc-bagi">
             <label className="isian">Sisa di laci (modal besok)<InputRupiah id="tk-sisa" nilai={sisaLaci} onUbah={setSisaLaci} /></label>
-            <label className="isian">Ke brankas (lewat pemilik)<InputRupiah id="tk-brankas" nilai={brankas} onUbah={setBrankas} /></label>
+            <label className="isian">Diserahkan ke pemilik<InputRupiah id="tk-pemilik" nilai={keKasPemilik} onUbah={setKePemilik} /></label>
             <label className="isian">Setor bank<InputRupiah id="tk-bank" nilai={bank} onUbah={setBank} /></label>
-            <label className="isian">Diambil pemilik (prive)<InputRupiah id="tk-prive" nilai={prive} onUbah={setPrive} /></label>
           </div>
           {bank > 0 && <PilihBank bank={bankNama} setBank={setBankNama} />}
         </div>
       )}
-      {perluPin && <IsianPin pin={pin} setPin={setPin} alasan="setujui selisih / terima uang brankas / prive" />}
+      {perluPin && <IsianPin pin={pin} setPin={setPin} alasan="setujui selisih / terima uang" />}
     </Dialog>
   );
 }
@@ -383,13 +351,13 @@ export function DialogLaporanHarian({ sesiId, onTutup }: { sesiId: string; onTut
           {s.ditutupIso ? ` · Tutup ${new Date(s.ditutupIso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}` : ' · masih buka'}</div>
         <div className="struk__garis" />
         <Baris k="Modal awal" v={r.modal} tebal />
-        {s.tambahBrankas > 0 && <Baris k="  termasuk dari brankas" v={s.tambahBrankas} />}
+        {s.tambahBrankas > 0 && <Baris k="  termasuk tambahan dari pemilik" v={s.tambahBrankas} />}
         <div className="struk__tebal" style={{ marginTop: 6 }}>Uang masuk tunai</div>
         <Baris k="  Penjualan" v={t.penjualan} />
         <Baris k="  Bayar kasbon" v={t.kasbon} />
         <Baris k="  Pesanan" v={t.pesanan} />
         {t['kas-masuk'] > 0 && <Baris k="  Kas masuk lain" v={t['kas-masuk']} />}
-        {t['titipan-brankas'] > 0 && <Baris k="  Titipan brankas" v={t['titipan-brankas']} />}
+        {t['titipan-brankas'] > 0 && <Baris k="  Dari pemilik" v={t['titipan-brankas']} />}
         {t.retur > 0 && <Baris k="  Retur (tambah bayar)" v={t.retur} />}
         <div className="struk__tebal" style={{ marginTop: 6 }}>Uang keluar tunai</div>
         <Baris k="  Pengeluaran" v={-t.pengeluaran} minus />
@@ -408,9 +376,8 @@ export function DialogLaporanHarian({ sesiId, onTutup }: { sesiId: string; onTut
             <div className="struk__garis" />
             <div className="struk__tebal">Pembagian uang fisik</div>
             <Baris k="  Sisa di laci" v={s.pembagian.sisaLaci} />
-            <Baris k="  Ke brankas" v={s.pembagian.brankas} />
+            <Baris k="  Diserahkan ke pemilik" v={s.pembagian.brankas + s.pembagian.prive} />
             <Baris k={`  Setor bank${s.pembagian.bankNama ? ` ${s.pembagian.bankNama}` : ''}`} v={s.pembagian.bank} />
-            <Baris k="  Prive pemilik" v={s.pembagian.prive} />
           </>
         )}
         <div className="struk__garis" />
