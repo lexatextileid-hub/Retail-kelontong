@@ -1,4 +1,5 @@
-import { distributorContoh, hargaBeliContoh, pelangganContoh } from '../../data/contoh';
+import { distributorContoh, hargaBeliContoh } from '../../data/contoh';
+import { ambilPelanggan } from '../../data/toko';
 import type { StatusPesanan, StatusSP, SuratPesanan } from '../../data/toko';
 import { rupiah } from '../../lib/format';
 import { ambilProduk, ambilSatuan, angka, bolehDesimal, singkatan } from '../penjualan/model';
@@ -29,7 +30,7 @@ export function ChipStatus({ status }: { status: StatusPesanan | StatusSP }) {
   return <span className={`chip-status chip-status--${warnaStatus[status]}`}>{teks}</span>;
 }
 
-export const namaPelanggan = (id: string) => pelangganContoh.find((p) => p.id === id)?.nama ?? '-';
+export const namaPelanggan = (id: string) => ambilPelanggan(id)?.nama ?? '-';
 export const ambilDistributor = (id: string) => distributorContoh.find((d) => d.id === id)!;
 
 /** Jumlah dalam satuan yang dipilih, mis. "72 Karton isi 5 renteng" atau "0,35 kg". */

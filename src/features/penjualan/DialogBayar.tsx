@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { InputRupiah } from '../../components/InputRupiah';
-import { PIN_PEMILIK_CONTOH, type PelangganContoh } from '../../data/contoh';
+import { PIN_PEMILIK_CONTOH } from '../../data/contoh';
+import type { PelangganKasbon } from '../../data/toko';
 import { cekKasbon } from '../../domain/kasbon';
 import { rupiah } from '../../lib/format';
 
@@ -41,7 +42,7 @@ export function DialogBayar({
   belanja: number;
   /** Diskon per barang yang diketik kasir di luar diskon pelanggan; ikut dihitung ke batas tanpa PIN. */
   diskonKasir: number;
-  pelanggan: PelangganContoh;
+  pelanggan: PelangganKasbon;
   onBatal: () => void;
   onSelesai: (h: HasilBayar) => void;
 }) {
@@ -72,7 +73,7 @@ export function DialogBayar({
   const potonganDihitung = jenisPotongan === 'Pembulatan' ? 0 : kurang;
   const potonganPerluPin = diskonKasir + potonganDihitung > BATAS_DISKON_AKHIR_TANPA_PIN;
   const diskonKasirPerluPin = diskonKasir > BATAS_DISKON_AKHIR_TANPA_PIN;
-  const cek = modeKurang === 'kasbon' ? cekKasbon(pelanggan, pelanggan.saldoKasbon, kurang) : null;
+  const cek = modeKurang === 'kasbon' ? cekKasbon(pelanggan, pelanggan.saldoKasbon, kurang, pelanggan.lewatTempo > 0) : null;
   const kasbonPerluPin = cek !== null && !cek.boleh;
   const potonganTidakBisa = bayarKasbonAktif && kurang > 0;
 
@@ -190,7 +191,7 @@ export function DialogBayar({
               <span>Kasbon setelah ini</span>
               <span>{rupiah(pelanggan.saldoKasbon + kurang)} dari batas {rupiah(pelanggan.batasKasbon)}</span>
             </div>
-            {kasbonPerluPin && <p className="catatan catatan--peringatan">Melebihi batas kasbon. Perlu PIN pemilik.</p>}
+            {kasbonPerluPin && <p className="catatan catatan--peringatan">{cek?.boleh === false && cek.alasan === 'lewat_tempo' ? `Ada kasbon lewat jatuh tempo (${rupiah(pelanggan.lewatTempo)}). Kasbon baru perlu PIN pemilik.` : 'Melebihi batas kasbon. Perlu PIN pemilik.'}</p>}
           </div>
         )}
 
@@ -216,7 +217,7 @@ export function DialogBayar({
                 {kasbonBisa && (
                   <label className="centang">
                     <input type="radio" name="kurang" checked={modeKurang === 'kasbon'} onChange={() => setPilihanKurang('kasbon')} />
-                    Jadikan kasbon · <span className="teks-pudar">{kasbonPerluPin ? 'melebihi batas, perlu PIN pemilik' : 'dalam batas'}</span>
+                    Jadikan kasbon · <span className="teks-pudar">{kasbonPerluPin ? (cek?.boleh === false && cek.alasan === 'lewat_tempo' ? 'ada kasbon lewat tempo, perlu PIN pemilik' : 'melebihi batas, perlu PIN pemilik') : 'dalam batas'}</span>
                   </label>
                 )}
               </div>

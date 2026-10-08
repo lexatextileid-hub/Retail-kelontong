@@ -131,17 +131,22 @@ export const stokContoh: Record<string, number> = {
 
 export interface PelangganContoh extends Pelanggan {
   hp?: string;
-  saldoKasbon: number;
-  notaKasbon: number;
-  notaTertuaHari: number;
+  /** Tempo bayar kasbon (hari sejak nota). Diatur pemilik di Back Office. */
+  tempoHari: number;
 }
 
+/** Tempo bawaan pelanggan baru dari kasir (pemilik bisa mengubah di Back Office). */
+export const TEMPO_BAWAAN_HARI = 7;
+
 export const pelangganContoh: PelangganContoh[] = [
-  { id: 'umum', nama: 'Umum', jenis: 'umum', batasKasbon: 0, saldoKasbon: 0, notaKasbon: 0, notaTertuaHari: 0 },
-  { id: 'antok', nama: 'Antok', jenis: 'terdaftar', batasKasbon: 500000, hp: '0812-xxxx-1101', saldoKasbon: 145000, notaKasbon: 3, notaTertuaHari: 12 },
-  { id: 'amir', nama: 'Amir', jenis: 'terdaftar', batasKasbon: 300000, hp: '0813-xxxx-2202', saldoKasbon: 0, notaKasbon: 0, notaTertuaHari: 0 },
-  { id: 'bu-sri', nama: 'Warung Bu Sri', jenis: 'terdaftar', batasKasbon: 1000000, hp: '0857-xxxx-3303', saldoKasbon: 420000, notaKasbon: 2, notaTertuaHari: 6 },
+  { id: 'umum', nama: 'Umum', jenis: 'umum', batasKasbon: 0, tempoHari: 0 },
+  { id: 'antok', nama: 'Antok', jenis: 'terdaftar', batasKasbon: 500000, hp: '0812-xxxx-1101', tempoHari: 14 },
+  { id: 'amir', nama: 'Amir', jenis: 'terdaftar', batasKasbon: 300000, hp: '0813-xxxx-2202', tempoHari: 7 },
+  { id: 'bu-sri', nama: 'Warung Bu Sri', jenis: 'terdaftar', batasKasbon: 1000000, hp: '0857-xxxx-3303', tempoHari: 30 },
 ];
+
+/** Nama bank untuk keterangan pembayaran transfer (bisa diketik lain). */
+export const bankContoh = ['BCA', 'BRI', 'Mandiri', 'BNI', 'BSI'];
 
 export const diskonContoh: DiskonPelanggan[] = [
   { pelangganId: 'antok', produkId: 'gula-1kg', jenis: 'potongan_rp', nilai: 200 },

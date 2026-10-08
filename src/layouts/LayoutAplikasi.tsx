@@ -158,7 +158,7 @@ export function LayoutAplikasi({ mode }: { mode: NamaMode }) {
             <span>{m.judul}</span>
           </NavLink>
         ))}
-        <button type="button" className="bawah__item" onClick={() => setLaci(true)}>
+        <button type="button" className={`bawah__item ${menuAktif && !utamaHp.includes(menuAktif) ? 'active' : ''}`} onClick={() => setLaci(true)}>
           <Ikon nama="lainnya" />
           <span>Lainnya</span>
         </button>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { InputRupiah } from '../../components/InputRupiah';
-import { diskonContoh, pelangganContoh, produkContoh } from '../../data/contoh';
+import { diskonContoh, produkContoh } from '../../data/contoh';
 import { buatPesanan, jumlahDasar, stokBebas, useToko, type BarisBaru } from '../../data/toko';
 import { hitungHargaBaris } from '../../domain/harga';
 import type { Produk } from '../../domain/tipe';
@@ -14,9 +14,9 @@ import '../../styles/pesanan.css';
 type Baris = BarisBaru & { id: string };
 
 export function BuatPesanan() {
-  useToko();
+  const { pelanggan } = useToko();
   const navigasi = useNavigate();
-  const terdaftar = pelangganContoh.filter((p) => p.jenis === 'terdaftar');
+  const terdaftar = pelanggan.filter((p) => p.jenis === 'terdaftar');
   const [pelangganId, setPelangganId] = useState('');
   const [cara, setCara] = useState<'ambil' | 'antar'>('ambil');
   const [alamat, setAlamat] = useState('');
@@ -30,7 +30,7 @@ export function BuatPesanan() {
 
   const plg = terdaftar.find((p) => p.id === pelangganId);
   // Sebelum pelanggan dipilih, harga memakai harga normal (pelanggan umum).
-  const plgHarga = plg ?? pelangganContoh.find((p) => p.jenis !== 'terdaftar')!;
+  const plgHarga = plg ?? pelanggan.find((p) => p.jenis !== 'terdaftar')!;
   const q = cari.trim().toLowerCase();
   const hasilCari = q
     ? produkContoh.filter((p) => p.nama.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || (p.kode ?? '').toLowerCase().includes(q)).slice(0, 8)

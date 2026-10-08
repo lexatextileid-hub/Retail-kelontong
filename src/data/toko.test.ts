@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { __state, buatPesanan, buatSP, ringkasPesanan, serahkan, terimaBayar, terimaDariSP } from './toko';
+import {
+  __state, bayarKasbon, buatPesanan, buatSP, catatKasbonLama, catatKasbonPenjualan, ringkasKasbon, ringkasPesanan, serahkan,
+  tagihanPelanggan, tambahPelanggan, terimaBayar, terimaDariSP,
+} from './toko';
+import { tambahHari } from '../domain/kasbon';
 
 const ambil = (id: string) => {
   const p = __state().pesanan.find((x) => x.id === id)!;
@@ -74,5 +78,40 @@ describe('alur pesanan dengan Surat Pesanan', () => {
     expect(st().baris.filter((x) => !x.diterima)[0].qty).toBe(1);
     expect(ambil(id).p.baris[0].diterimaOrder).toBe(36);
     expect(ambil(id).r.status).toBe('Menunggu barang');
+  });
+});
+
+describe('kasbon', () => {
+  it('kasbon lama + kasbon penjualan + pesanan yang sudah diserahkan jadi satu tagihan; bayar menutup yang tertua', () => {
+    const plg = tambahPelanggan('Pak Uji', '0800');
+    const hari = new Date();
+    const iso = (h: number) => tambahHari(`${hari.getFullYear()}-${String(hari.getMonth() + 1).padStart(2, '0')}-${String(hari.getDate()).padStart(2, '0')}`, h);
+    catatKasbonLama({ pelangganId: plg, tanggal: iso(-30), jumlah: 40000, keterangan: 'buku lama' });
+    catatKasbonPenjualan(plg, 'PJ-UJI-1', 25000);
+
+    // Pesanan dengan DP: belum jadi kasbon sebelum barang diterima.
+    const ps = buatPesanan({
+      pelangganId: plg, cara: 'ambil', tanggalJanji: iso(1),
+      baris: [{ produkId: 'kecap', satuanProdukId: 'kecap-btl', qty: 10 }], // dari stok
+      dp: { jumlah: 50000, metode: 'tunai' },
+    });
+    expect(tagihanPelanggan(plg).map((t) => t.sumber)).toEqual(['lama', 'penjualan']);
+    const p = __state().pesanan.find((x) => x.id === ps)!;
+    serahkan(ps, p.baris.map((b) => ({ barisId: b.id, jumlahDasar: b.qty * 1 })), false);
+    const total = ringkasPesanan(__state().pesanan.find((x) => x.id === ps)!).total;
+    const tagihanPs = tagihanPelanggan(plg).find((t) => t.sumber === 'pesanan')!;
+    expect(tagihanPs.sisa).toBe(total - 50000);
+    expect(ringkasKasbon(plg).saldo).toBe(40000 + 25000 + total - 50000);
+    expect(ringkasKasbon(plg).lewatTempo).toBe(40000); // tempo bawaan 7 hari
+
+    // Bayar 50.000: kasbon lama lunas, 10.000 ke nota penjualan
+    const b = bayarKasbon({ pelangganId: plg, jumlah: 50000, metode: 'transfer', bank: 'BCA' });
+    expect(b.alokasi.map((a) => [a.nomor, a.jumlah])).toEqual([[tagihanPelanggan(plg)[0].nomor, 40000], ['PJ-UJI-1', 10000]]);
+    expect(ringkasKasbon(plg).lewatTempo).toBe(0);
+
+    // Lunasi semua: bagian pesanan tercatat juga di pesanan → status Lunas
+    bayarKasbon({ pelangganId: plg, jumlah: ringkasKasbon(plg).saldo, metode: 'tunai' });
+    expect(ringkasKasbon(plg).saldo).toBe(0);
+    expect(ringkasPesanan(__state().pesanan.find((x) => x.id === ps)!).status).toBe('Lunas');
   });
 });

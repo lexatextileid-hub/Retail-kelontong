@@ -1,0 +1,49 @@
+/* ---------- Kasbon ---------- */
+.kb-ringkas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 640px; }
+.kb-angka { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; }
+.kb-angka strong { font-size: 22px; }
+.kb-angka .teks-pudar { font-size: 12.5px; }
+.kb-angka--merah { background: var(--bahaya-latar); border-color: #f1c4bf; }
+.kb-angka--merah strong { color: var(--bahaya); }
+
+.kb-judul { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.kb-tagihan { display: flex; flex-direction: column; }
+.kb-tagihan__baris {
+  display: flex; justify-content: space-between; gap: 12px; padding: 12px 8px; margin: 0 -8px;
+  border-top: 1px solid var(--garis-halus); color: var(--teks); text-decoration: none; border-radius: var(--radius);
+}
+.kb-tagihan__baris:first-child { border-top: 0; }
+a.kb-tagihan__baris:hover { background: var(--permukaan-2); color: var(--teks); }
+.kb-tagihan__baris--lewat { background: #fff7f6; }
+.kb-tagihan__kiri { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.kb-tagihan__kiri .teks-pudar { font-size: 12.5px; }
+.kb-tagihan__nomor { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.kb-tagihan__kanan { display: flex; flex-direction: column; align-items: flex-end; text-align: right; gap: 2px; flex: none; }
+.kb-tagihan__kanan .teks-pudar { font-size: 12px; }
+
+.kb-riwayat { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.kb-riwayat li { display: flex; flex-direction: column; gap: 3px; padding: 10px 0; border-top: 1px solid var(--garis-halus); }
+.kb-riwayat li:first-child { border-top: 0; }
+.kb-riwayat .teks-pudar { font-size: 12.5px; }
+.kb-riwayat__atas { display: flex; justify-content: space-between; gap: 12px; }
+
+/* Dialog bayar */
+.kb-jumlah { display: flex; gap: 8px; }
+.kb-jumlah .input-rp { flex: 1; min-width: 0; }
+.kb-jumlah .tombol { flex: none; }
+.kb-cepat { display: flex; gap: 6px; flex-wrap: wrap; }
+.kb-cepat .tombol[aria-pressed='true'] { background: var(--biru); border-color: var(--biru); color: #fff; }
+.kb-alokasi { display: flex; flex-direction: column; border: 1px solid var(--garis); border-radius: var(--radius); }
+.kb-alokasi__baris { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; flex-wrap: wrap; }
+.kb-alokasi__baris + .kb-alokasi__baris { border-top: 1px solid var(--garis-halus); }
+.kb-alokasi__info { display: flex; flex-direction: column; gap: 2px; font-size: 13.5px; min-width: 0; }
+.kb-alokasi__info .teks-pudar { font-size: 12.5px; }
+.kb-alokasi__nilai { font-weight: 700; color: var(--biru-tua); }
+.kb-alokasi__isi { display: flex; align-items: center; gap: 8px; }
+.kb-alokasi__isi .input-rp { width: 150px; }
+
+/* Kasbon lama */
+.kb-lama { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--garis-halus); }
+.kb-lama:first-of-type { border-top: 0; padding-top: 0; }
+.kb-lama__atas { display: flex; justify-content: space-between; gap: 8px; }
+.kb-lama__isian { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }

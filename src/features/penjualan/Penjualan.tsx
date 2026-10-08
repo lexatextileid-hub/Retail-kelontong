@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
-import { diskonContoh, pelangganContoh, produkContoh, type PelangganContoh } from '../../data/contoh';
-import { stokBebas, stokTerkunci, useToko } from '../../data/toko';
+import { diskonContoh, produkContoh } from '../../data/contoh';
+import {
+  bayarKasbon, catatKasbonPenjualan, pelangganDenganKasbon, ringkasKasbon, stokBebas, stokTerkunci, tambahPelanggan, useToko,
+} from '../../data/toko';
 import { hitungHargaBaris } from '../../domain/harga';
 import { kategoriBawaan } from '../../domain/kategoriBawaan';
 import type { Produk } from '../../domain/tipe';
@@ -25,7 +27,6 @@ function satuanTampil(p: Produk) {
 }
 
 export function Penjualan() {
-  const [pelanggan, setPelanggan] = useState<PelangganContoh[]>(pelangganContoh);
   const [aktif, setAktif] = useState<Keranjang>(kosong());
   const [tertahan, setTertahan] = useState<Tertahan[]>([]);
   const [cari, setCari] = useState('');
@@ -37,8 +38,8 @@ export function Penjualan() {
   const [nomor, setNomor] = useState(231);
   const [keranjangHp, setKeranjangHp] = useState(false);
 
-  useToko();
-  const plg = pelanggan.find((p) => p.id === aktif.pelangganId) ?? pelanggan[0];
+  const { pelanggan } = useToko();
+  const plg = pelangganDenganKasbon(aktif.pelangganId);
 
   // Barang yang sedang dipesan (keranjang tertahan), dalam satuan dasar
   const dipesan = useMemo(() => {
@@ -117,7 +118,9 @@ export function Penjualan() {
 
   const selesai = (h: HasilBayar) => {
     const no = `PJ-2610-${String(nomor).padStart(4, '0')}`;
-    const sisaKasbon = plg.jenis === 'terdaftar' ? plg.saldoKasbon - h.bayarKasbon + h.kasbonBaru : undefined;
+    if (h.kasbonBaru > 0) catatKasbonPenjualan(plg.id, no, h.kasbonBaru);
+    if (h.bayarKasbon > 0) bayarKasbon({ pelangganId: plg.id, jumlah: h.bayarKasbon, metode: h.tunai > 0 || h.transfer === 0 ? 'tunai' : 'transfer', lewat: 'penjualan' });
+    const sisaKasbon = plg.jenis === 'terdaftar' ? ringkasKasbon(plg.id).saldo : undefined;
     setNota({
       nomor: no,
       waktu: `${new Date().toLocaleDateString('id-ID')} ${jam()}`,
@@ -146,18 +149,13 @@ export function Penjualan() {
       kasbonBaru: h.kasbonBaru,
       sisaKasbon,
     });
-    if (sisaKasbon !== undefined)
-      setPelanggan((ps) => ps.map((p) => (p.id === plg.id ? { ...p, saldoKasbon: sisaKasbon } : p)));
     setNomor((n) => n + 1);
     setDialog(null);
   };
 
   const simpanPelanggan = (nama: string, hp: string) => {
-    const baru: PelangganContoh = {
-      id: idBaru(), nama, hp, jenis: 'terdaftar', batasKasbon: 0, saldoKasbon: 0, notaKasbon: 0, notaTertuaHari: 0,
-    };
-    setPelanggan((ps) => [...ps, baru]);
-    setAktif((k) => ({ ...k, pelangganId: baru.id }));
+    const baruId = tambahPelanggan(nama, hp);
+    setAktif((k) => ({ ...k, pelangganId: baruId }));
     setDialog(null);
   };
 
@@ -258,6 +256,7 @@ export function Penjualan() {
               {plg.notaKasbon > 0 && ` · ${plg.notaKasbon} nota, tertua ${plg.notaTertuaHari} hari`}
               {' · '}batas {rupiah(plg.batasKasbon)}
               {plg.batasKasbon === 0 && <span className="lencana lencana--peringatan" style={{ marginLeft: 6 }}>batas belum diatur pemilik</span>}
+              {plg.lewatTempo > 0 && <span className="lencana lencana--bahaya" style={{ marginLeft: 6 }}>lewat tempo {rupiah(plg.lewatTempo)}</span>}
             </p>
           )}
         </div>

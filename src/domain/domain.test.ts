@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { formatStok } from '../lib/format';
 import { ambilFifo, modalBarisFaktur } from './fifo';
 import { hitungHargaBaris } from './harga';
-import { cekKasbon } from './kasbon';
+import { alokasiTertua, cekKasbon, selisihHari, tambahHari } from './kasbon';
 import { kunciNama, satuanBawaan } from './satuanBawaan';
 import { buatSku, kategoriBawaan, kelompokBawaan } from './kategoriBawaan';
 import type { DiskonPelanggan, LapisanStok, Pelanggan, Produk } from './tipe';
@@ -107,6 +107,23 @@ describe('kasbon', () => {
   });
   it('di bawah batas boleh', () => {
     expect(cekKasbon(amir, 0, 50000)).toEqual({ boleh: true, sisaSetelah: 250000 });
+  });
+  it('ada nota lewat jatuh tempo: kasbon baru perlu PIN pemilik walau masih dalam batas', () => {
+    expect(cekKasbon(amir, 0, 50000, true)).toEqual({ boleh: false, alasan: 'lewat_tempo', perluPinPemilik: true });
+  });
+  it('pembayaran menutup nota tertua dulu', () => {
+    const nota = [
+      { id: 'b', tanggal: '2026-09-26', sisa: 60000 },
+      { id: 'a', tanggal: '2026-08-29', sisa: 50000 }, // kasbon lama
+      { id: 'c', tanggal: '2026-10-05', sisa: 35000 },
+    ];
+    expect(alokasiTertua(nota, 80000)).toEqual([{ notaId: 'a', jumlah: 50000 }, { notaId: 'b', jumlah: 30000 }]);
+    expect(alokasiTertua(nota, 145000).map((x) => x.jumlah)).toEqual([50000, 60000, 35000]);
+  });
+  it('jatuh tempo = tanggal nota + tempo pelanggan', () => {
+    expect(tambahHari('2026-09-26', 14)).toBe('2026-10-10');
+    expect(tambahHari('2026-12-25', 14)).toBe('2027-01-08');
+    expect(selisihHari('2026-10-10', '2026-10-08')).toBe(-2);
   });
 });
 

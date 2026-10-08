@@ -9,6 +9,9 @@ import { BuatPesanan } from './features/pesanan/BuatPesanan';
 import { DaftarPesanan } from './features/pesanan/DaftarPesanan';
 import { DetailPesanan } from './features/pesanan/DetailPesanan';
 import { Penjualan } from './features/penjualan/Penjualan';
+import { DaftarKasbon } from './features/kasbon/DaftarKasbon';
+import { DetailKasbon } from './features/kasbon/DetailKasbon';
+import { KasbonLama } from './features/kasbon/KasbonLama';
 import { BuatSPManual } from './features/sp/BuatSPManual';
 import { DaftarSP } from './features/sp/DaftarSP';
 import { SaranSP } from './features/sp/SaranSP';
@@ -65,8 +68,13 @@ export const menuKasir: Menu[] = [
   },
   {
     path: 'kasbon', judul: 'Kasbon', ikon: 'kasbon',
-    ringkasan: 'Cek kasbon pelanggan dan terima pembayaran.',
-    rencana: ['Cari pelanggan, lihat sisa kasbon dan batasnya', 'Bayar sebagian/penuh, tunai/transfer, menutup nota tertua dulu'],
+    ringkasan: 'Kasbon pelanggan (nota kasir, kasbon lama, pesanan yang sudah diserahkan) dan pembayarannya.',
+    rencana: ['Cari pelanggan, lihat sisa kasbon, batas, dan jatuh tempo', 'Bayar sebagian/penuh, tunai/transfer, menutup nota tertua dulu', 'Catat kasbon lama tanpa rincian barang'],
+    anak: [
+      { path: 'daftar', judul: 'Daftar Kasbon', halaman: <DaftarKasbon /> },
+      { path: 'lama', judul: 'Catat Kasbon Lama', halaman: <KasbonLama /> },
+      { path: 'detail/:id', judul: 'Detail', halaman: <DetailKasbon />, tersembunyi: true },
+    ],
   },
   {
     path: 'retur', judul: 'Retur', ikon: 'retur',
@@ -197,8 +205,13 @@ export const menuBackOffice: Menu[] = [
   {
     path: 'hutang-piutang', judul: 'Hutang & Piutang', ikon: 'hutang',
     ringkasan: 'Hutang ke distributor dan piutang pelanggan.',
-    rencana: ['Pembayaran bertahap dan campuran', 'Umur piutang'],
-    anak: [{ path: 'hutang', judul: 'Hutang Distributor' }, { path: 'piutang', judul: 'Piutang Pelanggan' }],
+    rencana: ['Piutang: data sama dengan Kasir → Kasbon (kasbon kasir, kasbon lama, pesanan tempo)', 'Hutang distributor: faktur tempo + hutang lama tanpa rincian barang', 'Pembayaran bertahap dan campuran', 'Umur piutang/hutang'],
+    anak: [
+      { path: 'hutang', judul: 'Hutang Distributor' },
+      { path: 'piutang', judul: 'Piutang Pelanggan', halaman: <DaftarKasbon dariOffice /> },
+      { path: 'lama', judul: 'Catat Kasbon Lama', halaman: <KasbonLama />, tersembunyi: true },
+      { path: 'detail/:id', judul: 'Detail Piutang', halaman: <DetailKasbon />, tersembunyi: true },
+    ],
   },
   {
     path: 'keuangan', judul: 'Keuangan', ikon: 'keuangan',

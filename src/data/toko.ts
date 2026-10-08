@@ -3,7 +3,8 @@
  * Nanti diganti Supabase. Bentuk data di sini mengikuti rancangan tabel.
  */
 import { useSyncExternalStore } from 'react';
-import { diskonContoh, hargaBeliContoh, modalContoh, pelangganContoh, stokContoh } from './contoh';
+import { diskonContoh, hargaBeliContoh, modalContoh, pelangganContoh, stokContoh, TEMPO_BAWAAN_HARI, type PelangganContoh } from './contoh';
+import { alokasiTertua, isoHari, selisihHari, tambahHari } from '../domain/kasbon';
 import { hitungHargaBaris, TARGET_UNTUNG_PERSEN, untungDariModal } from '../domain/harga';
 import { ambilProduk, ambilSatuan } from '../features/penjualan/model';
 
@@ -41,6 +42,7 @@ export interface Pembayaran {
 export interface SerahTerima {
   nomor: string; // SJ-…
   waktu: string;
+  tanggal: string; // yyyy-mm-dd
   diantar: boolean;
   oleh: string;
   baris: { barisId: string; jumlahDasar: number }[];
@@ -99,19 +101,68 @@ export interface SuratPesanan {
   faktur: { nomor: string; nomorDistributor: string; waktu: string; cara: 'cash' | 'tempo'; total: number; oleh: string }[];
 }
 
+/* ---------- Kasbon (piutang pelanggan) ---------- */
+
+/** Nota kasbon yang dicatat langsung: dari penjualan kasir, atau kasbon lama (data sebelum pakai aplikasi). */
+export interface NotaKasbon {
+  id: string;
+  nomor: string; // nomor nota penjualan, atau KL-… untuk kasbon lama
+  pelangganId: string;
+  tanggal: string; // yyyy-mm-dd
+  jumlah: number;
+  sumber: 'penjualan' | 'lama';
+  keterangan?: string;
+  nomorLama?: string; // nomor nota/buku lama bila masih ada
+  oleh: string;
+}
+
+export interface BayarKasbon {
+  id: string;
+  nomor: string; // BK-…
+  pelangganId: string;
+  tanggal: string;
+  waktu: string;
+  jumlah: number;
+  metode: 'tunai' | 'transfer';
+  bank?: string; // keterangan saja, mis. BCA
+  lewat: 'kasbon' | 'penjualan';
+  alokasi: { notaId: string; nomor: string; jumlah: number }[];
+  oleh: string;
+}
+
+/** Satu baris tagihan pelanggan: nota kasbon, kasbon lama, atau pesanan (setelah barang diserahkan). */
+export interface TagihanKasbon {
+  id: string; // id NotaKasbon, atau "ps:<id pesanan>"
+  nomor: string;
+  sumber: 'penjualan' | 'lama' | 'pesanan';
+  tanggal: string;
+  jatuhTempo: string;
+  jumlah: number;
+  terbayar: number;
+  sisa: number;
+  keterangan?: string;
+  pesananId?: string;
+}
+
 interface State {
   peran: Peran;
+  pelanggan: PelangganContoh[];
+  notaKasbon: NotaKasbon[];
+  bayarKasbon: BayarKasbon[];
   pesanan: Pesanan[];
   sp: SuratPesanan[];
-  urut: Record<'PS' | 'SP' | 'SJ' | 'PB', number>;
+  urut: Record<'PS' | 'SP' | 'SJ' | 'PB' | 'KL' | 'BK', number>;
   stokTambahan: Record<string, number>; // stok umum yang masuk dari SP (pratinjau)
 }
 
 let state: State = {
   peran: 'pemilik',
+  pelanggan: pelangganContoh,
+  notaKasbon: [],
+  bayarKasbon: [],
   pesanan: [],
   sp: [],
-  urut: { PS: 1, SP: 1, SJ: 1, PB: 1 },
+  urut: { PS: 1, SP: 1, SJ: 1, PB: 1, KL: 1, BK: 1 },
   stokTambahan: {},
 };
 const pendengar = new Set<() => void>();
@@ -169,7 +220,7 @@ export const jumlahDasar = (b: { produkId: string; satuanProdukId: string; qty: 
   b.qty * ambilSatuan(ambilProduk(b.produkId), b.satuanProdukId).isi;
 
 export function hargaBaris(p: Pesanan, b: BarisPesanan) {
-  const plg = pelangganContoh.find((x) => x.id === p.pelangganId) ?? pelangganContoh[0];
+  const plg = ambilPelanggan(p.pelangganId);
   return hitungHargaBaris(ambilProduk(b.produkId), b.satuanProdukId, b.qty, plg, diskonContoh, b.diskonManual, b.hargaManual);
 }
 
@@ -215,6 +266,8 @@ export function ringkasPesanan(p: Pesanan) {
   const adaDiserahkan = baris.some((x) => x.b.diserahkan > 0);
   const perluSetuju = baris.some((x) => x.perluSetuju);
   const sisa = Math.max(0, total - dibayar);
+  // Nilai barang yang sudah diserahkan: inilah yang menjadi tagihan (kasbon) pelanggan.
+  const nilaiDiserahkan = Math.round(baris.reduce((t, x) => t + (x.total ? (x.h.netto * x.b.diserahkan) / x.total : 0), 0));
   let status: StatusPesanan;
   if (p.dibatalkan) status = 'Dibatalkan';
   else if (semuaDiserahkan && sisa === 0) status = 'Lunas';
@@ -225,7 +278,7 @@ export function ringkasPesanan(p: Pesanan) {
   else if (adaMenunggu) status = 'Menunggu barang';
   else if (p.disiapkan) status = 'Disiapkan';
   else status = 'Barang siap';
-  return { baris, total, dibayar, dp, sisa, semuaSiap, status, perluSetuju };
+  return { baris, total, dibayar, dp, sisa, semuaSiap, status, perluSetuju, nilaiDiserahkan };
 }
 
 export type StatusPesanan =
@@ -309,7 +362,7 @@ export function serahkan(pesananId: string, baris: { barisId: string; jumlahDasa
         const x = baris.find((y) => y.barisId === b.id);
         return x ? { ...b, diserahkan: b.diserahkan + x.jumlahDasar } : b;
       }),
-      serah: [...p.serah, { nomor, waktu: sekarang(), diantar, oleh, baris }],
+      serah: [...p.serah, { nomor, waktu: sekarang(), tanggal: hariIni(), diantar, oleh, baris }],
     }),
     `${diantar ? 'Diantar' : 'Diserahkan'} (${nomor})`,
   );
@@ -432,6 +485,130 @@ export function terimaDariSP(
   return nomor;
 }
 
+/* ---------- Pelanggan ---------- */
+
+export const hariIni = () => isoHari(new Date());
+
+export const ambilPelanggan = (id: string, s: State = state) =>
+  s.pelanggan.find((p) => p.id === id) ?? s.pelanggan[0];
+
+/** Pelanggan baru dari kasir: hanya nama + HP, batas kasbon Rp 0. */
+export function tambahPelanggan(nama: string, hp?: string): string {
+  const p: PelangganContoh = { id: id('plg'), nama, hp, jenis: 'terdaftar', batasKasbon: 0, tempoHari: TEMPO_BAWAAN_HARI };
+  ubah((s) => ({ ...s, pelanggan: [...s.pelanggan, p] }));
+  return p.id;
+}
+
+/* ---------- Kasbon ---------- */
+
+/** Semua tagihan pelanggan (kasbon penjualan, kasbon lama, pesanan yang sudah diserahkan), urut tertua dulu. */
+export function tagihanPelanggan(pelangganId: string, s: State = state): TagihanKasbon[] {
+  const plg = ambilPelanggan(pelangganId, s);
+  const terbayarNota = new Map<string, number>();
+  for (const b of s.bayarKasbon) for (const a of b.alokasi) terbayarNota.set(a.notaId, (terbayarNota.get(a.notaId) ?? 0) + a.jumlah);
+
+  const dariNota: TagihanKasbon[] = s.notaKasbon
+    .filter((n) => n.pelangganId === pelangganId)
+    .map((n) => {
+      const terbayar = terbayarNota.get(n.id) ?? 0;
+      return {
+        id: n.id, nomor: n.nomor, sumber: n.sumber, tanggal: n.tanggal, jatuhTempo: tambahHari(n.tanggal, plg.tempoHari),
+        jumlah: n.jumlah, terbayar, sisa: Math.max(0, n.jumlah - terbayar),
+        keterangan: n.sumber === 'lama' ? [n.keterangan, n.nomorLama && `nota lama ${n.nomorLama}`].filter(Boolean).join(' · ') : undefined,
+      };
+    });
+
+  // Pesanan: dihitung kasbon setelah barang diterima pelanggan (nota/surat jalan terbit). DP mengurangi.
+  const dariPesanan: TagihanKasbon[] = s.pesanan
+    .filter((p) => p.pelangganId === pelangganId && !p.dibatalkan && p.serah.length > 0)
+    .map((p) => {
+      const r = ringkasPesanan(p);
+      const tanggal = p.serah[0].tanggal;
+      return {
+        id: `ps:${p.id}`, nomor: p.nomor, sumber: 'pesanan' as const, tanggal,
+        jatuhTempo: p.jatuhTempo ?? tambahHari(tanggal, plg.tempoHari),
+        jumlah: r.nilaiDiserahkan, terbayar: Math.min(r.dibayar, r.nilaiDiserahkan), sisa: Math.max(0, r.nilaiDiserahkan - r.dibayar),
+        keterangan: r.dp > 0 ? `DP ${r.dp.toLocaleString('id-ID')} sudah dipotong` : undefined, pesananId: p.id,
+      };
+    })
+    .filter((t) => t.jumlah > 0);
+
+  return [...dariNota, ...dariPesanan].sort((a, b) => a.tanggal.localeCompare(b.tanggal) || a.nomor.localeCompare(b.nomor));
+}
+
+export function ringkasKasbon(pelangganId: string, s: State = state) {
+  const hari = hariIni();
+  const terbuka = tagihanPelanggan(pelangganId, s).filter((t) => t.sisa > 0);
+  const saldo = terbuka.reduce((t, x) => t + x.sisa, 0);
+  const lewat = terbuka.filter((t) => t.jatuhTempo < hari);
+  return {
+    saldo,
+    banyakNota: terbuka.length,
+    tertuaHari: terbuka.length ? selisihHari(terbuka[0].tanggal, hari) : 0,
+    lewatTempo: lewat.reduce((t, x) => t + x.sisa, 0),
+    banyakLewat: lewat.length,
+    jatuhTempoTerdekat: terbuka.map((t) => t.jatuhTempo).sort()[0] as string | undefined,
+  };
+}
+
+/** Pelanggan + ringkasan kasbonnya (dipakai layar Penjualan). */
+export function pelangganDenganKasbon(pelangganId: string, s: State = state) {
+  const p = ambilPelanggan(pelangganId, s);
+  const r = ringkasKasbon(p.id, s);
+  return { ...p, saldoKasbon: r.saldo, notaKasbon: r.banyakNota, notaTertuaHari: r.tertuaHari, lewatTempo: r.lewatTempo };
+}
+export type PelangganKasbon = ReturnType<typeof pelangganDenganKasbon>;
+
+/** Kasbon baru dari transaksi kasir. */
+export function catatKasbonPenjualan(pelangganId: string, nomorNota: string, jumlah: number) {
+  const n: NotaKasbon = { id: id('nk'), nomor: nomorNota, pelangganId, tanggal: hariIni(), jumlah, sumber: 'penjualan', oleh: namaAkun[state.peran] };
+  ubah((s) => ({ ...s, notaKasbon: [...s.notaKasbon, n] }));
+}
+
+/** Kasbon lama (sebelum memakai aplikasi), tanpa rincian barang. Nota boleh sudah hilang. */
+export function catatKasbonLama(data: { pelangganId: string; tanggal: string; jumlah: number; keterangan?: string; nomorLama?: string }): string {
+  const nomor = nomorBaru('KL');
+  const n: NotaKasbon = { id: id('nk'), nomor, sumber: 'lama', oleh: namaAkun[state.peran], ...data };
+  ubah((s) => ({ ...s, notaKasbon: [...s.notaKasbon, n] }));
+  return nomor;
+}
+
+/**
+ * Terima pembayaran kasbon. Bawaan: menutup tagihan tertua dulu; `alokasi` mengganti urutan itu.
+ * Bagian untuk pesanan dicatat juga sebagai pembayaran pesanan (status pesanan ikut bergerak).
+ */
+export function bayarKasbon(data: {
+  pelangganId: string; jumlah: number; metode: 'tunai' | 'transfer'; bank?: string; lewat?: 'kasbon' | 'penjualan';
+  alokasi?: { notaId: string; jumlah: number }[];
+}): BayarKasbon {
+  const tagihan = tagihanPelanggan(data.pelangganId);
+  const alokasi = (data.alokasi ?? alokasiTertua(tagihan, data.jumlah)).filter((a) => a.jumlah > 0);
+  const nomor = nomorBaru('BK');
+  const oleh = namaAkun[state.peran];
+  const b: BayarKasbon = {
+    id: id('bk'), nomor, pelangganId: data.pelangganId, tanggal: hariIni(), waktu: sekarang(), jumlah: data.jumlah,
+    metode: data.metode, bank: data.metode === 'transfer' ? data.bank : undefined, lewat: data.lewat ?? 'kasbon', oleh,
+    alokasi: alokasi.map((a) => ({ ...a, nomor: tagihan.find((t) => t.id === a.notaId)?.nomor ?? '-' })),
+  };
+  // Bagian untuk pesanan ("ps:…") juga dicatat sebagai pembayaran pesanan — itulah sumber sisa tagihan pesanan.
+  ubah((s) => ({ ...s, bayarKasbon: [...s.bayarKasbon, b] }));
+  for (const a of b.alokasi.filter((x) => x.notaId.startsWith('ps:'))) {
+    const pid = a.notaId.slice(3);
+    const t = tagihan.find((x) => x.id === a.notaId)!;
+    const jenis: Pembayaran['jenis'] = a.jumlah >= t.sisa ? 'Pelunasan' : 'Cicilan';
+    ubahPesanan(
+      pid,
+      (p) => ({ ...p, pembayaran: [...p.pembayaran, { waktu: sekarang(), jumlah: a.jumlah, metode: data.metode, jenis, oleh }] }),
+      `${jenis} ${a.jumlah.toLocaleString('id-ID')} lewat Kasbon (${nomor})`,
+    );
+  }
+  return b;
+}
+
+/** Riwayat pembayaran kasbon pelanggan, termasuk yang masuk ke pesanan. */
+export const riwayatBayarKasbon = (pelangganId: string, s: State = state) =>
+  s.bayarKasbon.filter((b) => b.pelangganId === pelangganId).slice().reverse();
+
 /* ---------- Contoh awal untuk pratinjau ---------- */
 (function isiContoh() {
   const besok = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
@@ -448,6 +625,15 @@ export function terimaDariSP(
     pelangganId: 'antok', cara: 'ambil', tanggalJanji: besok,
     baris: [{ produkId: 'gula-1kg', satuanProdukId: 'gula-1kg-bks', qty: 10 }],
   });
+  // Kasbon contoh: Antok punya kasbon lama dari buku catatan (sudah lewat tempo 14 hari).
+  const lalu = (h: number) => tambahHari(hariIni(), -h);
+  catatKasbonLama({ pelangganId: 'antok', tanggal: lalu(40), jumlah: 50000, keterangan: 'Dari buku catatan kasbon' });
+  const nota = (pelangganId: string, nomor: string, h: number, jumlah: number) =>
+    (state = { ...state, notaKasbon: [...state.notaKasbon, { id: id('nk'), nomor, pelangganId, tanggal: lalu(h), jumlah, sumber: 'penjualan', oleh: '[Kasir A]' }] });
+  nota('antok', 'PJ-2609-0201', 12, 60000);
+  nota('antok', 'PJ-2610-0219', 3, 35000);
+  nota('bu-sri', 'PJ-2610-0184', 6, 300000);
+  nota('bu-sri', 'PJ-2610-0221', 2, 120000);
 })();
 
 /** Hanya untuk tes: membaca state saat ini. */

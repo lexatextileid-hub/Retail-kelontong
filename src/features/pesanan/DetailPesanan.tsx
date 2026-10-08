@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { Dialog } from '../../components/Dialog';
 import { Link, useParams } from 'react-router-dom';
-import { diskonContoh, pelangganContoh } from '../../data/contoh';
-import { ringkasPesanan, setujuiHarga, tandaiDisiapkan, ubahBarisPesanan, useToko, type Pesanan } from '../../data/toko';
+import { diskonContoh } from '../../data/contoh';
+import { ambilPelanggan, ringkasPesanan, setujuiHarga, tandaiDisiapkan, ubahBarisPesanan, useToko, type Pesanan } from '../../data/toko';
 import { TARGET_UNTUNG_PERSEN } from '../../domain/harga';
 import { rupiah } from '../../lib/format';
 import { DialogAturBarang } from '../penjualan/DialogSatuan';
@@ -45,7 +45,7 @@ export function DetailPesanan() {
   const lihatModal = peran !== 'kasir';
   const selesai = p.dibatalkan || r.status === 'Lunas';
   const bisaUbah = !p.dibatalkan && !r.baris.some((x) => x.b.diserahkan > 0);
-  const plg = pelangganContoh.find((x) => x.id === p.pelangganId)!;
+  const plg = ambilPelanggan(p.pelangganId);
 
   const spTerkait = sp.filter((x) => x.baris.some((b) => b.untukPesanan.some((u) => u.pesananId === p.id)));
   const spMenunggu = spTerkait.filter((x) => x.status === 'draf' || x.status === 'dikirim' || x.status === 'sebagian');
