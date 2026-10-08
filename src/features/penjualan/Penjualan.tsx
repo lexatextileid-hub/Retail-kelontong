@@ -7,7 +7,7 @@ import { formatStok, rupiah } from '../../lib/format';
 import { BarisKeranjang } from './BarisKeranjang';
 import { DialogBayar, type HasilBayar } from './DialogBayar';
 import { DialogDaftarSiapkan, DialogPelangganBaru, DialogStruk, DialogTahan } from './DialogLain';
-import { DialogSatuan } from './DialogSatuan';
+import { DialogAturBarang, type HasilAtur } from './DialogSatuan';
 import {
   ambilProduk, ambilSatuan, angka, bolehDesimal, idBaru, jam, kosong, satuanJual, singkatan,
   type Keranjang, type Nota, type Tertahan,
@@ -29,7 +29,7 @@ export function Penjualan() {
   const [tertahan, setTertahan] = useState<Tertahan[]>([]);
   const [cari, setCari] = useState('');
   const [kategori, setKategori] = useState('semua');
-  const [pilihSatuan, setPilihSatuan] = useState<Produk | null>(null);
+  const [atur, setAtur] = useState<{ produk: Produk; barisId?: string } | null>(null);
   const [dialog, setDialog] = useState<null | 'bayar' | 'tahan' | 'pelanggan'>(null);
   const [nota, setNota] = useState<Nota | null>(null);
   const [siapkan, setSiapkan] = useState<Tertahan | null>(null);
@@ -71,22 +71,30 @@ export function Penjualan() {
     setAktif((k) => ({ ...k, baris: k.baris.map((b) => (b.id === id ? { ...b, ...patch } : b)) }));
   const hapusBaris = (id: string) => setAktif((k) => ({ ...k, baris: k.baris.filter((b) => b.id !== id) }));
 
-  const tambah = (produkId: string, satuanProdukId: string, qty: number) => {
+  /** Tambah ke keranjang. Barang + satuan yang sama digabung, kecuali salah satunya punya diskon ketik kasir atau barang timbang. */
+  const tambah = (produkId: string, h: HasilAtur) => {
     setAktif((k) => {
-      const ada = k.baris.find((b) => b.produkId === produkId && b.satuanProdukId === satuanProdukId);
       const p = ambilProduk(produkId);
-      const timbang = bolehDesimal(ambilSatuan(p, satuanProdukId).satuanId);
-      if (ada && !timbang) return { ...k, baris: k.baris.map((b) => (b === ada ? { ...b, qty: b.qty + qty } : b)) };
-      return { ...k, baris: [...k.baris, { id: idBaru(), produkId, satuanProdukId, qty }] };
+      const timbang = bolehDesimal(ambilSatuan(p, h.satuanProdukId).satuanId);
+      const ada = k.baris.find(
+        (b) => b.produkId === produkId && b.satuanProdukId === h.satuanProdukId && b.diskonManual === undefined,
+      );
+      if (ada && !timbang && h.diskonManual === undefined)
+        return { ...k, baris: k.baris.map((b) => (b === ada ? { ...b, qty: b.qty + h.qty } : b)) };
+      return { ...k, baris: [...k.baris, { id: idBaru(), produkId, ...h }] };
     });
-    setPilihSatuan(null);
+    setAtur(null);
   };
 
-  const klikProduk = (p: Produk) => {
-    const daftar = satuanJual(p);
-    if (daftar.length === 1 && !bolehDesimal(daftar[0].satuanId)) tambah(p.id, daftar[0].id, 1);
-    else setPilihSatuan(p);
+  const simpanAtur = (h: HasilAtur) => {
+    if (!atur) return;
+    if (atur.barisId) {
+      ubahBaris(atur.barisId, { satuanProdukId: h.satuanProdukId, qty: h.qty, diskonManual: h.diskonManual });
+      setAtur(null);
+    } else tambah(atur.produk.id, h);
   };
+
+  const klikProduk = (p: Produk) => setAtur({ produk: p });
 
   const tahan = (nama: string, cetak: boolean) => {
     const t: Tertahan = { id: idBaru(), nama, waktu: jam(), keranjang: aktif };
@@ -151,8 +159,6 @@ export function Penjualan() {
     setDialog(null);
   };
 
-  const adaDiskon = (produkId: string) =>
-    plg.jenis === 'terdaftar' && diskonContoh.some((d) => d.pelangganId === plg.id && d.produkId === produkId);
 
   return (
     <div className={keranjangHp ? 'pj pj--keranjang-buka' : 'pj'}>
@@ -260,12 +266,9 @@ export function Penjualan() {
               produk={produk}
               hasil={hasil}
               namaPelanggan={plg.nama}
-              punyaDiskon={adaDiskon(produk.id)}
               stokSisa={(stokContoh[produk.id] ?? 0) - (dipesan.get(produk.id) ?? 0)}
               onQty={(qty) => (qty > 0 ? ubahBaris(baris.id, { qty }) : hapusBaris(baris.id))}
-              onSatuan={(satuanProdukId) => ubahBaris(baris.id, { satuanProdukId, diskonManual: undefined })}
-              onDiskon={(n) => ubahBaris(baris.id, { diskonManual: n })}
-              onHapus={() => hapusBaris(baris.id)}
+              onUbah={() => setAtur({ produk, barisId: baris.id })}
             />
           ))}
           {aktif.baris.length === 0 && (
@@ -301,8 +304,17 @@ export function Penjualan() {
         </button>
       </div>
 
-      {pilihSatuan && (
-        <DialogSatuan produk={pilihSatuan} onPilih={(s, qty) => tambah(pilihSatuan.id, s, qty)} onTutup={() => setPilihSatuan(null)} />
+      {atur && (
+        <DialogAturBarang
+          key={atur.barisId ?? atur.produk.id}
+          produk={atur.produk}
+          pelanggan={plg}
+          daftarDiskon={diskonContoh}
+          awal={atur.barisId ? aktif.baris.find((b) => b.id === atur.barisId) : undefined}
+          onSimpan={simpanAtur}
+          onHapus={atur.barisId ? () => { hapusBaris(atur.barisId!); setAtur(null); } : undefined}
+          onTutup={() => setAtur(null)}
+        />
       )}
       {dialog === 'bayar' && <DialogBayar belanja={total} diskonKasir={diskonKasir} pelanggan={plg} onBatal={() => setDialog(null)} onSelesai={selesai} />}
       {dialog === 'tahan' && (

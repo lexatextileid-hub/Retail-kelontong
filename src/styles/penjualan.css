@@ -144,8 +144,6 @@
   }
   .pj--keranjang-buka .pj__ringkas-hp { display: none; }
 
-  .dialog-latar { padding: 16px 12px; align-items: flex-end; }
-  .dialog { max-height: calc(100% - 24px); overflow-y: auto; }
 }
 
 /* Metode bayar */
@@ -163,10 +161,34 @@
 }
 .kembalian strong { font-size: 26px; }
 
-@media (max-width: 860px) {
-  .dialog { margin-top: auto; }
-  .dialog-latar { padding-top: 64px; }
-}
 @media (max-width: 420px) {
   .metode { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ---------- Pop-up Atur Barang ---------- */
+.atur-bagian { border: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.atur-bagian legend { padding: 0; margin-bottom: 8px; }
+.pilih-satuan__item[aria-checked='true'] { border-color: var(--biru); background: var(--biru-muda); box-shadow: inset 0 0 0 1px var(--biru); }
+.atur-angka { max-width: 180px; font-size: 18px; }
+.atur-diskon-kepala { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.saklar--kecil { height: 32px; }
+.saklar--kecil button { padding: 0 10px; font-size: 12.5px; }
+.atur-bantu { margin: 0; font-size: 12.5px; }
+.atur-ringkas { display: flex; flex-direction: column; gap: 4px; }
+.atur-tombol { display: flex; gap: 8px; }
+.atur-tombol .tombol--utama { flex: 1; }
+.tombol--bahaya { color: var(--bahaya); border-color: #f1c4bf; height: 52px; }
+.tombol--bahaya:hover { background: var(--bahaya-latar); color: var(--bahaya); }
+
+/* Baris keranjang: ketuk untuk ubah */
+.kr-baris__klik {
+  display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left;
+  border: none; background: none; padding: 4px 6px; margin: -4px -6px; border-radius: var(--radius); cursor: pointer;
+}
+.kr-baris__klik:hover { background: var(--permukaan-2); }
+.kr-baris__atas { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.kr-baris__netto { white-space: nowrap; }
+.kr-baris__rinci { font-size: 13px; color: var(--teks-3); }
+.kr-baris__diskon { font-size: 12.5px; color: var(--biru-tua); }
+.kr-baris__bawah { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.atur-bagian .stepper { align-self: flex-start; }
