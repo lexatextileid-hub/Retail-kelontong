@@ -86,8 +86,8 @@ export const menuKasir: Menu[] = [
     ringkasan: 'Retur dari pembeli: dari nota, pesanan, atau tanpa nota (pengecualian).',
     rencana: ['Ketik nomor nota, atau cari lewat nama pelanggan', 'Uang kembali, tukar barang, atau potong kasbon; barang bagus atau rusak', 'Perlu PIN pemilik'],
     anak: [
-      { path: 'baru', judul: 'Retur Baru', halaman: <BuatRetur /> },
       { path: 'daftar', judul: 'Daftar Retur', halaman: <DaftarRetur /> },
+      { path: 'baru', judul: 'Tambah Retur', halaman: <BuatRetur /> },
     ],
   },
   {

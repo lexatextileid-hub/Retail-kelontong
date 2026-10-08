@@ -159,6 +159,7 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - **Tukar barang boleh barang lain.** Selisih: toko mengembalikan uang / potong kasbon, atau pelanggan menambah bayar (tunai, transfer, atau kasbon untuk pelanggan terdaftar).
 - **Pesanan pelanggan juga bisa diretur** (barang yang sudah diserahkan, batas dihitung dari tanggal serah); selisih bisa memotong sisa tagihan pesanan.
 - Jumlah yang sudah diretur dicatat per baris nota, jadi tidak bisa diretur dua kali.
+- **Susunan menu Retur** (mengikuti Loyverse/Majoo): **Daftar Retur** (filter periode, pelanggan, nomor, sumber; total retur) → **Tambah Retur**: langkah 1 pilih transaksi (nota penjualan atau pesanan; cari nomor, tanggal, pelanggan; tanpa nota sebagai pengecualian), langkah 2 barang, tukar, penyelesaian, alasan, PIN.
 - Barang rusak dari retur masuk **Gudang → Barang Rusak** (tidak dihitung stok jual).
 - **Riwayat** (Mode Kasir): semua transaksi per tanggal (penjualan, bayar kasbon, retur), cari nomor/pelanggan, cetak ulang struk (bertanda SALINAN), lanjut retur dari nota.
 

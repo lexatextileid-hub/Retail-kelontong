@@ -14,6 +14,7 @@ import { DialogAturBarang } from '../penjualan/DialogSatuan';
 import { ambilProduk, ambilSatuan, angka, bolehDesimal, idBaru } from '../penjualan/model';
 import { labelDasar, labelJumlah, namaPelanggan } from '../pesanan/bersama';
 import { DialogStrukRetur } from './DialogRetur';
+import { tanggalPendek } from '../kasbon/bersama';
 import '../../styles/pesanan.css';
 import '../../styles/penjualan.css';
 import '../../styles/kasbon.css';
@@ -43,6 +44,8 @@ export function BuatRetur() {
   const [pesananId, setPesananId] = useState<string | null>(awalPesanan);
   const [plgManual, setPlgManual] = useState('umum');
   const [cari, setCari] = useState('');
+  const [fTanggal, setFTanggal] = useState('');
+  const [fPelanggan, setFPelanggan] = useState('');
   const [isi, setIsi] = useState<Record<string, { qty: number; kondisi: 'bagus' | 'rusak' }>>({});
   const [manual, setManual] = useState<{ id: string; produkId: string; satuanProdukId: string; isi: number; qty: number; hargaPerSatuan: number }[]>([]);
   const [tukar, setTukar] = useState<(BarisTukar & { id: string })[]>([]);
@@ -137,14 +140,14 @@ export function BuatRetur() {
     setHasil(r);
   };
 
-  // Daftar nota untuk dipilih
+  // Filter pencarian transaksi (seperti daftar transaksi di Loyverse/Majoo): nomor, tanggal, pelanggan.
   const q = cari.trim().toLowerCase();
-  const daftarNota = toko.penjualan
-    .filter((n) => !q || n.nomor.toLowerCase().includes(q) || namaPelanggan(n.pelangganId).toLowerCase().includes(q))
-    .slice(0, 12);
+  const cocok = (nomor: string, pid: string, tgl: string) =>
+    (!q || nomor.toLowerCase().includes(q)) && (!fTanggal || tgl === fTanggal) && (!fPelanggan || pid === fPelanggan);
+  const daftarNota = toko.penjualan.filter((n) => cocok(n.nomor, n.pelangganId, n.tanggal)).slice(0, 30);
   const daftarPesanan = toko.pesanan
     .filter((p) => !p.dibatalkan && p.serah.length > 0)
-    .filter((p) => !q || p.nomor.toLowerCase().includes(q) || namaPelanggan(p.pelangganId).toLowerCase().includes(q));
+    .filter((p) => cocok(p.nomor, p.pelangganId, p.serah[p.serah.length - 1].tanggal));
   const umurTeks = (iso: string) => {
     const b = cekBatasRetur(iso, sekarangIso, aturan.batasHari);
     const jam = Math.max(0, Math.floor(b.umurJam));
@@ -155,41 +158,60 @@ export function BuatRetur() {
 
   return (
     <div className="ps-halaman">
-      <div className="saklar" role="group" aria-label="Sumber retur" style={{ alignSelf: 'flex-start' }}>
-        <button type="button" aria-pressed={sumber === 'nota'} onClick={() => { setSumber('nota'); ulang(); }}>Dari nota</button>
-        <button type="button" aria-pressed={sumber === 'pesanan'} onClick={() => { setSumber('pesanan'); ulang(); }}>Dari pesanan</button>
-        {aturan.tanpaNotaDenganPin && (
-          <button type="button" aria-pressed={sumber === 'tanpa-nota'} onClick={() => { setSumber('tanpa-nota'); ulang(); }}>Tanpa nota</button>
-        )}
-      </div>
+      <ol className="rt-langkah" aria-label="Langkah">
+        <li className={!asalDipilih ? 'aktif' : 'selesai'}><span>1</span>Pilih transaksi</li>
+        <li className={asalDipilih ? 'aktif' : ''}><span>2</span>Barang & penyelesaian</li>
+      </ol>
 
-      {/* 1. Pilih nota / pesanan */}
+      {/* 1. Pilih transaksi */}
       {!asalDipilih && (
         <div className="kartu tumpuk">
-          <h2>{sumber === 'nota' ? 'Pilih nota' : 'Pilih pesanan'}</h2>
-          <p className="teks-pudar" style={{ margin: 0, fontSize: 13 }}>
-            Ketik nomor dari struk, atau cari nama pelanggan. Batas retur {aturan.batasHari}×24 jam
-            {aturan.lewatBatasDenganPin ? '; lewat batas hanya dengan PIN pemilik.' : '.'}
-          </p>
-          <label className="pj__cari-kotak">
-            <span className="sr">Cari</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" />
-            </svg>
-            <input value={cari} onChange={(e) => setCari(e.target.value)} placeholder={sumber === 'nota' ? 'mis. PJ-2610-0230 atau nama pelanggan' : 'mis. PS-2610-0001 atau nama pelanggan'} autoFocus />
-          </label>
-          <div className="rw-daftar">
+          <div className="kb-judul">
+            <div className="saklar" role="group" aria-label="Jenis transaksi">
+              <button type="button" aria-pressed={sumber === 'nota'} onClick={() => setSumber('nota')}>Nota penjualan</button>
+              <button type="button" aria-pressed={sumber === 'pesanan'} onClick={() => setSumber('pesanan')}>Pesanan</button>
+            </div>
+            <span className="teks-pudar" style={{ fontSize: 12.5 }}>
+              Batas retur {aturan.batasHari}×24 jam{aturan.lewatBatasDenganPin ? ' · lewat batas dengan PIN pemilik' : ''}
+            </span>
+          </div>
+          <div className="rt-filter">
+            <label className="pj__cari-kotak">
+              <span className="sr">Nomor</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" />
+              </svg>
+              <input value={cari} onChange={(e) => setCari(e.target.value)} placeholder={sumber === 'nota' ? 'Nomor nota, mis. 0230' : 'Nomor pesanan'} autoFocus />
+            </label>
+            <label className="isian">
+              <span className="sr">Tanggal</span>
+              <input type="date" className="isian__kontrol" aria-label="Tanggal" value={fTanggal} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setFTanggal(e.target.value)} />
+            </label>
+            <label className="isian">
+              <span className="sr">Pelanggan</span>
+              <select className="isian__kontrol" aria-label="Pelanggan" value={fPelanggan} onChange={(e) => setFPelanggan(e.target.value)}>
+                <option value="">Semua pelanggan</option>
+                {toko.pelanggan.map((p) => <option key={p.id} value={p.id}>{p.nama}</option>)}
+              </select>
+            </label>
+            {(cari || fTanggal || fPelanggan) && (
+              <button type="button" className="tautan" onClick={() => { setCari(''); setFTanggal(''); setFPelanggan(''); }}>Hapus filter</button>
+            )}
+          </div>
+          <div className="rw-daftar" style={{ padding: 0 }}>
             {sumber === 'nota' &&
               daftarNota.map((n) => {
                 const u = umurTeks(n.waktuIso);
+                const sudah = toko.retur.some((r) => r.notaId === n.id);
                 return (
                   <button key={n.id} type="button" className="rw-baris" onClick={() => setNotaId(n.id)}>
                     <span className="rw-baris__kiri">
                       <span className="rw-baris__nomor">
                         <strong>{n.nomor}</strong>
                         {u.lewat && <span className="chip-status chip-status--merah">Lewat batas</span>}
+                        {sudah && <span className="chip-status chip-status--kuning">Pernah diretur</span>}
                       </span>
-                      <span className="teks-pudar">{u.teks} · {namaPelanggan(n.pelangganId)} · {n.baris.length} barang</span>
+                      <span className="teks-pudar">{tanggalPendek(n.tanggal)} · {u.teks} · {namaPelanggan(n.pelangganId)} · {n.baris.length} barang</span>
                     </span>
                     <strong className="rw-baris__nilai">{rupiah(n.total)}</strong>
                   </button>
@@ -197,8 +219,8 @@ export function BuatRetur() {
               })}
             {sumber === 'pesanan' &&
               daftarPesanan.map((p) => {
-                const s = p.serah[p.serah.length - 1];
-                const u = umurTeks(`${s.tanggal}T23:59:00`);
+                const sj = p.serah[p.serah.length - 1];
+                const u = umurTeks(`${sj.tanggal}T23:59:00`);
                 return (
                   <button key={p.id} type="button" className="rw-baris" onClick={() => setPesananId(p.id)}>
                     <span className="rw-baris__kiri">
@@ -206,15 +228,21 @@ export function BuatRetur() {
                         <strong>{p.nomor}</strong>
                         {u.lewat && <span className="chip-status chip-status--merah">Lewat batas</span>}
                       </span>
-                      <span className="teks-pudar">diserahkan {s.tanggal} · {namaPelanggan(p.pelangganId)}</span>
+                      <span className="teks-pudar">diserahkan {tanggalPendek(sj.tanggal)} · {namaPelanggan(p.pelangganId)}</span>
                     </span>
                     <strong className="rw-baris__nilai">{rupiah(ringkasPesanan(p).nilaiDiserahkan)}</strong>
                   </button>
                 );
               })}
-            {sumber === 'nota' && daftarNota.length === 0 && <p className="ps-kosong">Nota tidak ditemukan.</p>}
-            {sumber === 'pesanan' && daftarPesanan.length === 0 && <p className="ps-kosong">Belum ada pesanan yang sudah diserahkan.</p>}
+            {sumber === 'nota' && daftarNota.length === 0 && <p className="ps-kosong">Nota tidak ditemukan. Ubah nomor, tanggal, atau pelanggan.</p>}
+            {sumber === 'pesanan' && daftarPesanan.length === 0 && <p className="ps-kosong">Belum ada pesanan yang sudah diserahkan untuk filter ini.</p>}
           </div>
+          {aturan.tanpaNotaDenganPin && (
+            <p className="teks-pudar" style={{ margin: 0, fontSize: 13 }}>
+              Pelanggan tidak bawa nota?{' '}
+              <button type="button" className="tautan" onClick={() => setSumber('tanpa-nota')}>Retur tanpa nota</button> (pengecualian, PIN pemilik, harga jual sekarang).
+            </p>
+          )}
         </div>
       )}
 
@@ -228,7 +256,7 @@ export function BuatRetur() {
                   {sumber === 'nota' ? nota!.nomor : sumber === 'pesanan' ? pesanan!.nomor : 'Retur tanpa nota'}
                   {plg && sumber !== 'tanpa-nota' && <span className="teks-pudar" style={{ fontWeight: 500, fontSize: 14 }}> · {plg.nama}</span>}
                 </h2>
-                {sumber !== 'tanpa-nota' && <button type="button" className="tautan" onClick={ulang}>Ganti</button>}
+                <button type="button" className="tautan" onClick={() => { ulang(); setSumber(sumber === 'tanpa-nota' ? 'nota' : sumber); }}>{sumber === 'tanpa-nota' ? 'Kembali pilih nota' : 'Ganti transaksi'}</button>
               </div>
               {sumber === 'tanpa-nota' && (
                 <label className="isian">
@@ -386,7 +414,7 @@ export function BuatRetur() {
       )}
 
       <p className="teks-pudar" style={{ margin: 0, fontSize: 12.5 }}>
-        Aturan retur (batas waktu, pengecualian) diatur pemilik di Back Office · Pengaturan · Aturan. <Link to="../daftar" className="tautan">Daftar retur</Link>
+        Aturan retur (batas waktu, pengecualian) diatur pemilik di Back Office · Pengaturan · Aturan. <Link to="../daftar" className="tautan">← Daftar retur</Link>
       </p>
 
       {pilihBarang && (

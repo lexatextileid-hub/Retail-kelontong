@@ -91,3 +91,12 @@ a.kb-tagihan__baris:hover { background: var(--permukaan-2); color: var(--teks); 
 .rt-cara { display: flex; flex-direction: column; gap: 8px; }
 .rt-cara .teks-pudar { font-size: 12.5px; }
 .rt-cara--mati { opacity: 0.5; cursor: not-allowed; }
+.rt-filter { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-items: end; }
+.rt-filter .pj__cari-kotak { grid-column: span 2; }
+@media (max-width: 520px) { .rt-filter .pj__cari-kotak { grid-column: 1 / -1; } }
+.rt-langkah { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.rt-langkah li { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; background: var(--permukaan); border: 1px solid var(--garis); font-size: 13px; font-weight: 600; color: var(--teks-3); }
+.rt-langkah li span { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--permukaan-2); font-size: 12px; }
+.rt-langkah li.aktif { color: var(--biru-tua); border-color: var(--biru-garis); background: var(--biru-muda); }
+.rt-langkah li.aktif span { background: var(--biru); color: #fff; }
+.rt-langkah li.selesai span { background: #1d6b3c; color: #fff; }
