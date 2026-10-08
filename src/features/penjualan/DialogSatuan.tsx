@@ -10,6 +10,8 @@ export interface HasilAtur {
   qty: number;
   /** Diskon total baris yang diketik kasir; kosong = pakai diskon pelanggan otomatis. */
   diskonManual?: number;
+  /** Harga per kg yang diketik kasir (barang timbang); kosong = harga bawaan. */
+  hargaManual?: number;
 }
 
 type ModeDiskon = 'unit' | 'total';
@@ -52,19 +54,25 @@ export function DialogAturBarang({
     awal?.diskonManual !== undefined ? awal.diskonManual.toLocaleString('id-ID') : '',
   );
 
+  const [teksHarga, setTeksHarga] = useState(
+    awal?.hargaManual !== undefined ? awal.hargaManual.toLocaleString('id-ID') : '',
+  );
+  const hargaBawaan = satuan.hargaJual ?? 0;
+  const hargaManual = timbang && teksHarga.trim() !== '' && keAngka(teksHarga) !== hargaBawaan ? keAngka(teksHarga) : undefined;
+
   const angkaQty = keAngka(teksQty);
   const qty = timbang ? Math.round((pakaiGram ? angkaQty / 1000 : angkaQty) * 1000) / 1000 : Math.max(0, Math.floor(angkaQty));
   const nilaiDiskon = keAngka(teksDiskon);
   const diskonManual = teksDiskon.trim() === '' ? undefined : modeDiskon === 'unit' ? Math.round(nilaiDiskon * qty) : nilaiDiskon;
 
-  const hasil = qty > 0 ? hitungHargaBaris(produk, satuan.id, qty, pelanggan, daftarDiskon, diskonManual) : null;
+  const hasil = qty > 0 ? hitungHargaBaris(produk, satuan.id, qty, pelanggan, daftarDiskon, diskonManual, hargaManual) : null;
   const adaSaran = pelanggan.jenis === 'terdaftar' && daftarDiskon.some((d) => d.pelangganId === pelanggan.id && d.produkId === produk.id);
   const sd = singkatan(produk.satuanDasarId);
   const labelUnit = timbang ? 'kg' : satuan.label.toLowerCase();
 
   const simpan = () => {
     if (!hasil) return;
-    onSimpan({ satuanProdukId: satuan.id, qty, diskonManual });
+    onSimpan({ satuanProdukId: satuan.id, qty, diskonManual, hargaManual });
   };
 
   const gantiSatuan = (id: string) => {
@@ -78,7 +86,10 @@ export function DialogAturBarang({
       {hasil && (
         <div className="atur-ringkas">
           <div className="ringkas-total">
-            <span>{angka(qty)} {labelUnit} × {rupiah(hasil.hargaSatuan)}</span>
+            <span>
+              {angka(qty)} {labelUnit} × {rupiah(hasil.hargaSatuan)}
+              {hasil.hargaDiubah && <span className="lencana lencana--peringatan" style={{ marginLeft: 6 }}>harga diubah</span>}
+            </span>
             <span>{rupiah(hasil.bruto)}</span>
           </div>
           {hasil.diskon > 0 && (
@@ -148,6 +159,33 @@ export function DialogAturBarang({
               .map((t) => `${t.mulaiJumlah > 0 ? `${t.mulaiJumlah}+ ` : ''}${rupiah(t.harga)}`)
               .join(' · ')}
           </p>
+        )}
+
+        {timbang && (
+          <div className="atur-bagian">
+            <label htmlFor="atur-harga" className="label-kecil">Harga per kg</label>
+            <div className="input-rp">
+              <span aria-hidden="true">Rp</span>
+              <input
+                id="atur-harga"
+                inputMode="numeric"
+                value={teksHarga}
+                placeholder={hargaBawaan.toLocaleString('id-ID')}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => {
+                  const d = e.target.value.replace(/\D/g, '');
+                  setTeksHarga(d ? Number(d).toLocaleString('id-ID') : '');
+                }}
+              />
+            </div>
+            {hargaManual !== undefined ? (
+              <button type="button" className="tautan" style={{ alignSelf: 'flex-start' }} onClick={() => setTeksHarga('')}>
+                Harga diubah · kembali ke harga bawaan {rupiah(hargaBawaan)}
+              </button>
+            ) : (
+              <p className="teks-pudar atur-bantu">Harga bawaan {rupiah(hargaBawaan)}/kg. Ketik harga lain bila harga hari ini berbeda.</p>
+            )}
+          </div>
         )}
 
         <div className="atur-bagian">

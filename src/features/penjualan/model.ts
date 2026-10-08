@@ -8,6 +8,8 @@ export interface BarisKeranjang {
   satuanProdukId: string;
   qty: number;
   diskonManual?: number;
+  /** Harga per satuan yang diketik kasir (barang timbang). */
+  hargaManual?: number;
 }
 
 export interface Keranjang {

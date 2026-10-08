@@ -36,6 +36,7 @@ export function BarisKeranjang({
         </span>
         <span className="kr-baris__rinci">
           {angka(baris.qty)} {labelUnit} × {rupiah(hasil.hargaSatuan)}
+          {hasil.hargaDiubah && <span className="lencana lencana--peringatan" style={{ marginLeft: 6 }}>harga diubah</span>}
           {produk.metodeHarga === 'bertingkat' && hasil.tingkat && hasil.tingkat.mulaiJumlah > 0 && (
             <span className="lencana" style={{ marginLeft: 6 }}>harga {hasil.tingkat.mulaiJumlah}+</span>
           )}
@@ -53,7 +54,7 @@ export function BarisKeranjang({
       <div className="kr-baris__bawah">
         <button type="button" className="tautan" onClick={onUbah}>Ubah satuan / diskon</button>
         {timbang ? (
-          <button type="button" className="tombol tombol--kecil" onClick={onUbah}>Ubah berat</button>
+          <button type="button" className="tombol tombol--kecil" onClick={onUbah}>Ubah berat / harga</button>
         ) : (
           <div className="stepper">
             <button type="button" onClick={() => onQty(baris.qty - 1)} aria-label="Kurangi">−</button>

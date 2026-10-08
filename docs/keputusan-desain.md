@@ -56,6 +56,7 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 
 ## Barang timbang (Bawang & Umbi, Rempah Kering)
 
+- **Di kasir, harga per kg bisa diubah** (harga bawaan tetap ada sebagai isian awal), lalu tetap bisa diberi diskon per kg atau total. Harga yang diubah ditandai "harga diubah" dan tercatat; tidak dihitung ke batas diskon Rp 10.000.
 - **Dijual ditimbang sesuai kebutuhan.** Satuan dasar kg dengan desimal; harga jual per kg; kasir mengetik berat (dalam kg atau gram), total dihitung otomatis tanpa pembulatan.
 - **Pembelian kadang tanpa nota** (pasar/pengepul): Barang Masuk punya jenis **"pembelian tanpa nota"** — pilih/ketik sumber, berat aktual, harga total, sumber uang (biasanya dibayar langsung); sistem membuat nomor nota internal; foto opsional; ditandai untuk diperiksa pemilik.
 - **Harga sangat sering berubah:** layar **ubah harga cepat** — daftar barang per kategori dengan modal terakhir, harga jual, dan usulan dari % untung; ubah banyak barang sekaligus; riwayat harga tersimpan.
@@ -95,6 +96,11 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - Laporan memakai **untung dari penjualan (margin)**. Label selalu ditulis jelas ("dari modal" / "dari penjualan").
 - Harga beli naik → sistem bisa mengusulkan harga jual baru dengan % untung yang sama.
 - **Pembulatan harga bawaan: tanpa pembulatan** (usaha semi-FMCG, selisih Rp 100 berarti bagi pembeli). Harga hasil hitung hanya usulan; ada pilihan cepat di sekitarnya dengan % untung masing-masing. Pembulatan bisa diatur per barang bila perlu. Harga yang diketik manual tidak pernah diubah sistem.
+
+## Diskon per barang (kasir)
+
+- Di pop-up Atur Barang: diskon **per item** (× jumlah) atau **total baris**. Berlaku untuk semua pelanggan; diskon khusus pelanggan tetap terisi otomatis dan bisa diubah.
+- Diskon per barang yang diketik kasir + potongan akhir dihitung bersama ke batas Rp 10.000 tanpa PIN.
 
 ## Potongan di akhir transaksi (kasir)
 

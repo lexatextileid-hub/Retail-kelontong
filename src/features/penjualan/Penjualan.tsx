@@ -60,7 +60,7 @@ export function Penjualan() {
   const hasilBaris = aktif.baris.map((b) => ({
     baris: b,
     produk: ambilProduk(b.produkId),
-    hasil: hitungHargaBaris(ambilProduk(b.produkId), b.satuanProdukId, b.qty, plg, diskonContoh, b.diskonManual),
+    hasil: hitungHargaBaris(ambilProduk(b.produkId), b.satuanProdukId, b.qty, plg, diskonContoh, b.diskonManual, b.hargaManual),
   }));
   const subtotal = hasilBaris.reduce((t, x) => t + x.hasil.bruto, 0);
   const diskonPelanggan = hasilBaris.reduce((t, x) => t + x.hasil.diskon, 0);
@@ -89,7 +89,7 @@ export function Penjualan() {
   const simpanAtur = (h: HasilAtur) => {
     if (!atur) return;
     if (atur.barisId) {
-      ubahBaris(atur.barisId, { satuanProdukId: h.satuanProdukId, qty: h.qty, diskonManual: h.diskonManual });
+      ubahBaris(atur.barisId, { satuanProdukId: h.satuanProdukId, qty: h.qty, diskonManual: h.diskonManual, hargaManual: h.hargaManual });
       setAtur(null);
     } else tambah(atur.produk.id, h);
   };

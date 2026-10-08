@@ -174,3 +174,24 @@ describe('format stok', () => {
     expect(formatStok(132, [{ label: 'pcs', isi: 1 }, { label: 'dus', isi: 40 }])).toBe('3 dus 12 pcs');
   });
 });
+
+describe('harga diubah kasir (barang timbang)', () => {
+  const bawang: Produk = {
+    id: 'bawang', sku: 'UMB-00001', nama: 'Bawang Merah', kategoriId: 'UMB', satuanDasarId: 'kg', stokMinimum: 5,
+    metodeHarga: 'per_satuan', tingkatHarga: [], aktif: true,
+    satuan: [{ id: 'bwm-kg', satuanId: 'kg', label: 'kg', isi: 1, dibeli: true, dijual: true, hargaJual: 38000 }],
+  };
+  it('harga bawaan dipakai bila tidak diubah', () => {
+    const h = hitungHargaBaris(bawang, 'bwm-kg', 0.25, umum, []);
+    expect(h.bruto).toBe(9500);
+    expect(h.hargaDiubah).toBe(false);
+  });
+  it('harga per kg diubah kasir, lalu tetap bisa diberi diskon', () => {
+    const h = hitungHargaBaris(bawang, 'bwm-kg', 0.5, umum, [], 500, 40000);
+    expect(h.bruto).toBe(20000);
+    expect(h.netto).toBe(19500);
+    expect(h.hargaDiubah).toBe(true);
+    expect(h.hargaNormal).toBe(38000);
+  });
+});
+

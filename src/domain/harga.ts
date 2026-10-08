@@ -3,6 +3,8 @@ import type { DiskonPelanggan, Pelanggan, Produk, TingkatHarga } from './tipe';
 export interface HasilHarga {
   jumlahDasar: number; // qty dikonversi ke satuan dasar
   hargaSatuan: number; // harga per satuan yang dipilih, atau per satuan dasar jika bertingkat
+  hargaNormal: number; // harga bawaan dari data barang
+  hargaDiubah: boolean; // kasir mengubah harga (barang timbang)
   bruto: number;
   tingkat?: TingkatHarga; // tingkat yang sedang berlaku (bertingkat)
   tingkatBerikutnya?: { tingkat: TingkatHarga; kurang: number }; // untuk pengingat di kasir
@@ -45,6 +47,7 @@ export function hitungDiskonSaran(
  * @param satuanProdukId satuan yang dipilih kasir (pcs, pak, dus, slop, kg, ...)
  * @param qty jumlah dalam satuan yang dipilih
  * @param diskonManual diskon total yang diketik kasir; kosong = pakai saran
+ * @param hargaManual harga per satuan yang diketik kasir (barang timbang yang harganya cepat berubah); kosong = harga bawaan
  */
 export function hitungHargaBaris(
   produk: Produk,
@@ -53,6 +56,7 @@ export function hitungHargaBaris(
   pelanggan: Pelanggan,
   daftarDiskon: DiskonPelanggan[],
   diskonManual?: number,
+  hargaManual?: number,
 ): HasilHarga {
   const satuan = produk.satuan.find((s) => s.id === satuanProdukId);
   if (!satuan) throw new Error(`Satuan ${satuanProdukId} tidak ada di ${produk.nama}`);
@@ -72,9 +76,10 @@ export function hitungHargaBaris(
     tingkatBerikutnya = cariTingkatBerikutnya(produk.tingkatHarga, jumlahDasar);
   } else {
     if (satuan.hargaJual === undefined) throw new Error(`Harga ${satuan.label} belum diisi`);
-    hargaSatuan = satuan.hargaJual;
-    bruto = Math.round(qty * satuan.hargaJual);
+    hargaSatuan = hargaManual ?? satuan.hargaJual;
+    bruto = Math.round(qty * hargaSatuan);
   }
+  const hargaNormal = produk.metodeHarga === 'bertingkat' ? hargaSatuan : (satuan.hargaJual ?? hargaSatuan);
 
   const diskonSaran = hitungDiskonSaran(pelanggan, produk.id, daftarDiskon, jumlahDasar, bruto);
   // Diskon pelanggan (saran) tidak berlaku untuk Umum; diskon yang diketik kasir berlaku untuk siapa pun.
@@ -83,6 +88,8 @@ export function hitungHargaBaris(
   return {
     jumlahDasar,
     hargaSatuan,
+    hargaNormal,
+    hargaDiubah: hargaSatuan !== hargaNormal,
     bruto,
     tingkat,
     tingkatBerikutnya,
