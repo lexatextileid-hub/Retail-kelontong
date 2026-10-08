@@ -1,9 +1,10 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { bukaLaci, hariIni, laciTerakhirDitutup, laciTerbuka, ringkasLaci, useToko, type ArusKas } from '../../data/toko';
 import { rupiah } from '../../lib/format';
 import { tanggalPendek } from '../kasbon/bersama';
 import {
-  DialogBayarDistributor, DialogBukaKasir, DialogBuktiKasKeluar, DialogKasMasuk, DialogLaporanHarian, DialogPengeluaran,
+  DialogBukaKasir, DialogBuktiKasKeluar, DialogKasMasuk, DialogLaporanHarian, DialogPengeluaran,
   DialogSetorBank, DialogTutupKasir, namaJenis,
 } from './DialogLaci';
 import '../../styles/pesanan.css';
@@ -102,7 +103,7 @@ export function LaciHariIni() {
       <div className="lc-aksi">
         <button type="button" className="tombol" onClick={() => setD('masuk')}>+ Kas masuk</button>
         <button type="button" className="tombol" onClick={() => setD('keluar')}>− Pengeluaran</button>
-        <button type="button" className="tombol" onClick={() => setD('distributor')}>Bayar distributor</button>
+        <Link to="../bayar-distributor?baru=1" className="tombol">Bayar distributor</Link>
         <button type="button" className="tombol" onClick={() => setD('setor')}>Setor bank</button>
         <button type="button" className="tombol" onClick={() => setD({ laporan: sesi.id })}>Laporan sementara</button>
       </div>
@@ -157,7 +158,6 @@ export function LaciHariIni() {
       {d === 'masuk' && <DialogKasMasuk onSelesai={() => setD(null)} onTutup={() => setD(null)} />}
       {d === 'keluar' && <DialogPengeluaran adaLaci maksLaci={r.seharusnya} onSelesai={(a) => setD({ bukti: a })} onTutup={() => setD(null)} />}
       {d === 'setor' && <DialogSetorBank maks={r.seharusnya} onSelesai={(a) => setD({ bukti: a })} onTutup={() => setD(null)} />}
-      {d === 'distributor' && <DialogBayarDistributor adaLaci maksLaci={r.seharusnya} onSelesai={(a) => setD({ bukti: a })} onTutup={() => setD(null)} />}
       {d === 'tutup' && <DialogTutupKasir sesi={sesi} onSelesai={(id) => setD({ laporan: id })} onTutup={() => setD(null)} />}
       {d && typeof d === 'object' && 'bukti' in d && <DialogBuktiKasKeluar a={d.bukti} onTutup={() => setD(null)} />}
       {d && typeof d === 'object' && 'laporan' in d && <DialogLaporanHarian sesiId={d.laporan} onTutup={() => setD(null)} />}

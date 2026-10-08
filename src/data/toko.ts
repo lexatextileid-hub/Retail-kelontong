@@ -3,7 +3,7 @@
  * Nanti diganti Supabase. Bentuk data di sini mengikuti rancangan tabel.
  */
 import { useSyncExternalStore } from 'react';
-import { diskonContoh, hargaBeliContoh, modalContoh, pelangganContoh, stokContoh, type PelangganContoh } from './contoh';
+import { diskonContoh, distributorContoh, hargaBeliContoh, modalContoh, pelangganContoh, stokContoh, type PelangganContoh } from './contoh';
 import { alokasiTertua, isoHari, selisihHari, tambahHari } from '../domain/kasbon';
 import { hitungHargaBaris, TARGET_UNTUNG_PERSEN, untungDariModal } from '../domain/harga';
 import { ambilProduk, ambilSatuan, bolehDesimal, singkatan, type Nota } from '../features/penjualan/model';
@@ -99,7 +99,7 @@ export interface SuratPesanan {
   baris: BarisSP[];
   status: StatusSP;
   catatan?: string;
-  faktur: { nomor: string; nomorDistributor: string; waktu: string; cara: 'cash' | 'tempo'; total: number; oleh: string }[];
+  faktur: { nomor: string; nomorDistributor: string; waktu: string; tanggal?: string; cara: 'cash' | 'tempo'; total: number; oleh: string }[];
 }
 
 /* ---------- Kasbon (piutang pelanggan) ---------- */
@@ -262,7 +262,8 @@ export interface ArusKas {
   kategori?: string;
   penerima?: string;
   bank?: string;
-  faktur?: { id: string; nomor: string; jumlah: number }[];
+  /** jumlah = uang dibayar; diskon = potongan dari distributor (mengurangi hutang tanpa uang). */
+  faktur?: { id: string; nomor: string; jumlah: number; diskon?: number }[];
 }
 
 export const KATEGORI_PENGELUARAN = [
@@ -276,6 +277,7 @@ export interface HutangLama {
   distributorId: string;
   nomor: string; // nomor faktur kertas
   tanggal: string;
+  jatuhTempo?: string;
   total: number;
 }
 
@@ -672,7 +674,7 @@ export function terimaDariSP(
             ...x,
             baris: barisBaru,
             status,
-            faktur: [...x.faktur, { nomor, nomorDistributor: data.nomorDistributor, waktu: sekarang(), cara: data.cara, total, oleh: namaAkun[s.peran] }],
+            faktur: [...x.faktur, { nomor, nomorDistributor: data.nomorDistributor, waktu: sekarang(), tanggal: hariIni(), cara: data.cara, total, oleh: namaAkun[s.peran] }],
           }
         : x,
     ),
@@ -1012,23 +1014,55 @@ export function tutupLaci(data: {
 
 export const nomorArus = (j: 'KK' | 'KM' | 'BD' | 'ST') => nomorBaru(j);
 
-/** Faktur distributor yang belum lunas: faktur tempo dari Surat Pesanan + hutang lama. */
-export function fakturTerbuka(s: State = state) {
-  const bayar = new Map<string, number>();
-  for (const a of s.arus) for (const f of a.faktur ?? []) bayar.set(f.id, (bayar.get(f.id) ?? 0) + f.jumlah);
-  const dariSP = s.sp.flatMap((sp) =>
-    sp.faktur.filter((f) => f.cara === 'tempo').map((f) => ({
-      id: `fk:${f.nomor}`, nomor: f.nomor, nomorDistributor: f.nomorDistributor, distributorId: sp.distributorId,
-      tanggal: f.waktu, total: f.total, lama: false,
-    })),
-  );
-  const lama = s.hutangLama.map((h) => ({
-    id: `hl:${h.id}`, nomor: h.nomor, nomorDistributor: h.nomor, distributorId: h.distributorId, tanggal: h.tanggal, total: h.total, lama: true,
-  }));
-  return [...lama, ...dariSP]
-    .map((f) => ({ ...f, dibayar: bayar.get(f.id) ?? 0, sisa: Math.max(0, f.total - (bayar.get(f.id) ?? 0)) }))
-    .filter((f) => f.sisa > 0);
+export type StatusFaktur = 'belum' | 'sebagian' | 'lunas';
+
+export interface FakturHutang {
+  id: string; // "fk:<nomor PB>" atau "hl:<id>"
+  nomor: string; // nomor internal (PB-…) atau nomor faktur lama
+  nomorDistributor: string; // nomor di kertas faktur
+  distributorId: string;
+  tanggal: string; // yyyy-mm-dd
+  jatuhTempo: string;
+  total: number;
+  dibayar: number;
+  sisa: number;
+  status: StatusFaktur;
+  lama: boolean;
+  pembayaran: { nomor: string; waktuIso: string; jumlah: number; diskon: number; sumber: ArusKas['sumber']; akun: string }[];
 }
+
+/** Semua faktur tempo (dari Surat Pesanan) + hutang lama, dengan pembayaran dan status. */
+export function daftarFaktur(s: State = state): FakturHutang[] {
+  const termin = (d: string) => distributorContoh.find((x) => x.id === d)?.terminHari ?? 0;
+  const bayarnya = (fid: string) =>
+    s.arus.flatMap((a) => (a.faktur ?? []).filter((f) => f.id === fid).map((f) => ({ nomor: a.nomor, waktuIso: a.waktuIso, jumlah: f.jumlah, diskon: f.diskon ?? 0, sumber: a.sumber, akun: a.akun })));
+  const dasar = [
+    ...s.hutangLama.map((h) => ({
+      id: `hl:${h.id}`, nomor: h.nomor, nomorDistributor: h.nomor, distributorId: h.distributorId, tanggal: h.tanggal,
+      jatuhTempo: h.jatuhTempo ?? tambahHari(h.tanggal, termin(h.distributorId)), total: h.total, lama: true,
+    })),
+    ...s.sp.flatMap((sp) =>
+      sp.faktur.filter((f) => f.cara === 'tempo').map((f) => {
+        const tgl = f.tanggal ?? hariIni();
+        return {
+          id: `fk:${f.nomor}`, nomor: f.nomor, nomorDistributor: f.nomorDistributor, distributorId: sp.distributorId, tanggal: tgl,
+          jatuhTempo: tambahHari(tgl, termin(sp.distributorId)), total: f.total, lama: false,
+        };
+      }),
+    ),
+  ];
+  return dasar
+    .map((f) => {
+      const pembayaran = bayarnya(f.id);
+      const dibayar = pembayaran.reduce((t, p) => t + p.jumlah + p.diskon, 0);
+      const sisa = Math.max(0, f.total - dibayar);
+      return { ...f, pembayaran, dibayar, sisa, status: (sisa === 0 ? 'lunas' : dibayar > 0 ? 'sebagian' : 'belum') as StatusFaktur };
+    })
+    .sort((a, b) => a.jatuhTempo.localeCompare(b.jatuhTempo));
+}
+
+/** Faktur distributor yang belum lunas. */
+export const fakturTerbuka = (s: State = state) => daftarFaktur(s).filter((f) => f.sisa > 0);
 
 /* ---------- Contoh awal untuk pratinjau ---------- */
 (function isiContoh() {
@@ -1077,8 +1111,18 @@ export function fakturTerbuka(s: State = state) {
   // Hutang lama ke distributor (tanpa rincian barang)
   state = { ...state, hutangLama: [
     { id: 'hl1', distributorId: 'dist-a', nomor: 'INV-0912', tanggal: lalu(26), total: 1250000 },
-    { id: 'hl2', distributorId: 'dist-b', nomor: 'F-2209', tanggal: lalu(16), total: 2400000 },
+    { id: 'hl2', distributorId: 'dist-b', nomor: 'F-2209', tanggal: lalu(16), jatuhTempo: tambahHari(hariIni(), 3), total: 2400000 },
+    { id: 'hl3', distributorId: 'dist-c', nomor: 'C-1003', tanggal: lalu(5), total: 850000 },
+    { id: 'hl4', distributorId: 'dist-b', nomor: 'F-2150', tanggal: lalu(35), jatuhTempo: lalu(5), total: 600000 },
   ] };
+  // Pembayaran lama dari kas pemilik (Back Office): F-2150 lunas, INV-0912 sebagian.
+  const bayarLama = (nomor: string, h: number, fid: string, nomorF: string, jumlah: number, dist: string) =>
+    (state = { ...state, arus: [...state.arus, { id: id('ak'), nomor, waktuIso: (() => { const w = new Date(); w.setDate(w.getDate() - h); w.setHours(15, 0, 0, 0); return w.toISOString(); })(),
+      akun: '[Pemilik]', jenis: 'bayar-distributor', sumber: 'brankas', tunai: -jumlah, transfer: 0, penerima: dist, keterangan: `Bayar ${dist}`,
+      faktur: [{ id: fid, nomor: nomorF, jumlah }] }] });
+  bayarLama('BD-2610-0001', 6, 'hl:hl4', 'F-2150', 600000, 'Distributor B');
+  bayarLama('BD-2610-0002', 3, 'hl:hl1', 'INV-0912', 250000, 'Distributor A');
+  state = { ...state, urut: { ...state.urut, BD: 3 } };
 
   // Laci contoh: kemarin sudah ditutup; hari ini Kasir A sudah buka, Pemilik belum.
   const jamKe = (h: number, j: number, m = 0) => { const w = new Date(); w.setDate(w.getDate() - h); w.setHours(j, m, 0, 0); return w.toISOString(); };

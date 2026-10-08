@@ -188,10 +188,10 @@ export function DialogSetorBank({ maks, onSelesai, onTutup }: { maks: number; on
 
 /* ---------- Bayar distributor ---------- */
 
-export function DialogBayarDistributor({ maksLaci = 0, onSelesai, onTutup }: { adaLaci?: boolean; maksLaci?: number; onSelesai: (a: ArusKas) => void; onTutup: () => void }) {
+export function DialogBayarDistributor({ maksLaci = 0, fakturDipilih = [], onSelesai, onTutup }: { adaLaci?: boolean; maksLaci?: number; fakturDipilih?: string[]; onSelesai: (a: ArusKas) => void; onTutup: () => void }) {
   const toko = useToko();
   const faktur = fakturTerbuka(toko);
-  const [per, setPer] = useState<Record<string, number>>({});
+  const [per, setPer] = useState<Record<string, number>>(() => Object.fromEntries(faktur.filter((f) => fakturDipilih.includes(f.id)).map((f) => [f.id, f.sisa])));
   const total = faktur.reduce((t, f) => t + (per[f.id] ?? 0), 0);
   const dipilih = faktur.filter((f) => (per[f.id] ?? 0) > 0);
   const distributor = [...new Set(dipilih.map((f) => f.distributorId))];
@@ -219,7 +219,7 @@ export function DialogBayarDistributor({ maksLaci = 0, onSelesai, onTutup }: { a
                   onChange={(e) => setPer((m) => ({ ...m, [f.id]: e.target.checked ? f.sisa : 0 }))} />
                 <div className="kb-alokasi__info">
                   <span><strong>{f.nomorDistributor}</strong> {f.lama && <span className="chip-status chip-status--kuning">Hutang lama</span>}</span>
-                  <span className="teks-pudar">{f.lama ? tanggalPendek(f.tanggal) : f.tanggal} · sisa {rupiah(f.sisa)}{f.dibayar ? ` dari ${rupiah(f.total)}` : ''}</span>
+                  <span className="teks-pudar">{tanggalPendek(f.tanggal)} · jatuh tempo {tanggalPendek(f.jatuhTempo)} · sisa {rupiah(f.sisa)}{f.dibayar ? ` dari ${rupiah(f.total)}` : ''}</span>
                 </div>
                 <div className="kb-alokasi__isi">
                   <InputRupiah id={`bd-${f.id}`} nilai={a} label={`Bayar ${f.nomorDistributor}`} onUbah={(n) => setPer((m) => ({ ...m, [f.id]: Math.min(n, f.sisa) }))} />

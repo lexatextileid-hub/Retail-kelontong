@@ -144,6 +144,10 @@ Beberapa hal ada di dua sisi dengan peran berbeda: kasir input faktur/hitung sto
 - **Kas masuk lain** di kasir: pendapatan lain-lain (jual kardus bekas, barang rusak/kedaluwarsa) atau uang dari brankas (pindah dana, PIN pemilik).
 - Pengeluaran / bayar distributor dari laci tidak boleh melebihi uang di laci.
 - Bayar distributor: pilih faktur tempo (dari Surat Pesanan) atau **hutang lama** (tanpa rincian barang); satu pembayaran satu distributor, bisa beberapa faktur, bisa sebagian.
+- **Bayar Distributor (mode akuntansi, mengikuti "Pembayaran Pembelian" Accurate):**
+  - **Faktur hutang**: tabel no. faktur, distributor, tanggal, jatuh tempo (tanggal + termin distributor), total, dibayar, terutang, status (belum dibayar / sebagian / lewat X hari / lunas). Ringkasan: total hutang, lewat jatuh tempo, jatuh tempo 7 hari. Filter distributor, status, no. faktur. Centang faktur → bayar.
+  - **Bukti pembayaran**: no. bukti (BD-…), tanggal, distributor, faktur dibayar, dibayar dari, diskon, nilai bayar, oleh; filter periode, distributor, nomor; total periode.
+  - **Formulir pembayaran**: distributor, tanggal, no. bukti otomatis, dibayar dari, keterangan; tabel faktur distributor itu: bayar ✓, no. faktur, tanggal, jatuh tempo, total, terutang, **diskon** (potongan dari distributor, mengurangi hutang tanpa uang), bayar. Satu bukti = satu distributor.
 - **Buka kasir (awal hari):** modal awal laci.
 - **Selama hari itu:** pengeluaran operasional (dengan keterangan), **bayar distributor** (pilih fakturnya; boleh dilakukan kasir), **setor tunai ke bank** (bisa beberapa kali; dicatat sebagai pindah dana laci → rekening, bukan pengeluaran), retur uang kembali.
 - **Tutup kasir (akhir hari):** kasir mengetik **total uang fisik** (tidak per pecahan); sistem menampilkan selisih.

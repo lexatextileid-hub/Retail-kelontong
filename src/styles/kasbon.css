@@ -123,3 +123,32 @@ a.kb-tagihan__baris:hover { background: var(--permukaan-2); color: var(--teks); 
 .lc-tutup-penjualan { max-width: 520px; margin: 40px auto; text-align: left; }
 .struk--biasa { font-family: inherit; max-width: none; font-size: 14px; }
 @media (max-width: 520px) { .lc-dua, .lc-bagi { grid-template-columns: 1fr; } }
+.bd-ringkas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.bd-ringkas .kb-angka { text-align: left; cursor: pointer; font: inherit; color: inherit; }
+.bd-aktif { border-color: var(--biru) !important; box-shadow: 0 0 0 1px var(--biru); }
+.bd-tabel-kartu { padding: 8px 16px; overflow-x: auto; }
+.bd-tabel { min-width: 860px; }
+.bd-tabel tbody tr { cursor: pointer; }
+.bd-tabel tbody tr:hover { background: var(--permukaan-2); }
+.bd-tabel tr.bd-pilih { background: var(--biru-muda); }
+@media (max-width: 720px) {
+  .bd-ringkas { grid-template-columns: 1fr; }
+  .bd-tabel { min-width: 0; }
+  .bd-tabel-kartu { overflow-x: visible; }
+  .bd-tabel td[data-label='Pilih']::before { content: none; }
+  .bd-tabel td[data-label='Pilih'] { justify-content: flex-start; }
+}
+.bd-kepala { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 16px; }
+.bd-kepala__lebar { grid-column: 1 / -1; }
+.bd-kepala input[readonly] { background: var(--permukaan-2); color: var(--teks-2); }
+.bd-form .input-rp { width: 140px; height: 38px; margin-left: auto; }
+.bd-tabel tfoot td { padding-top: 12px; border-top: 1px solid var(--garis); }
+.bd-kaki { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; padding: 16px; }
+.bd-kaki__angka { display: flex; flex-direction: column; gap: 6px; min-width: 300px; flex: 1 1 340px; max-width: 460px; }
+@media (max-width: 720px) {
+  .bd-kepala { grid-template-columns: 1fr 1fr; }
+  .bd-tabel tfoot { display: none; }
+  .bd-form .input-rp { width: 150px; }
+}
+.bd-kepala > * { min-width: 0; }
+@media (max-width: 520px) { .bd-kepala { grid-template-columns: 1fr; } }
