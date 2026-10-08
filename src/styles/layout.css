@@ -42,13 +42,33 @@
 .samping__anak a:hover { background: var(--permukaan-2); }
 .samping__anak a.active { color: var(--biru-tua); font-weight: 600; background: var(--biru-muda); }
 
-.samping__ciut {
-  margin-top: auto; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px;
-  border: none; background: none; color: var(--teks-3); font-size: 13px; cursor: pointer; border-radius: var(--radius);
-}
-.samping__ciut:hover { background: var(--permukaan-2); }
+.app__kanan { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; }
+.app__isi { flex: 1; min-height: 0; overflow: auto; }
 
-.app__isi { flex: 1; min-width: 0; height: 100%; overflow: auto; }
+/* Bilah judul */
+.kepala {
+  flex: none; display: flex; align-items: center; gap: 12px; height: 60px; padding: 0 20px 0 12px;
+  background: var(--permukaan); border-bottom: 1px solid var(--garis);
+}
+.kepala__tombol {
+  width: 40px; height: 40px; flex: none; border: none; border-radius: var(--radius);
+  background: transparent; color: var(--teks-2); cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.kepala__tombol:hover { background: var(--permukaan-2); color: var(--teks); }
+.kepala__judul { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--biru-tua); }
+.kepala__judul h1 {
+  font-size: 15px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--teks);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.kepala__pemisah { color: var(--garis-kuat); }
+.kepala__sub { font-size: 14px; color: var(--teks-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kepala__kanan { margin-left: auto; display: flex; align-items: center; gap: 16px; flex: none; }
+.kepala__tanggal { font-size: 13px; color: var(--teks-3); }
+.kepala__pengguna { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; }
+.kepala__avatar {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--biru-muda); color: var(--biru-tua);
+  display: flex; align-items: center; justify-content: center; font-weight: 700;
+}
 
 /* Menu bawah (HP) */
 .bawah { display: none; }
@@ -67,6 +87,8 @@
 @media (max-width: 860px) {
   .samping { display: none; }
   .app__isi { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  .kepala { height: 52px; padding: 0 12px 0 6px; }
+  .kepala__tanggal, .kepala__pengguna span:last-child { display: none; }
   .bawah {
     display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
